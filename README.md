@@ -1,7 +1,7 @@
 # fusion-addins
 
 Autodesk Fusion add-ins generated from [decad-gallery](https://github.com/lestrrat-3d/decad-gallery) models. Each
-add-in is one folder under `addins/`. Do not edit those folders by hand, because they are generated and get
+add-in is one folder under `addins/`. Do not edit the code in those folders by hand, because it is generated and gets
 overwritten. `lib/addinkit/` holds runtime code shared by every add-in. Its `general_utils.py` and `event_utils.py`
 come from Autodesk's add-in template and keep Autodesk's copyright notice.
 
@@ -65,7 +65,9 @@ On success it prints the file counts and the fingerprint.
 
 ## Tests
 
-Run `python3 -m unittest discover` from the repository root. CI runs the same command on Python 3.12 and 3.13.
+Run `python3 -m unittest discover` from the repository root. An add-in may carry its own tests in
+`addins/<addin>/tests/`. Run them with `python3 -m unittest discover -s "addins/<addin>/tests"`. CI runs both on
+Python 3.12 and 3.13, and runs the second command for every add-in that has a `tests/` folder.
 Keep the root `lib/` free of an `__init__.py`: `addinkit/__init__.py` imports `adsk`, so discovery must not reach it.
 
 ## License

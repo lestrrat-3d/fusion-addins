@@ -21,3 +21,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: python3 -m unittest discover
+      - name: add-in tests
+        run: |
+          for d in addins/*/tests; do
+            [ -d "$d" ] || continue
+            echo "== $d"
+            python3 -m unittest discover -s "$d"
+          done

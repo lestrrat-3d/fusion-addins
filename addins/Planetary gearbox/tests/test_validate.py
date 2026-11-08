@@ -1,0 +1,142 @@
+import dataclasses
+import math
+import unittest
+
+import _support  # noqa: F401
+from gen.params import Frame, default_params
+from gen.validate import ValidationError, validate
+
+CASES = [
+    ({"ring_teeth": 72}, "ring teeth"),
+    ({"planet_count": 5}, "planet count"),
+    ({"planet_count": 6}, "neighbouring planet centers"),
+    ({"planet_count": 1}, "planet count"),
+    ({"stages": 0}, "stages"),
+    ({"module": 0}, "module"),
+    ({"bolt_hole_diameter": 6}, "bolt holes"),
+    ({"ring_wall": 3}, "bolt holes"),
+    ({"carrier_wall": 12}, "no room for spokes"),
+    ({"gear_thickness": 7.5}, "gear thickness"),
+    ({"key_depth": 3}, "key depth"),
+    ({"key_width": 5}, "key width"),
+    ({"seat_chamfer": 2}, "seat chamfer"),
+    ({"edge_chamfer": 0.49}, "edge chamfer"),
+    ({"edge_chamfer": 1.01}, "edge chamfer"),
+    ({"edge_chamfer": float("nan")}, "EdgeChamfer must be finite"),
+    ({"bearing_clearance": -0.1}, "bearing clearance"),
+    ({"placement": Frame((0, 0, 0), (0, 0, 0), (0, 0, 0))}, "placement"),
+    ({"gear_thickness": float("nan")}, "finite"),
+    ({"samples": 2}, "samples"),
+    ({"backlash": -0.1}, "backlash"),
+    ({"backlash": 0.6}, "backlash"),
+    ({"pressure_angle": math.pi / 2}, "pressure angle"),
+    ({"sun_teeth": 2}, "sun teeth"),
+    ({"stage_gap": 0.5}, "stage gap"),
+    ({"bearing_clearance": 0.2}, "bearing clearance"),
+    ({"key_width": 0.5}, "key width"),
+    ({"bolt_hole_diameter": 2.1}, "M2 bolt shank"),
+    ({"bolt_hole_diameter": 2.3}, "clearance hole"),
+    ({"bolt_hole_diameter": 1.5}, "shank"),
+    ({"cover_thickness": 2.5}, "bolt head"),
+    ({"ring_wall": 6}, "bolt head and nut pockets"),
+    ({"module": 0.5}, "shaft bore"),
+]
+
+
+class ValidateTest(unittest.TestCase):
+    def test_default_passes(self):
+        validate(default_params())
+
+    def test_valid_placement_passes(self):
+        validate(dataclasses.replace(default_params(), placement=Frame((10, -5, 7), (0, 1, 0), (0, 0, 1))))
+
+    def test_invalid_rows(self):
+        for changes, want in CASES:
+            with self.subTest(changes=changes):
+                p = dataclasses.replace(default_params(), **changes)
+                with self.assertRaises(ValidationError) as cm:
+                    validate(p)
+                self.assertIn(want, str(cm.exception))
+
+    def test_exact_messages(self):
+        with self.assertRaises(ValidationError) as cm:
+            validate(dataclasses.replace(default_params(), ring_teeth=72))
+        self.assertEqual(str(cm.exception), "ring teeth 72 must equal sun teeth + 2 * planet teeth = 71")
+        with self.assertRaises(ValidationError) as cm:
+            validate(dataclasses.replace(default_params(), gear_thickness=7.5))
+        self.assertEqual(
+            str(cm.exception), "gear thickness 7.5 leaves less than 1 for the lip behind a 7 wide bearing"
+        )
+        with self.assertRaises(ValidationError) as cm:
+            validate(dataclasses.replace(default_params(), gear_thickness=float("nan")))
+        self.assertEqual(str(cm.exception), "GearThickness must be finite, got NaN")
+
+    def test_new_exact_messages(self):
+        cases = [
+            ({"planet_count": 6}, "neighbouring planet centers are 20.999999999999996 apart; tips need 31.46 for at "
+             "least 0.5 clearance"),
+            ({"module": 0.5}, "the 8 mm shaft bore leaves less than one module of wall under the sun root"),
+            ({"key_width": 0.5}, "key width 0.5 must exceed 0.5 for the shaft clearance"),
+            ({"bolt_hole_diameter": 2.1}, "bolt hole diameter 2.1 is under the 2.4 clearance hole for the M2 bolt "
+             "shank 2"),
+            ({"bolt_hole_diameter": 1.5}, "bolt hole diameter 1.5 is under the 2.4 clearance hole for the M2 bolt "
+             "shank 2"),
+            ({"cover_thickness": 2.5}, "cover thickness 2.5 leaves less than 1 under a 2 tall bolt head"),
+            ({"ring_wall": 6}, "bolt head and nut pockets of radius 2.1 do not fit the ring wall 6 with 1 of "
+             "material either side"),
+            ({"stage_gap": 0.5}, "stage gap 0.5 is out of range"),
+            ({"edge_chamfer": 0.4}, "edge chamfer 0.4 is out of range"),
+            ({"edge_chamfer": float("inf")}, "EdgeChamfer must be finite, got +Inf"),
+            ({"bearing_clearance": 0.2}, "bearing clearance 0.2 is out of range"),
+            ({"bolt_hole_diameter": 3.4, "ring_wall": 13, "carrier_wall": 9.25},
+             "carrier radius 34 does not leave more than 0.5 clearance from ring tip radius 34.5"),
+        ]
+        for changes, want in cases:
+            with self.subTest(changes=changes):
+                with self.assertRaises(ValidationError) as cm:
+                    validate(dataclasses.replace(default_params(), **changes))
+                self.assertEqual(str(cm.exception), want)
+
+    def test_boundaries(self):
+        base = default_params()
+        validate(dataclasses.replace(base, edge_chamfer=0.5))
+        validate(dataclasses.replace(base, edge_chamfer=1.0))
+        validate(dataclasses.replace(base, bolt_hole_diameter=4))
+        validate(dataclasses.replace(base, bolt_hole_diameter=2.4))
+        with self.assertRaisesRegex(ValidationError, "clearance hole"):
+            validate(dataclasses.replace(base, bolt_hole_diameter=2.39))
+        with self.assertRaisesRegex(ValidationError, "bolt holes"):
+            validate(dataclasses.replace(base, bolt_hole_diameter=4.01))
+        cb = (1.0 * 29 / 2 - (1.0 + 0.5 + 0.02)) - 1.0 - 22.0 / 2
+        validate(dataclasses.replace(base, bearing_clearance=cb))
+        with self.assertRaisesRegex(ValidationError, "bearing pocket"):
+            validate(dataclasses.replace(base, bearing_clearance=cb + 0.01))
+        wide = dataclasses.replace(base, bolt_hole_diameter=3.4, ring_wall=13)
+        validate(dataclasses.replace(wide, carrier_wall=9.24))
+        with self.assertRaisesRegex(ValidationError, "carrier radius"):
+            validate(dataclasses.replace(wide, carrier_wall=9.25))
+
+    def test_planet_count_divisibility_message(self):
+        with self.assertRaises(ValidationError) as cm:
+            validate(dataclasses.replace(default_params(), planet_count=5))
+        self.assertEqual(
+            str(cm.exception),
+            "sun teeth + ring teeth = 84 must divide by planet count 5 so the planets mesh at equal angles",
+        )
+
+    def test_spur_limit_is_prefixed(self):
+        # At 40 degrees the ring tool's adjacent flanks overlap at the root, which only the spur limits catch.
+        p = dataclasses.replace(default_params(), pressure_angle=math.radians(40))
+        with self.assertRaises(ValidationError) as cm:
+            validate(p)
+        self.assertEqual(
+            str(cm.exception),
+            (
+                "ring tooth spaces: spurgear: tooth: spurgear: tooth section: "
+                "spurgear: adjacent teeth overlap at the root circle (radius 34.5)"
+            ),
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

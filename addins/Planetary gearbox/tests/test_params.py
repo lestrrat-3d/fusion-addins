@@ -1,0 +1,161 @@
+import dataclasses
+import math
+import unittest
+
+import _support  # noqa: F401
+from gen.bearing import Bearing, bearing_608zz
+from gen.dims import derive, rim_inner_radius
+from gen.inputs import INPUT_SPECS, params_from_values
+from gen.params import (
+    MIN_EDGE_CHAMFER,
+    Frame,
+    default_params,
+    frame_axes,
+    frame_is_valid,
+    gear_root_clearance,
+    gear_root_depth,
+    placement_frame,
+    ratio,
+)
+
+REFERENCE_DIMS = {
+    "orbit": 21,
+    "planet_root": 12.98,
+    "planet_tip": 15.48,
+    "sun_root": 5.0,
+    "ring_tip": 34.5,
+    "ring_root": 37.0,
+    "ring_outer": 44.0,
+    "pin": 7.5,
+    "shaft": 7.5,
+    "shaft_bore": 8.0,
+    "pocket": 22.5,
+    "lip": 18,
+    "collar": 9.9,
+    "cover_boss": 28.5,
+    "cover_hub": 34.5,
+    "boss": 13.5,
+    "arm": 9.5,
+    "bolt_circle": 40.5,
+    "rim_inner": 37.0,
+    "stage_pitch": 13,
+    "ring_length": 14,
+}
+
+
+def near(test, got, want, tol=1e-12):
+    test.assertLessEqual(abs(got - want), tol, f"got {got!r} want {want!r}")
+
+
+def near_vec(test, got, want, tol=1e-12):
+    for g, w in zip(got, want):
+        near(test, g, w, tol)
+
+
+class ParamsTest(unittest.TestCase):
+    def test_derive_default(self):
+        d = derive(default_params())
+        for name, want in REFERENCE_DIMS.items():
+            with self.subTest(name=name):
+                near(self, getattr(d, name), want)
+        self.assertEqual(d.bearing, Bearing(8, 22, 7))
+
+    def test_rim_inner_radius(self):
+        self.assertAlmostEqual(rim_inner_radius(40.5), 37.0, places=12)
+
+    def test_gear_root_clearance(self):
+        for m, want in ((0.5, 0.5), (1, 0.5), (2, 0.5), (4, 1.0)):
+            with self.subTest(module=m):
+                near(self, gear_root_clearance(m), want)
+        near(self, gear_root_depth(1.0), 1.5)
+
+    def test_new_defaults(self):
+        self.assertEqual(default_params().bolt_hole_diameter, 2.4)
+        self.assertEqual(default_params().bearing_clearance, 0.25)
+        self.assertEqual(default_params().edge_chamfer, 0.5)
+        self.assertEqual(MIN_EDGE_CHAMFER, 0.5)
+
+    def test_ring_length_two_stages(self):
+        d = derive(dataclasses.replace(default_params(), stages=2))
+        near(self, d.ring_length, 27)
+
+    def test_ratio(self):
+        near(self, ratio(default_params()), 1 + 71 / 13)
+        near(self, ratio(dataclasses.replace(default_params(), stages=2)), (1 + 71 / 13) ** 2)
+
+    def test_bearing(self):
+        self.assertEqual(bearing_608zz(), Bearing(8, 22, 7))
+
+    def test_input_specs(self):
+        ids = [s.id for s in INPUT_SPECS]
+        self.assertEqual(len(ids), len(set(ids)))
+        # Placement is chosen by selection in the dialog, so the table holds only the 23 gallery inputs.
+        self.assertEqual(len(ids), 23)
+        self.assertEqual(ids.index("edge_chamfer"), ids.index("seat_chamfer") + 1)
+        fields = {f.name for f in dataclasses.fields(default_params())}
+        self.assertTrue(set(ids) <= fields)
+
+    def test_params_from_values_defaults(self):
+        values = {s.id: s.default for s in INPUT_SPECS}
+        values["pressure_angle"] = 20 * math.pi / 180
+        self.assertEqual(params_from_values(values), default_params())
+
+    def test_frame_validity(self):
+        self.assertTrue(frame_is_valid(Frame()))
+        self.assertTrue(frame_is_valid(Frame((10, -5, 7), (0, 1, 0), (0, 0, 1))))
+        self.assertFalse(frame_is_valid(Frame((0, 0, 0), (0, 0, 0), (0, 0, 0))))
+        self.assertFalse(frame_is_valid(Frame((0, 0, 0), (1, 0, 0), (2, 0, 0))))
+        self.assertFalse(frame_is_valid(Frame((float("nan"), 0, 0))))
+        self.assertTrue(frame_is_valid(Frame((0, 0, 0), (1, 0, 0), (1, 1, 0))))
+
+    def test_frame_axes(self):
+        _, x, y, z = frame_axes(Frame((10, -5, 7), (0, 1, 0), (0, 0, 1)))
+        near_vec(self, z, (1, 0, 0))
+        near_vec(self, x, (0, 1, 0))
+        near_vec(self, y, (0, 0, 1))
+        _, _, y2, _ = frame_axes(Frame((0, 0, 0), (1, 0, 0), (1, 1, 0)))
+        near_vec(self, y2, (0, 1, 0))
+        with self.assertRaises(ValueError):
+            frame_axes(Frame((0, 0, 0), (1, 0, 0), (2, 0, 0)))
+
+class PlacementFrameTest(unittest.TestCase):
+    def test_none_when_both_empty(self):
+        self.assertIsNone(placement_frame(None, None))
+
+    def test_default_axis_is_identity(self):
+        f = placement_frame((1.0, 2.0, 3.0), None)
+        origin, x, y, z = frame_axes(f)
+        self.assertEqual(origin, (1.0, 2.0, 3.0))
+        self.assertEqual((x, y, z), ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)))
+
+    def test_origin_defaults_to_world_origin(self):
+        origin, _, _, z = frame_axes(placement_frame(None, (0.0, 0.0, -2.0)))
+        self.assertEqual(origin, (0.0, 0.0, 0.0))
+        self.assertAlmostEqual(z[2], -1.0)
+
+    def test_axis_becomes_z_and_axes_are_orthonormal(self):
+        for axis in ((1, 0, 0), (0, 1, 0), (0, -1, 0), (1, 1, 1), (0.2, 5, -0.3), (0, 0, -1), (3, 0, 4)):
+            with self.subTest(axis=axis):
+                f = placement_frame((0.0, 0.0, 0.0), tuple(float(a) for a in axis))
+                self.assertTrue(frame_is_valid(f))
+                _, x, y, z = frame_axes(f)
+                n = math.sqrt(sum(a * a for a in axis))
+                for got, want in zip(z, axis):
+                    self.assertAlmostEqual(got, want / n)
+                for u, v in ((x, y), (x, z), (y, z)):
+                    self.assertAlmostEqual(sum(a * b for a, b in zip(u, v)), 0.0)
+
+    def test_degenerate_axis_rejected(self):
+        for axis in ((0.0, 0.0, 0.0), (float("nan"), 0.0, 1.0), (0.0, float("inf"), 0.0)):
+            with self.subTest(axis=axis):
+                with self.assertRaisesRegex(ValueError, "placement axis"):
+                    placement_frame((0.0, 0.0, 0.0), axis)
+
+    def test_non_finite_origin_rejected(self):
+        with self.assertRaisesRegex(ValueError, "placement origin"):
+            placement_frame((float("nan"), 0.0, 0.0), None)
+
+
+
+if __name__ == "__main__":
+    unittest.main()
