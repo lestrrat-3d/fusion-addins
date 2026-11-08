@@ -73,27 +73,31 @@ class AddinInvariantsTest(unittest.TestCase):
         self.assertEqual(offenders, [])
 
     def test_readme_lists_each_addin(self):
-        """The README add-in list links every add-in directory and pins the image to its gallery revision."""
+        """The README add-in table links every add-in directory and pins each image to its gallery revision."""
         dirs = addin_dirs()
         if not dirs:
             self.skipTest("no add-ins yet")
         text = (ROOT / "README.md").read_text(encoding="utf-8")
         start, end = text.index("<!-- addins:start -->"), text.index("<!-- addins:end -->")
-        listing = text[start:end]
-        links = re.findall(r"^### \[[^\]]+\]\(addins/([^)]+)\)$", listing, re.MULTILINE)
-        names = [d.name for d in dirs]
-        self.assertEqual([link.replace("%20", " ") for link in links], names)
-        for d in dirs:
+        rows = [line for line in text[start:end].splitlines() if line.startswith("| <a href=")]
+        row_pattern = re.compile(
+            r'^\| <a href="addins/([^"]+)"><img src="https://raw\.githubusercontent\.com/lestrrat-3d/decad-gallery/'
+            r'([0-9a-f]{40})/models/[a-z0-9]+/images/hero\.png" alt="[^"]*" width="\d+"></a> '
+            r"\| \[[^\]]+\]\(addins/([^)]+)\) \| [^|]+ \|$"
+        )
+        entries = []
+        for row in rows:
+            match = row_pattern.match(row)
+            self.assertIsNotNone(match, f"malformed row: {row[:80]}")
+            self.assertEqual(match.group(1), match.group(3), "image link and name link differ")
+            entries.append((match.group(1).replace("%20", " "), match.group(2)))
+        self.assertEqual([name for name, _ in entries], [d.name for d in dirs])
+        for d, (_, revision) in zip(dirs, entries):
             with self.subTest(addin=d.name):
                 config = (d / "config.py").read_text(encoding="utf-8")
-                revision = re.search(r'^GALLERY_REVISION = "([0-9a-f]{40})"$', config, re.MULTILINE)
-                self.assertIsNotNone(revision, "config.py has no GALLERY_REVISION")
-                images = re.findall(
-                    r"!\[[^\]]*\]\(https://raw\.githubusercontent\.com/lestrrat-3d/decad-gallery/([0-9a-f]{40})/"
-                    r"models/[a-z0-9]+/images/hero\.png\)",
-                    listing,
-                )
-                self.assertIn(revision.group(1), images)
+                want = re.search(r'^GALLERY_REVISION = "([0-9a-f]{40})"$', config, re.MULTILINE)
+                self.assertIsNotNone(want, "config.py has no GALLERY_REVISION")
+                self.assertEqual(revision, want.group(1))
 
 
 if __name__ == "__main__":
