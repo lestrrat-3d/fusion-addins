@@ -18,6 +18,8 @@ STATUS_ID = "status"
 BUILD_ID = "build"
 ORIGIN_ID = "placement_origin"
 AXIS_ID = "placement_axis"
+# The placement selections in dialog order. Once one has a selection, the next one takes focus.
+PLACEMENT_IDS = (ORIGIN_ID, AXIS_ID)
 
 _MM_PER_CM = 10.0
 
@@ -40,6 +42,7 @@ def add_inputs(inputs: adsk.core.CommandInputs, build_label: str) -> None:
     ):
         origin.addSelectionFilter(flt)
     origin.setSelectionLimits(0, 1)
+    origin.hasFocus = True
     axis = inputs.addSelectionInput(AXIS_ID, "Axis direction", "Select a construction axis, linear edge or planar face")
     for flt in (
         adsk.core.SelectionCommandInput.ConstructionLines,
@@ -60,6 +63,22 @@ def add_inputs(inputs: adsk.core.CommandInputs, build_label: str) -> None:
     inputs.addTextBoxCommandInput(RATIO_ID, "Reduction", _ratio_text(default_params()), 1, True)
     inputs.addTextBoxCommandInput(STATUS_ID, "", "", 2, True)
     inputs.addTextBoxCommandInput(BUILD_ID, "", build_label, 1, True)
+
+
+def advance_placement_focus(inputs: adsk.core.CommandInputs, changed: adsk.core.CommandInput | None) -> None:
+    """Directive (docs/planetarygearbox/directives.md): a placement selection that gets a selection hands the focus to
+    the next placement selection. The last one, and any other input, leave the focus alone."""
+    if changed is None or changed.id not in PLACEMENT_IDS:
+        return
+    sel = adsk.core.SelectionCommandInput.cast(changed)
+    if sel is None or sel.selectionCount == 0:
+        return
+    index = PLACEMENT_IDS.index(changed.id) + 1
+    if index >= len(PLACEMENT_IDS):
+        return
+    following = adsk.core.SelectionCommandInput.cast(inputs.itemById(PLACEMENT_IDS[index]))
+    if following is not None:
+        following.hasFocus = True
 
 
 def _selected(inputs: adsk.core.CommandInputs, input_id: str):
