@@ -7,7 +7,7 @@ import adsk.core
 from . import commands, config
 from .lib import addinkit as futil
 from .lib.addinkit import fingerprint
-from .lib.planetarygearboxgen.report import SinkLog
+from .lib.gen.report import SinkLog
 
 
 def run(context):

@@ -2,8 +2,8 @@ import math
 import unittest
 
 import _support  # noqa: F401
-from planetarygearboxgen.curves import Arc, loop_is_closed
-from planetarygearboxgen.involute import (
+from gen.curves import Arc, loop_is_closed
+from gen.involute import (
     closing_radius,
     external_gear_dims,
     flank_beta,
@@ -16,7 +16,7 @@ from planetarygearboxgen.involute import (
     tooth_section,
     validate_spur,
 )
-from planetarygearboxgen.polygon import polygon_area
+from gen.polygon import polygon_area
 
 A = 20 * math.pi / 180
 J = 0.05

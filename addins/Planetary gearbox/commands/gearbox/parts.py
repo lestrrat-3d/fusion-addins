@@ -6,15 +6,15 @@ import typing
 
 import adsk.fusion
 
-from ...lib.planetarygearboxgen import edgefinish, gears, layout
-from ...lib.planetarygearboxgen.curves import Circle
-from ...lib.planetarygearboxgen.involute import (
+from ...lib.gen import edgefinish, gears, layout
+from ...lib.gen.curves import Circle
+from ...lib.gen.involute import (
     GearDims,
     is_embedded,
     root_contacts,
     tooth_section,
 )
-from ...lib.planetarygearboxgen.fasteners import (
+from ...lib.gen.fasteners import (
     FASTENER_LENGTH,
     FASTENER_STOCK,
     NUT_ACROSS_FLATS,
@@ -33,16 +33,16 @@ from ...lib.planetarygearboxgen.fasteners import (
     nut_chamfer_section,
     nut_pocket_flats,
 )
-from ...lib.planetarygearboxgen.params import (
+from ...lib.gen.params import (
     PIN_COLLAR_CLEARANCE,
     PIN_COLLAR_THICKNESS,
     PLANET_BEARING_LIFT,
     RING_MARGIN,
     TOOL_MARGIN,
 )
-from ...lib.planetarygearboxgen.phase import ring_tooth_angle
-from ...lib.planetarygearboxgen.report import fmt_num
-from ...lib.planetarygearboxgen.sections import (
+from ...lib.gen.phase import ring_tooth_angle
+from ...lib.gen.report import fmt_num
+from ...lib.gen.sections import (
     bolt_hole_centers,
     carrier_plate_outline,
     cover_window_loops,

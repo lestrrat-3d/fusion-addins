@@ -3,11 +3,11 @@ import math
 import unittest
 
 import _support  # noqa: F401
-from planetarygearboxgen.curves import Circle, loop_is_closed, loop_polygon
-from planetarygearboxgen.dims import derive
-from planetarygearboxgen.params import BOLT_RIM_MARGIN, default_params
-from planetarygearboxgen.polygon import point_in_polygon, polygon_area
-from planetarygearboxgen.sections import (
+from gen.curves import Circle, loop_is_closed, loop_polygon
+from gen.dims import derive
+from gen.params import BOLT_RIM_MARGIN, default_params
+from gen.polygon import point_in_polygon, polygon_area
+from gen.sections import (
     bolt_hole_centers,
     carrier_plate_outline,
     cover_window_loops,

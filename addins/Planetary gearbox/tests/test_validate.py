@@ -3,8 +3,8 @@ import math
 import unittest
 
 import _support  # noqa: F401
-from planetarygearboxgen.params import Frame, default_params
-from planetarygearboxgen.validate import ValidationError, validate
+from gen.params import Frame, default_params
+from gen.validate import ValidationError, validate
 
 CASES = [
     ({"ring_teeth": 72}, "ring teeth"),

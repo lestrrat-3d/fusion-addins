@@ -6,8 +6,8 @@ import typing
 
 import adsk.fusion
 
-from ...lib.planetarygearboxgen import containers, expected, layout, probes
-from ...lib.planetarygearboxgen.report import within
+from ...lib.gen import containers, expected, layout, probes
+from ...lib.gen.report import within
 from . import fusion
 
 if typing.TYPE_CHECKING:

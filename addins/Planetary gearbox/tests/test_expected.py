@@ -2,9 +2,9 @@ import dataclasses
 import unittest
 
 import _support  # noqa: F401
-from planetarygearboxgen.dims import derive
-from planetarygearboxgen.expected import assembled_z, part_local_bounds, part_volume
-from planetarygearboxgen.params import default_params
+from gen.dims import derive
+from gen.expected import assembled_z, part_local_bounds, part_volume
+from gen.params import default_params
 
 P1 = default_params()
 D1 = derive(P1)

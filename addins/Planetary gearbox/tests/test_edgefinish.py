@@ -3,10 +3,10 @@ import math
 import unittest
 
 import _support  # noqa: F401
-from planetarygearboxgen import edgefinish, layout
-from planetarygearboxgen.curves import loop_polygon
-from planetarygearboxgen.dims import derive
-from planetarygearboxgen.edgefinish import (
+from gen import edgefinish, layout
+from gen.curves import loop_polygon
+from gen.dims import derive
+from gen.edgefinish import (
     LIP,
     OUTER,
     WINDOWS_AND_RIM,
@@ -17,8 +17,8 @@ from planetarygearboxgen.edgefinish import (
     keep_loop,
     window_chamfer_volume,
 )
-from planetarygearboxgen.params import default_params
-from planetarygearboxgen.sections import carrier_plate_outline, cover_window_loops
+from gen.params import default_params
+from gen.sections import carrier_plate_outline, cover_window_loops
 
 P1 = default_params()
 D1 = derive(P1)

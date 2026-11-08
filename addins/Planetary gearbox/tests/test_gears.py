@@ -3,9 +3,9 @@ import math
 import unittest
 
 import _support  # noqa: F401
-from planetarygearboxgen import gears
-from planetarygearboxgen.involute import external_gear_dims, ring_tool_dims
-from planetarygearboxgen.params import default_params, gear_root_clearance
+from gen import gears
+from gen.involute import external_gear_dims, ring_tool_dims
+from gen.params import default_params, gear_root_clearance
 
 A = 20 * math.pi / 180
 J = 0.15

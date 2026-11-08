@@ -9,7 +9,7 @@ import adsk.fusion
 
 from ... import config
 from ...lib import addinkit as futil
-from ...lib.planetarygearboxgen.report import NullLog
+from ...lib.gen.report import NullLog
 from . import dialog
 
 app = adsk.core.Application.get()

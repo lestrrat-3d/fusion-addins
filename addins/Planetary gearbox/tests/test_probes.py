@@ -3,15 +3,15 @@ import math
 import unittest
 
 import _support  # noqa: F401
-from planetarygearboxgen import gears, layout
-from planetarygearboxgen.curves import Circle, loop_polygon, rotate
-from planetarygearboxgen.dims import derive
-from planetarygearboxgen.involute import gear_outline_polygon
-from planetarygearboxgen.params import default_params
-from planetarygearboxgen.phase import planet_orbit_angle, planet_tooth_angle, ring_tooth_angle
-from planetarygearboxgen.polygon import count_inside, point_in_polygon
-from planetarygearboxgen.probes import fastener_points, mesh_points, part_probes
-from planetarygearboxgen.sections import (
+from gen import gears, layout
+from gen.curves import Circle, loop_polygon, rotate
+from gen.dims import derive
+from gen.involute import gear_outline_polygon
+from gen.params import default_params
+from gen.phase import planet_orbit_angle, planet_tooth_angle, ring_tooth_angle
+from gen.polygon import count_inside, point_in_polygon
+from gen.probes import fastener_points, mesh_points, part_probes
+from gen.sections import (
     bolt_hole_centers,
     carrier_plate_outline,
     cover_window_loops,

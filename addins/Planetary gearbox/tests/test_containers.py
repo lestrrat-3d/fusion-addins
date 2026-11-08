@@ -2,8 +2,8 @@ import dataclasses
 import unittest
 
 import _support  # noqa: F401
-from planetarygearboxgen import layout
-from planetarygearboxgen.containers import (
+from gen import layout
+from gen.containers import (
     CONTAINER_NAMES,
     GEARBOX_NAME,
     PART_CONTAINERS,
@@ -15,8 +15,8 @@ from planetarygearboxgen.containers import (
     container_of,
     expected_bodies,
 )
-from planetarygearboxgen.dims import derive
-from planetarygearboxgen.params import default_params
+from gen.dims import derive
+from gen.params import default_params
 
 P1 = default_params()
 D1 = derive(P1)

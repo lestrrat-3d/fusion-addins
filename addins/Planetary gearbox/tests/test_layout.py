@@ -3,9 +3,9 @@ import math
 import unittest
 
 import _support  # noqa: F401
-from planetarygearboxgen import layout
-from planetarygearboxgen.dims import derive
-from planetarygearboxgen.params import default_params
+from gen import layout
+from gen.dims import derive
+from gen.params import default_params
 
 P1 = default_params()
 D1 = derive(P1)

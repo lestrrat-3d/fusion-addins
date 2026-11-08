@@ -3,10 +3,10 @@ import math
 import unittest
 
 import _support  # noqa: F401
-from planetarygearboxgen.bearing import Bearing, bearing_608zz
-from planetarygearboxgen.dims import derive, rim_inner_radius
-from planetarygearboxgen.inputs import INPUT_SPECS, params_from_values
-from planetarygearboxgen.params import (
+from gen.bearing import Bearing, bearing_608zz
+from gen.dims import derive, rim_inner_radius
+from gen.inputs import INPUT_SPECS, params_from_values
+from gen.params import (
     MIN_EDGE_CHAMFER,
     Frame,
     default_params,

@@ -12,9 +12,9 @@ import typing
 import adsk.core
 import adsk.fusion
 
-from ...lib.planetarygearboxgen import containers, layout
-from ...lib.planetarygearboxgen.dims import Dims, derive
-from ...lib.planetarygearboxgen.params import Params
+from ...lib.gen import containers, layout
+from ...lib.gen.dims import Dims, derive
+from ...lib.gen.params import Params
 from . import checks, fusion, parts
 
 STAGE_PARTS = layout.PARTS  # all parts are built

@@ -10,9 +10,9 @@ from unittest import mock
 
 import _support  # noqa: F401
 
-from planetarygearboxgen import containers, layout
-from planetarygearboxgen.dims import derive
-from planetarygearboxgen.params import default_params, placement_frame
+from gen import containers, layout
+from gen.dims import derive
+from gen.params import default_params, placement_frame
 
 _ADDINS = _support.ADDINS
 

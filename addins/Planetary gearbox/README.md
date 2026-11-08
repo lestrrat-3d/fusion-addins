@@ -23,13 +23,13 @@ See [../../README.md](../../README.md).
 ## Tests
 
 From the `fusion-addins` root, run `python3 -m unittest discover -s "addins/Planetary gearbox/tests"`. The tests cover the
-pure geometry package `lib/planetarygearboxgen/` and, with Fusion mocked, the glue imports and the build order
+pure geometry package `lib/gen/` and, with Fusion mocked, the glue imports and the build order
 (body names, copies, body count, container components and edge chamfers for one and two stages). They need no
 Fusion.
 
 ## Build checks
 
-After each build the add-in compares every built body with the expected values from `lib/planetarygearboxgen/`:
+After each build the add-in compares every built body with the expected values from `lib/gen/`:
 volume, z range against the assembled position, and point containment probes. For a placed build it also checks that
 gear outline points lie outside the neighbouring gear (meshing), that bolt and nut surface points lie outside the cover
 and ring they pass through (fit), and that the component tree has the gallery's nine containers with the right bodies.

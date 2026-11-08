@@ -9,9 +9,9 @@ import dataclasses
 import adsk.core
 import adsk.fusion
 
-from ...lib.planetarygearboxgen.inputs import INPUT_SPECS, params_from_values
-from ...lib.planetarygearboxgen.params import Params, Vec3, default_params, placement_frame, ratio
-from ...lib.planetarygearboxgen.validate import ValidationError, validate
+from ...lib.gen.inputs import INPUT_SPECS, params_from_values
+from ...lib.gen.params import Params, Vec3, default_params, placement_frame, ratio
+from ...lib.gen.validate import ValidationError, validate
 
 RATIO_ID = "ratio"
 STATUS_ID = "status"

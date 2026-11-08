@@ -2,8 +2,8 @@ import math
 import unittest
 
 import _support  # noqa: F401
-from planetarygearboxgen.curves import Arc, Line, loop_is_closed, loop_polygon, rotate
-from planetarygearboxgen.polygon import count_inside, distance_to_polygon, point_in_polygon, polygon_area
+from gen.curves import Arc, Line, loop_is_closed, loop_polygon, rotate
+from gen.polygon import count_inside, distance_to_polygon, point_in_polygon, polygon_area
 
 SQUARE = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
 

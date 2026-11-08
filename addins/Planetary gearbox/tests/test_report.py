@@ -1,8 +1,8 @@
 import unittest
 
 import _support  # noqa: F401
-from planetarygearboxgen import report
-from planetarygearboxgen.report import Expect
+from gen import report
+from gen.report import Expect
 
 
 class ReportTest(unittest.TestCase):

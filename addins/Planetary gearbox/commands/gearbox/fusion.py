@@ -12,10 +12,10 @@ import typing
 import adsk.core
 import adsk.fusion
 
-from ...lib.planetarygearboxgen.containers import Found
-from ...lib.planetarygearboxgen.curves import Arc, Line, Loop, Point, Spline
-from ...lib.planetarygearboxgen.layout import Pose
-from ...lib.planetarygearboxgen.params import Frame, frame_axes
+from ...lib.gen.containers import Found
+from ...lib.gen.curves import Arc, Line, Loop, Point, Spline
+from ...lib.gen.layout import Pose
+from ...lib.gen.params import Frame, frame_axes
 
 if typing.TYPE_CHECKING:
     from .build import BuildContext

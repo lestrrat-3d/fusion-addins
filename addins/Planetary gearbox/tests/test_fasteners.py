@@ -2,8 +2,8 @@ import math
 import unittest
 
 import _support  # noqa: F401
-from planetarygearboxgen.curves import Line, loop_is_closed, loop_polygon
-from planetarygearboxgen.fasteners import (
+from gen.curves import Line, loop_is_closed, loop_polygon
+from gen.fasteners import (
     MIN_BOLT_HOLE_DIAMETER,
     bolt_section,
     head_pocket_diameter,
@@ -14,7 +14,7 @@ from planetarygearboxgen.fasteners import (
     nut_chamfer_section,
     nut_pocket_flats,
 )
-from planetarygearboxgen.polygon import polygon_area
+from gen.polygon import polygon_area
 
 BOLT_VERTICES = [
     (0.0, -6.0),

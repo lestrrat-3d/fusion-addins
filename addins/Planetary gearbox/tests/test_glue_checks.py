@@ -38,7 +38,7 @@ class PointChecksTest(unittest.TestCase):
         with mock.patch.dict(sys.modules, fakes), mock.patch.object(sys, "path", [_ADDINS] + sys.path):
             checks = importlib.import_module("Planetary gearbox.commands.gearbox.checks")
             fusion = importlib.import_module("Planetary gearbox.commands.gearbox.fusion")
-            probes_mod = importlib.import_module("Planetary gearbox.lib.planetarygearboxgen.probes")
+            probes_mod = importlib.import_module("Planetary gearbox.lib.gen.probes")
             outside = adsk.fusion.PointContainment.PointOutsidePointContainment
             inside = adsk.fusion.PointContainment.PointInsidePointContainment
             # point() converts mm to cm and calls Point3D.create; make that return the (x, y, z) tuple itself.
@@ -71,11 +71,11 @@ class PointChecksTest(unittest.TestCase):
         fakes = {"adsk": adsk, "adsk.core": adsk.core, "adsk.fusion": adsk.fusion}
         with mock.patch.dict(sys.modules, fakes), mock.patch.object(sys, "path", [_ADDINS] + sys.path):
             checks = importlib.import_module("Planetary gearbox.commands.gearbox.checks")
-            layout = importlib.import_module("Planetary gearbox.lib.planetarygearboxgen.layout")
-            expected = importlib.import_module("Planetary gearbox.lib.planetarygearboxgen.expected")
-            params = importlib.import_module("Planetary gearbox.lib.planetarygearboxgen.params")
-            dims = importlib.import_module("Planetary gearbox.lib.planetarygearboxgen.dims")
-            cmod = importlib.import_module("Planetary gearbox.lib.planetarygearboxgen.containers")
+            layout = importlib.import_module("Planetary gearbox.lib.gen.layout")
+            expected = importlib.import_module("Planetary gearbox.lib.gen.expected")
+            params = importlib.import_module("Planetary gearbox.lib.gen.params")
+            dims = importlib.import_module("Planetary gearbox.lib.gen.dims")
+            cmod = importlib.import_module("Planetary gearbox.lib.gen.containers")
             p = params.default_params()
             p = dataclasses.replace(p, stages=stages)
             d = dims.derive(p)
@@ -118,9 +118,9 @@ class PointChecksTest(unittest.TestCase):
         fakes = {"adsk": adsk, "adsk.core": adsk.core, "adsk.fusion": adsk.fusion}
         with mock.patch.dict(sys.modules, fakes), mock.patch.object(sys, "path", [_ADDINS] + sys.path):
             checks = importlib.import_module("Planetary gearbox.commands.gearbox.checks")
-            params = importlib.import_module("Planetary gearbox.lib.planetarygearboxgen.params")
-            dims = importlib.import_module("Planetary gearbox.lib.planetarygearboxgen.dims")
-            cmod = importlib.import_module("Planetary gearbox.lib.planetarygearboxgen.containers")
+            params = importlib.import_module("Planetary gearbox.lib.gen.params")
+            dims = importlib.import_module("Planetary gearbox.lib.gen.dims")
+            cmod = importlib.import_module("Planetary gearbox.lib.gen.containers")
             p = params.default_params()
             d = dims.derive(p)
             want = {k: list(v) for k, v in cmod.expected_bodies(p, d).items()}
