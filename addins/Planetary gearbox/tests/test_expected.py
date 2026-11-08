@@ -19,7 +19,7 @@ REFERENCE = {
     "output_shaft": (1236.2478, 0.5),
     "carrier": (5425.8376, 0.5),
     "cover": (10460.4648, 0.5),
-    "ring": (28606.8598, 0.5),
+    "ring": (31856.0663, 0.5),
     "sun": (598.9424, 2.0),
     "planet": (2029.7498, 2.0),
     "bolt": (38.9151, 0.001),
@@ -73,7 +73,13 @@ class ExpectedTest(unittest.TestCase):
 
     def test_ring_volume_two_stages(self):
         got = part_volume(P2, D2, "ring")
-        self.assertLessEqual(abs(got.value - 55378.0879), 0.5, f"volume {got.value}")
+        self.assertLessEqual(abs(got.value - 61655.7360), 0.5, f"volume {got.value}")
+
+    def test_ring_volume_without_ears(self):
+        p = dataclasses.replace(P1, ear_count=0)
+        got = part_volume(p, derive(p), "ring")
+        self.assertLessEqual(abs(got.value - 28606.8598), 0.5, f"volume {got.value}")
+        self.assertEqual(part_local_bounds(p, derive(p), "ring")[2], 44.0)
 
     def test_planet_volume_with_fillet_fallback(self):
         p = default_params()
@@ -103,7 +109,7 @@ class ExpectedTest(unittest.TestCase):
     def test_local_bounds(self):
         want = {
             "sun": (0, 8, 7.48),
-            "ring": (1, 15, 44.0),
+            "ring": (1, 15, 47.43524478543748),
             "carrier": (-9, 3, 27.75),
             "input_shaft": (-23, 8, None),
             "bolt": (-6, 2, 1.9),

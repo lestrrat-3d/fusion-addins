@@ -89,11 +89,34 @@ class ParamsTest(unittest.TestCase):
     def test_input_specs(self):
         ids = [s.id for s in INPUT_SPECS]
         self.assertEqual(len(ids), len(set(ids)))
-        # Placement is chosen by selection in the dialog, so the table holds only the 23 gallery inputs.
-        self.assertEqual(len(ids), 23)
+        # Placement is chosen by selection in the dialog, so the table holds the 25 gallery inputs and the ears box.
+        self.assertEqual(len(ids), 26)
         self.assertEqual(ids.index("edge_chamfer"), ids.index("seat_chamfer") + 1)
         fields = {f.name for f in dataclasses.fields(default_params())}
-        self.assertTrue(set(ids) <= fields)
+        self.assertEqual(set(ids) - fields, {"ears"})
+        # The ears box comes right before the ear inputs that it enables, in the gallery's table order.
+        self.assertEqual(ids[ids.index("output_shaft_length") + 1 :][:3], ["ears", "ear_count", "ear_bore_diameter"])
+        for spec in INPUT_SPECS:
+            self.assertEqual(spec.needs, "ears" if spec.id.startswith("ear_") else "", spec.id)
+
+    def test_ears_default_on(self):
+        p = default_params()
+        self.assertEqual((p.ear_count, p.ear_bore_diameter), (3, 4.0))
+        specs = {s.id: s for s in INPUT_SPECS}
+        self.assertEqual((specs["ears"].kind, specs["ears"].default), ("bool", 1))
+
+    def test_params_from_values_ears_off(self):
+        values = {s.id: s.default for s in INPUT_SPECS}
+        values["pressure_angle"] = 20 * math.pi / 180
+        values["ears"] = 0
+        p = params_from_values(values)
+        self.assertEqual(p.ear_count, 0)
+        self.assertEqual(p, dataclasses.replace(default_params(), ear_count=0))
+        values["ears"] = 1
+        values["ear_count"] = 2
+        values["ear_bore_diameter"] = 6
+        p = params_from_values(values)
+        self.assertEqual((p.ear_count, p.ear_bore_diameter), (2, 6.0))
 
     def test_params_from_values_defaults(self):
         values = {s.id: s.default for s in INPUT_SPECS}

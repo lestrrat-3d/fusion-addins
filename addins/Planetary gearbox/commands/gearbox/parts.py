@@ -8,6 +8,7 @@ import adsk.fusion
 
 from ...lib.gen import edgefinish, gears, layout
 from ...lib.gen.curves import Circle
+from ...lib.gen.ears import ear_bore_centers, ring_outline
 from ...lib.gen.involute import (
     GearDims,
     is_embedded,
@@ -229,7 +230,8 @@ def build_bearing(ctx: BuildContext) -> adsk.fusion.BRepBody:
 
 
 def build_ring(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildRing] The tooth-space tool is cut out of a bolted blank; then both end faces' rims are chamfered."""
+    """[buildRing] The tooth-space tool is cut out of a bolted blank with mounting ears; then both end faces' rims
+    (the ears' outline included) are chamfered."""
     p, d = ctx.p, ctx.d
     length = d.ring_length
     gd = gears.ring_tool(p)
@@ -238,10 +240,17 @@ def build_ring(ctx: BuildContext) -> adsk.fusion.BRepBody:
     if turn != 0:
         fusion.move(ctx, tool, layout.Pose(angle=turn), "ring ring_tool_turn")
     sk = fusion.new_sketch(ctx.comp, "ring blank")
-    fusion.draw_circle(sk, (0.0, 0.0), d.ring_outer)
+    # [addRingOutline] A circle, or with mounting ears one closed loop; each ear's bore is a hole of the section.
+    outline = ring_outline(p, d)
+    if isinstance(outline, Circle):
+        fusion.draw_circle(sk, outline.center, outline.radius)
+    else:
+        fusion.draw_loop(sk, outline)
     for c in bolt_hole_centers(d):
         fusion.draw_circle(sk, c, p.bolt_hole_diameter / 2)
-    profile = fusion.profile_with_loops(sk, 5, "ring ring_blank_sketch")
+    for c in ear_bore_centers(p, d):
+        fusion.draw_circle(sk, c, p.ear_bore_diameter / 2)
+    profile = fusion.profile_with_loops(sk, 5 + p.ear_count, "ring ring_blank_sketch")
     blank = fusion.extrude(ctx, profile, RING_MARGIN, length, "ring ring_blank_extrude")
 
     # [cutNutPockets] Eight closed hexagonal nut cavities, one single-tool cut each, before the tooth cut.

@@ -29,7 +29,7 @@ D1_WIDE = derive(P1_WIDE)
 
 # part -> (volume at c = 0.5, volume at c = 1.0)
 VOLUMES = {
-    "ring": (68.8532, 274.3658),
+    "ring": (81.0455, 323.1348),
     "cover": (178.0549, 715.6292),
     "carrier": (37.6209, 149.4363),
 }
@@ -103,6 +103,12 @@ class EdgeFinishTest(unittest.TestCase):
             if name not in VOLUMES:
                 with self.subTest(part=name):
                     self.assertEqual(edge_chamfer_volume(P1, D1, name), 0.0)
+
+    def test_edge_chamfer_volume_ring_without_ears(self):
+        for c, want in ((0.5, 68.8532), (1.0, 274.3658)):
+            with self.subTest(chamfer=c):
+                p = dataclasses.replace(P1, ear_count=0, edge_chamfer=c)
+                self.assertAlmostEqual(edge_chamfer_volume(p, derive(p), "ring"), want, delta=1e-3)
 
     def test_window_chamfer_volume(self):
         self.assertAlmostEqual(window_chamfer_volume(D1, 0.5), 17.0004, delta=1e-3)

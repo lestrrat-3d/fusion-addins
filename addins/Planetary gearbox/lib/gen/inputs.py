@@ -11,9 +11,13 @@ from .params import Params
 class InputSpec:
     id: str
     label: str
-    kind: str  # "length" (mm) | "angle" (deg shown) | "count" | "scalar"
+    kind: str  # "length" (mm) | "angle" (deg shown) | "count" | "scalar" | "bool" (check box, 1 = checked)
     default: float
+    # Id of the "bool" input that enables this one. Its dialog input is disabled while that box is unchecked.
+    needs: str = ""
 
+
+EARS_ID = "ears"
 
 # Deviation: the pressure angle is entered in degrees (Fusion's "deg" value input displays degrees) and is
 # radians once read back, as in the gallery. See README "Deviations from decad-gallery".
@@ -40,14 +44,26 @@ INPUT_SPECS: tuple[InputSpec, ...] = (
     InputSpec("carrier_wall", "Carrier wall", "length", 3),
     InputSpec("ring_wall", "Ring wall", "length", 7),
     InputSpec("output_shaft_length", "Output shaft length", "length", 12),
+    # Directive (docs/planetarygearbox/directives.md): the mounting ears are on by default and a check box turns them
+    # off. The gallery has only EarCount (0 = no ears); an unchecked box gives 0, see params_from_values.
+    InputSpec(EARS_ID, "Mounting ears", "bool", 1),
+    InputSpec("ear_count", "Ear count", "count", 3, needs=EARS_ID),
+    InputSpec("ear_bore_diameter", "Ear bore diameter", "length", 4, needs=EARS_ID),
     InputSpec("backlash", "Backlash", "length", 0.15),
 )
 
 
 def params_from_values(values: dict[str, float]) -> Params:
-    """Build Params from dialog values: lengths in mm, angle in rad, counts as int, scalars as float."""
+    """Build Params from dialog values: lengths in mm, angle in rad, counts as int, scalars as float.
+
+    A "bool" value is not a Params field. It switches off every input that needs it: with the ears box unchecked
+    the ear count is 0, the gallery's way to leave the ring a plain cylinder."""
     kwargs: dict[str, float | int] = {}
     for spec in INPUT_SPECS:
+        if spec.kind == "bool":
+            continue
         v = values[spec.id]
         kwargs[spec.id] = int(v) if spec.kind == "count" else float(v)
+    if not values[EARS_ID]:
+        kwargs["ear_count"] = 0
     return Params(**kwargs)  # pyright: ignore[reportArgumentType]

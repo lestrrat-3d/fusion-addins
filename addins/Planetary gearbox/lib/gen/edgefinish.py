@@ -2,7 +2,8 @@
 
 Own copy of decad-gallery models/planetarygearbox edgefinish.go (largeFaceArea, outerLoop, windowsAndRim,
 radiusAbout) and the finishFaceEdges calls in gears.go buildRing, cover.go buildCover and carrier.go buildCarrier at
-a800069. The removed volumes are the add-in's own; the gallery tests none.
+791aeb2. The gallery chamfers both ring faces in one call because decad cannot chamfer the ring twice; Fusion chamfers
+each face in its own feature. The removed volumes are the add-in's own; the gallery tests none.
 """
 
 from __future__ import annotations
@@ -10,8 +11,9 @@ from __future__ import annotations
 import dataclasses
 import math
 
-from .curves import Arc, Line, Loop
+from .curves import Arc, Circle, Line, Loop
 from .dims import Dims
+from .ears import ring_outline
 from .params import COVER_SPOKES, RING_MARGIN, Params
 from .sections import carrier_plate_outline
 
@@ -104,7 +106,12 @@ def edge_chamfer_volume(p: Params, d: Dims, part: str) -> float:
     """Total volume (mm^3) the edge chamfers remove from a part."""
     c = p.edge_chamfer
     if part == "ring":
-        return 2 * _rim(d.ring_outer, c, True)
+        outline = ring_outline(p, d)
+        if isinstance(outline, Circle):
+            return 2 * _rim(d.ring_outer, c, True)
+        # The outline turns through 2 pi in all, so the smooth-edge rule c^2/2 (P - c/3 * 2 pi) holds. The six
+        # corners where an ear meets the outer circle add under c^3 each, far below the check's tolerance.
+        return 2 * c * c / 2 * (_perimeter(outline) - 2 * math.pi * c / 3)
     if part == "cover":
         return (
             2 * _rim(d.ring_outer, c, True)
