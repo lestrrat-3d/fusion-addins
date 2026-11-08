@@ -52,6 +52,23 @@ def in_spans(z, spans):
     return any(lo <= z <= hi for lo, hi in spans)
 
 
+def in_ring_blank(p, d, x, y):
+    """Is (x, y) inside the ring's outer wall or an ear, and outside every ear bore? Written from the gallery's words:
+    an ear is a tab as long as the ring, 2 half-widths wide, out to a half circle round its bore."""
+    half = p.ear_bore_diameter / 2 + 3
+    centre = d.ring_outer + half
+    in_ear = False
+    for i in range(p.ear_count):
+        a = math.pi / 2 + 2 * math.pi * i / p.ear_count
+        along = x * math.cos(a) + y * math.sin(a)
+        side = -x * math.sin(a) + y * math.cos(a)
+        if math.hypot(along - centre, side) < p.ear_bore_diameter / 2:
+            return False
+        if abs(side) <= half and 0 <= along <= centre or math.hypot(along - centre, side) <= half:
+            in_ear = True
+    return math.hypot(x, y) <= d.ring_outer or in_ear
+
+
 def material(p, d, part, pt):
     """Independent 2D oracle: is pt (part-local) inside the material of part?"""
     x, y, z = pt
@@ -72,7 +89,7 @@ def material(p, d, part, pt):
         lo, hi = layout.part_local_z(p, d, "ring")
         gd = gears.ring_tool(p)
         tool = gear_outline_polygon(gd, 60, angle=ring_tooth_angle(p))
-        if not (lo <= z <= hi) or r > d.ring_outer or point_in_polygon(tool, (x, y)):
+        if not (lo <= z <= hi) or not in_ring_blank(p, d, x, y) or point_in_polygon(tool, (x, y)):
             return False
         if not all(math.hypot(x - bx, y - by) > p.bolt_hole_diameter / 2 for bx, by in bolt_hole_centers(d)):
             return False
@@ -160,6 +177,16 @@ class ProbesTest(unittest.TestCase):
 
     def test_probes_two_stages(self):
         self.check(P2, D2)
+
+    def test_probes_ear_variants(self):
+        for changes in ({"ear_count": 0}, {"ear_count": 1}, {"ear_count": 2, "ear_bore_diameter": 6.0},
+                        {"ear_count": 6}, {"ear_count": 3, "ear_bore_diameter": 8.0}):
+            with self.subTest(changes=changes):
+                p = dataclasses.replace(P1, **changes)
+                self.check(p, derive(p))
+                labels = {pr.label for pr in part_probes(p, derive(p))["ring"]}
+                self.assertEqual(sum(label.endswith(" bore") and label.startswith("ear ") for label in labels),
+                                 p.ear_count)
 
     def test_probes_round_shafts(self):
         p = dataclasses.replace(P2, key_depth=0.0)

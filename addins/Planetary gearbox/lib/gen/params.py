@@ -1,7 +1,7 @@
 """Gearbox inputs, defaults and placement frame.
 
 Own copy of decad-gallery models/planetarygearbox params.go (DefaultParams, Ratio, constants) and the validity
-and axes rules of r3 NewFrame, and params.go clearance constants (a800069).
+and axes rules of r3 NewFrame, and params.go clearance constants (a800069), plus EarCount and EarBoreDiameter (791aeb2).
 """
 
 from __future__ import annotations
@@ -136,6 +136,8 @@ class Params:
     ring_wall: float = 7.0
     backlash: float = 0.15
     output_shaft_length: float = 12.0
+    ear_count: int = 3
+    ear_bore_diameter: float = 4.0
     placement: Frame | None = None
 
 

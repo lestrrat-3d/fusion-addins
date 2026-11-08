@@ -7,6 +7,7 @@ import math
 
 from . import gears, layout
 from .dims import Dims
+from .ears import ear_angle, ear_center_radius, ear_half_width
 from .involute import gear_outline_polygon
 from .fasteners import (
     HEAD_DIAMETER,
@@ -58,6 +59,27 @@ def _collar_probe(spec: layout.ShaftSpec, r: float, d: Dims) -> list[Probe]:
         return []
     lo, hi = spec.collar
     return [Probe("collar", ((r + d.collar / 2) / 2, 0.0, (lo + hi) / 2), INSIDE)]
+
+
+def _ear_probes(p: Params, d: Dims, z: float) -> list[Probe]:
+    """Ring probes for the mounting ears: the bore, the wall between bore and ring, the ear's tip and side, and the
+    bare ring between two ears. None without ears."""
+    if p.ear_count == 0:
+        return []
+    half = ear_half_width(p.ear_bore_diameter)
+    centre = ear_center_radius(d.ring_outer, p.ear_bore_diameter)
+    out: list[Probe] = []
+    for i in range(p.ear_count):
+        a = ear_angle(i, p.ear_count)
+        out.append(Probe(f"ear {i} bore", _polar(centre, a, z), OUTSIDE))
+        out.append(Probe(f"ear {i} wall", _polar((d.ring_outer + centre - p.ear_bore_diameter / 2) / 2, a, z), INSIDE))
+        out.append(Probe(f"ear {i} tip", _polar(centre + half + 1.0, a, z), OUTSIDE))
+        side = (centre * math.cos(a) - (half + 0.5) * math.sin(a), centre * math.sin(a) + (half + 0.5) * math.cos(a))
+        out.append(Probe(f"ear {i} side", (side[0], side[1], z), OUTSIDE))
+        # The bare ring between two ears, only when it lies a clear 1 mm beside the ears' sides.
+        if p.ear_count == 1 or (d.ring_outer + 1.0) * math.sin(math.pi / p.ear_count) >= half + 1.0:
+            out.append(Probe(f"between ears {i}", _polar(d.ring_outer + 1.0, a + math.pi / p.ear_count, z), OUTSIDE))
+    return out
 
 
 def part_probes(p: Params, d: Dims) -> dict[str, list[Probe]]:
@@ -116,6 +138,7 @@ def part_probes(p: Params, d: Dims) -> dict[str, list[Probe]]:
     probes["ring"].append(Probe("front nut roof", _polar(bc + 1.65, a0, RING_MARGIN + NUT_ROOF / 2), INSIDE))
     probes["ring"].append(Probe("rear nut roof", _polar(bc + 1.65, a0, RING_MARGIN + d.ring_length - NUT_ROOF / 2),
                                 INSIDE))
+    probes["ring"] += _ear_probes(p, d, zr)
 
     r_s = (d.cover_hub / 2 + d.rim_inner) / 2
     probes["cover"] = (

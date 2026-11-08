@@ -98,8 +98,10 @@ class FakeLog:
 
 # Default-input loops as (is_outer, edge_count, start_radius): part -> (bottom face, top face).
 FACE_LOOPS = {
-    "ring": ([(True, 1, 44.0), (False, 284, 34.5)] + [(False, 1, 39.3)] * 4,
-             [(True, 1, 44.0), (False, 284, 34.5)] + [(False, 1, 39.3)] * 4),
+    # The default ring has three mounting ears: its outer loop is 3 x (line, arc, line, arc) = 12 edges, and the
+    # ear bores are three more single-edge loops that no rule keeps.
+    "ring": ([(True, 12, 44.0), (False, 284, 34.5)] + [(False, 1, 39.3)] * 4 + [(False, 1, 49.0)] * 3,
+             [(True, 12, 44.0), (False, 284, 34.5)] + [(False, 1, 39.3)] * 4 + [(False, 1, 49.0)] * 3),
     "cover": ([(True, 1, 44.0)] + [(False, 4, 17.9)] * 3 + [(False, 1, 9.0)] + [(False, 1, 39.3)] * 4,
               [(True, 1, 44.0)] + [(False, 4, 17.9)] * 3 + [(False, 1, 38.5)] * 4 + [(False, 1, 14.25)]),
     "carrier": ([(True, 6, 27.75), (False, 12, 4.0)] + [(False, 1, 25.95)] * 3,
@@ -148,6 +150,10 @@ def install(world, fusion, face_loops=FACE_LOOPS):
         rows = face_loops[body.part][0 if z <= 1.0 else 1]
         return [(o, [object()] * n, r) for o, n, r in rows]
 
+    def profile_with_loops(sk, loops, what, only=False):
+        world.calls.append(("profile", f"{what} {loops}"))
+        return mock.MagicMock()
+
     def chamfer(ctx, edges, distance, what, tangent_chain=True):
         world.calls.append(("chamfer", what))
         world.chamfers.append((what, len(edges), distance, tangent_chain))
@@ -160,7 +166,7 @@ def install(world, fusion, face_loops=FACE_LOOPS):
         "revolve": revolve,
         "draw_circle": mock.MagicMock(),
         "draw_rectangle": mock.MagicMock(),
-        "profile_with_loops": mock.MagicMock(),
+        "profile_with_loops": profile_with_loops,
         "extrude": extrude,
         "join": combine,
         "cut": combine,
@@ -314,14 +320,30 @@ class GlueBuildTest(unittest.TestCase):
         thin, _ = self.run_build(stage_gap=0.75)
         self.assertIn(("extrude", "carrier pin_collar_extrude"), thin.calls)
 
+    def test_ring_blank_sketch_has_the_ear_bores(self):
+        for changes, loops in (({}, 8), ({"ear_count": 0}, 5), ({"ear_count": 2, "ear_bore_diameter": 6.0}, 7)):
+            with self.subTest(changes=changes):
+                world, _ = self.run_build(**changes)
+                self.assertEqual(
+                    [c for c in world.calls if c[0] == "profile" and c[1].startswith("ring ring_blank_sketch")],
+                    [("profile", f"ring ring_blank_sketch {loops}")],
+                )
+
+    def test_edge_finish_without_ears(self):
+        plain = {k: (list(v[0]), list(v[1])) for k, v in FACE_LOOPS.items()}
+        plain["ring"] = ([(True, 1, 44.0), (False, 284, 34.5)] + [(False, 1, 39.3)] * 4,) * 2
+        world, _ = self.run_build(ear_count=0, face_loops=plain)
+        finish = [c for c in world.chamfers if c[0].startswith("ring edge_chamfer")]
+        self.assertEqual(finish, [("ring edge_chamfer z=1", 1, 0.5, False), ("ring edge_chamfer z=15", 1, 0.5, False)])
+
     def test_edge_finishing_calls(self):
         world, _ = self.run_build()
         finish = [c for c in world.chamfers if "edge_chamfer" in c[0]]
         self.assertEqual(
             finish,
             [
-                ("ring edge_chamfer z=1", 1, 0.5, False),
-                ("ring edge_chamfer z=15", 1, 0.5, False),
+                ("ring edge_chamfer z=1", 12, 0.5, False),
+                ("ring edge_chamfer z=15", 12, 0.5, False),
                 ("cover edge_chamfer z=0", 14, 0.5, False),
                 ("cover edge_chamfer z=3", 13, 0.5, False),
                 ("carrier edge_chamfer z=0", 6, 0.5, False),

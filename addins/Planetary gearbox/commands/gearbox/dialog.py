@@ -58,11 +58,26 @@ def add_inputs(inputs: adsk.core.CommandInputs, build_label: str) -> None:
             inputs.addValueInput(spec.id, spec.label, "deg", adsk.core.ValueInput.createByString(f"{spec.default} deg"))
         elif spec.kind == "count":
             inputs.addIntegerSpinnerCommandInput(spec.id, spec.label, 0, 9999, 1, int(spec.default))
+        elif spec.kind == "bool":
+            inputs.addBoolValueInput(spec.id, spec.label, True, "", bool(spec.default))
         else:
             inputs.addValueInput(spec.id, spec.label, "", adsk.core.ValueInput.createByReal(spec.default))
+    sync_dependent_inputs(inputs)
     inputs.addTextBoxCommandInput(RATIO_ID, "Reduction", _ratio_text(default_params()), 1, True)
     inputs.addTextBoxCommandInput(STATUS_ID, "", "", 2, True)
     inputs.addTextBoxCommandInput(BUILD_ID, "", build_label, 1, True)
+
+
+def sync_dependent_inputs(inputs: adsk.core.CommandInputs) -> None:
+    """Directive (docs/planetarygearbox/directives.md): an input that needs a check box is disabled while the box is
+    unchecked. With the ears box unchecked the ear count and the ear bore diameter cannot be edited."""
+    for spec in INPUT_SPECS:
+        if not spec.needs:
+            continue
+        box = adsk.core.BoolValueCommandInput.cast(inputs.itemById(spec.needs))
+        dependent = inputs.itemById(spec.id)
+        if box is not None and dependent is not None:
+            dependent.isEnabled = box.value
 
 
 def advance_placement_focus(inputs: adsk.core.CommandInputs, changed: adsk.core.CommandInput | None) -> None:
@@ -140,8 +155,15 @@ def read_params(inputs: adsk.core.CommandInputs) -> tuple[Params | None, str]:
     values: dict[str, float] = {}
     for spec in INPUT_SPECS:
         inp = inputs.itemById(spec.id)
+        if spec.needs and not values[spec.needs]:
+            # Disabled by its check box: the value does not count, and params_from_values ignores it or zeroes it.
+            values[spec.id] = spec.default
+            continue
         if spec.kind == "count":
             values[spec.id] = float(adsk.core.IntegerSpinnerCommandInput.cast(inp).value)
+            continue
+        if spec.kind == "bool":
+            values[spec.id] = float(adsk.core.BoolValueCommandInput.cast(inp).value)
             continue
         vin = adsk.core.ValueCommandInput.cast(inp)
         if not vin.isValidExpression:

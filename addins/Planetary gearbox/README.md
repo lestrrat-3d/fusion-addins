@@ -7,11 +7,12 @@ uses the gallery's input rules. Bodies are grouped the way the gallery groups th
 component holds one sub-component per gallery container (`Housing`, `Cover Bearings`, `Bolts`, `Nuts`, `Shafts`,
 `Sun Gears`, `Planet Gears`, `Planet Bearings`, `Carriers`), and each body sits in the sub-component of its
 container. As in the gallery, the ring, the covers and the carriers have a 45° chamfer (`Edge chamfer`, 0.5 mm) on
-the edges of their large flat faces.
+the edges of their large flat faces. The ring has three mounting ears by default; the `Mounting ears` check box in the
+dialog turns them off, and the `Ear count` and `Ear bore diameter` inputs are disabled while it is unchecked.
 
 ## Gallery revision
 
-Gallery revision: 047bb9d892b5ae5a40a4119844115ff916b84203 (`GALLERY_REVISION` in `config.py`)
+Gallery revision: 791aeb255270dfb80a29ed65aa417096997bf30a (`GALLERY_REVISION` in `config.py`)
 
 The add-in translates decad-gallery at this commit: `models/planetarygearbox` and the models it builds from,
 `models/spurgear`, `models/ballbearing`, `models/m2bolt` and `models/m2nut`.
@@ -30,7 +31,7 @@ Fusion.
 ## Build checks
 
 After each build the add-in compares every built body with the expected values from `lib/gen/`:
-volume, z range against the assembled position, and point containment probes. For a placed build it also checks that
+volume, z range against the assembled position, and point containment probes (the ring's include its ears and their bores). For a placed build it also checks that
 gear outline points lie outside the neighbouring gear (meshing), that bolt and nut surface points lie outside the cover
 and ring they pass through (fit), and that the component tree has the gallery's nine containers with the right bodies.
 This stands in for the gallery's `VerifyContainers`, which Fusion does not have.

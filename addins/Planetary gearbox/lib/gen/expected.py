@@ -10,6 +10,7 @@ import math
 from . import edgefinish, layout
 from .curves import loop_polygon
 from .dims import Dims
+from .ears import ring_blank_area, ring_xmax
 from . import gears
 from .involute import GearDims, gear_outline_polygon
 from .fasteners import (
@@ -155,7 +156,7 @@ def part_volume(p: Params, d: Dims, part: str, fillet_radius: float | None = Non
         tool = _area(gears.ring_tool(p))
         bolts = 4 * math.pi * (p.bolt_hole_diameter / 2) ** 2
         cavities = 8 * (math.sqrt(3) / 2 * nut_pocket_flats() ** 2 - math.pi * (p.bolt_hole_diameter / 2) ** 2)
-        value = (math.pi * d.ring_outer**2 - bolts - tool) * d.ring_length - cavities * nut_cavity_height()
+        value = (ring_blank_area(p, d) - bolts - tool) * d.ring_length - cavities * nut_cavity_height()
         value -= edgefinish.edge_chamfer_volume(p, d, part)
         return Expect(value, 0.002 * value)
     if part == "cover":
@@ -218,7 +219,9 @@ def part_local_bounds(p: Params, d: Dims, part: str) -> tuple[float, float, floa
         xmax = HEAD_DIAMETER / 2
     elif part == "nut":
         xmax = nut_across_corners() / 2
-    elif part in ("ring", "cover"):
+    elif part == "ring":
+        xmax = ring_xmax(p, d)
+    elif part == "cover":
         xmax = d.ring_outer
     elif part in ("housing_bearing", "planet_bearing"):
         xmax = 11.0

@@ -1,6 +1,6 @@
-"""Input validation. Own copy of decad-gallery models/planetarygearbox Params.Validate / validateFit.
+"""Input validation. Own copy of decad-gallery models/planetarygearbox Params.Validate / validateFit / validateEars.
 
-Messages are the gallery's (a800069), without its "planetarygearbox: " prefix.
+Messages are the gallery's (791aeb2), without its "planetarygearbox: " prefix.
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ import math
 
 from .bearing import bearing_608zz
 from .dims import derive
+from .ears import validate_ears
 from . import gears as gearset
 from .involute import closing_radius, is_embedded, validate_spur
 from .fasteners import (
@@ -69,6 +70,7 @@ def validate(p: Params) -> None:
         ("RingWall", p.ring_wall),
         ("Backlash", p.backlash),
         ("OutputShaftLength", p.output_shaft_length),
+        ("EarBoreDiameter", p.ear_bore_diameter),
     ):
         if not math.isfinite(v):
             raise ValidationError(f"{name} must be finite, got {n(v)}")
@@ -91,6 +93,12 @@ def validate(p: Params) -> None:
         ("ring wall", p.ring_wall, p.ring_wall > 0),
         ("backlash", p.backlash, 0 <= p.backlash <= p.module / 2),
         ("output shaft length", p.output_shaft_length, p.output_shaft_length > 0),
+        ("ear count", float(p.ear_count), p.ear_count >= 0),
+        (
+            "ear bore diameter",
+            p.ear_bore_diameter,
+            p.ear_bore_diameter >= 0 and (p.ear_count == 0 or p.ear_bore_diameter > 0),
+        ),
     ):
         if not ok:
             raise ValidationError(f"{name} {n(v)} is out of range")
@@ -189,6 +197,11 @@ def validate(p: Params) -> None:
             f"carrier radius {n(d.orbit + d.boss / 2)} does not leave more than {n(LOOSE_GEAR_CLEARANCE)} "
             f"clearance from ring tip radius {n(d.ring_tip)}"
         )
+
+    # The ears clear each other and the bolt sites [params.go validateEars].
+    ear_error = validate_ears(p, d)
+    if ear_error is not None:
+        raise ValidationError(ear_error)
 
     # 10. Spur-gear limits, which the gallery raises at build time (ring, sun, planet order).
     # Deviation: checked here so the dialog shows them before building (README "Deviations from decad-gallery").
