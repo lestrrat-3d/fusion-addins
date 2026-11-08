@@ -27,16 +27,9 @@ def _ratio_text(p: Params) -> str:
 
 
 def add_inputs(inputs: adsk.core.CommandInputs, build_label: str) -> None:
-    """Add one input per INPUT_SPECS entry, in order, then the read-only text boxes."""
-    for spec in INPUT_SPECS:
-        if spec.kind == "length":
-            inputs.addValueInput(spec.id, spec.label, "mm", adsk.core.ValueInput.createByString(f"{spec.default} mm"))
-        elif spec.kind == "angle":
-            inputs.addValueInput(spec.id, spec.label, "deg", adsk.core.ValueInput.createByString(f"{spec.default} deg"))
-        elif spec.kind == "count":
-            inputs.addIntegerSpinnerCommandInput(spec.id, spec.label, 0, 9999, 1, int(spec.default))
-        else:
-            inputs.addValueInput(spec.id, spec.label, "", adsk.core.ValueInput.createByReal(spec.default))
+    """Add the placement selections, then one input per INPUT_SPECS entry in order, then the read-only text boxes.
+
+    Directive (docs/planetarygearbox/directives.md): the placement selections come first."""
     # Deviation from decad-gallery: placement is chosen in the model (a point and an axis) instead of typing the
     # gallery's frame values. Both empty = world origin, axis +Z.
     origin = inputs.addSelectionInput(ORIGIN_ID, "Origin point", "Select a construction point, sketch point or vertex")
@@ -55,6 +48,15 @@ def add_inputs(inputs: adsk.core.CommandInputs, build_label: str) -> None:
     ):
         axis.addSelectionFilter(flt)
     axis.setSelectionLimits(0, 1)
+    for spec in INPUT_SPECS:
+        if spec.kind == "length":
+            inputs.addValueInput(spec.id, spec.label, "mm", adsk.core.ValueInput.createByString(f"{spec.default} mm"))
+        elif spec.kind == "angle":
+            inputs.addValueInput(spec.id, spec.label, "deg", adsk.core.ValueInput.createByString(f"{spec.default} deg"))
+        elif spec.kind == "count":
+            inputs.addIntegerSpinnerCommandInput(spec.id, spec.label, 0, 9999, 1, int(spec.default))
+        else:
+            inputs.addValueInput(spec.id, spec.label, "", adsk.core.ValueInput.createByReal(spec.default))
     inputs.addTextBoxCommandInput(RATIO_ID, "Reduction", _ratio_text(default_params()), 1, True)
     inputs.addTextBoxCommandInput(STATUS_ID, "", "", 2, True)
     inputs.addTextBoxCommandInput(BUILD_ID, "", build_label, 1, True)
