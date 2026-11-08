@@ -1,0 +1,13 @@
+{
+    "autodeskProduct": "Fusion",
+    "type": "addin",
+    "id": "3067eea3-fa62-452b-8396-7abcd6b3bc48",
+    "author": "lestrrat-3d",
+    "description": {
+        "": "Planetary gearbox from decad-gallery models/planetarygearbox"
+    },
+    "version": "",
+    "runOnStartup": false,
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
