@@ -70,9 +70,9 @@ class LayoutTest(unittest.TestCase):
 
     def test_shaft_specs(self):
         s = layout.input_shaft_spec(P1, D1)
-        self.assertEqual((s.bottom, s.top, s.collar, s.grooves), (-23, 8, (-4, -0.5), ((0, 9),)))
+        self.assertEqual((s.bottom, s.top, s.collar, s.grooves), (-21, 8, (-4, -0.5), ((0, 9),)))
         s = layout.output_shaft_spec(P1, D1)
-        self.assertEqual((s.bottom, s.top, s.collar, s.grooves), (0, 26, (3.5, 6.75), ((-1, 3),)))
+        self.assertEqual((s.bottom, s.top, s.collar, s.grooves), (0, 24, (3.5, 6.75), ((-1, 3),)))
         self.assertIsNone(layout.link_shaft_spec(P1, D1))
         s = layout.link_shaft_spec(P2, D2)
         assert s is not None
@@ -127,7 +127,7 @@ class LayoutTest(unittest.TestCase):
         self.check_pose(poses["Rear Bolt 1"], 0, c, c, 14)
         self.check_pose(poses["Front Nut 1"], -math.pi / 4, c, c, 0.1)
         self.check_pose(poses["Rear Nut 4"], 5 * math.pi / 4, c, -c, 10.3)
-        self.assertLess(abs(poses["Planet Bearing 1.1"].z - 1.25), 1e-12)
+        self.assertLess(abs(poses["Planet Bearing 1.1"].z - 3.25), 1e-12)
 
     def test_nut_cavity_and_head_pocket_poses(self):
         cav = layout.nut_cavity_poses(P1, D1)

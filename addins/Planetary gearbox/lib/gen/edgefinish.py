@@ -2,7 +2,7 @@
 
 Own copy of decad-gallery models/planetarygearbox edgefinish.go (largeFaceArea, outerLoop, windowsAndRim,
 radiusAbout) and the finishFaceEdges calls in gears.go buildRing, cover.go buildCover and carrier.go buildCarrier at
-791aeb2. The gallery chamfers both ring faces in one call because decad cannot chamfer the ring twice; Fusion chamfers
+44d180a. The gallery chamfers both ring faces in one call because decad cannot chamfer the ring twice; Fusion chamfers
 each face in its own feature. The removed volumes are the add-in's own; the gallery tests none.
 """
 

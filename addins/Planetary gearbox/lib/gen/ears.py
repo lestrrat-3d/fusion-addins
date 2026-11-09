@@ -1,7 +1,7 @@
 """The ring's mounting ears: dimensions, outline, areas and the input rules.
 
 Own copy of decad-gallery models/planetarygearbox ears.go (earWall, earGap, earHalfWidth, earCenterRadius, earAngle,
-addRingOutline) and Params.validateEars at 791aeb2. Deviation: the outline is a list of curves at computed
+addRingOutline) and Params.validateEars at 44d180a. Deviation: the outline is a list of curves at computed
 coordinates, not a constrained sketch (README "Deviations from decad-gallery" lives in the converter repo).
 """
 

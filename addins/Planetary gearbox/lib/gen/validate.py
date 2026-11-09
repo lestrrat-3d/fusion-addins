@@ -1,13 +1,13 @@
 """Input validation. Own copy of decad-gallery models/planetarygearbox Params.Validate / validateFit / validateEars.
 
-Messages are the gallery's (791aeb2), without its "planetarygearbox: " prefix.
+Messages are the gallery's (44d180a), without its "planetarygearbox: " prefix.
 """
 
 from __future__ import annotations
 
 import math
 
-from .bearing import bearing_608zz
+from .bearing import bearing_605zz
 from .dims import derive
 from .ears import validate_ears
 from . import gears as gearset
@@ -33,6 +33,7 @@ from .params import (
     PIN_COLLAR_THICKNESS,
     PLANET_BEARING_LIFT,
     RING_MARGIN,
+    SEAT_CLEARANCE,
     Params,
     frame_is_valid,
 )
@@ -48,7 +49,7 @@ class ValidationError(ValueError):
 
 def validate(p: Params) -> None:
     """Raise ValidationError with the message of the first failing rule."""
-    b = bearing_608zz()
+    b = bearing_605zz()
     m = p.module
 
     # 1. Finiteness.
@@ -88,7 +89,7 @@ def validate(p: Params) -> None:
         ("seat chamfer", p.seat_chamfer, 0 <= p.seat_chamfer <= 1),
         ("edge chamfer", p.edge_chamfer, MIN_EDGE_CHAMFER <= p.edge_chamfer <= 1),
         ("key width", p.key_width, 0 < p.key_width <= b.bore_diameter / 2),
-        ("bearing clearance", p.bearing_clearance, p.bearing_clearance >= FIT_CLEARANCE),
+        ("bearing clearance", p.bearing_clearance, p.bearing_clearance >= SEAT_CLEARANCE),
         ("carrier wall", p.carrier_wall, p.carrier_wall > 0),
         ("ring wall", p.ring_wall, p.ring_wall > 0),
         ("backlash", p.backlash, 0 <= p.backlash <= p.module / 2),

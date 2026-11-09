@@ -12,7 +12,7 @@ come from Autodesk's add-in template and keep Autodesk's copyright notice.
 
 | Image | Add-in | Description |
 |-------|--------|-------------|
-| <a href="addins/Planetary%20gearbox"><img src="https://raw.githubusercontent.com/lestrrat-3d/decad-gallery/791aeb255270dfb80a29ed65aa417096997bf30a/models/planetarygearbox/images/hero.png" alt="The default two-stage planetary gearbox, fully assembled, with the ring gear and both end covers cut open to show the planets, carriers, shafts and bearings inside" width="240"></a> | [Planetary gearbox](addins/Planetary%20gearbox) | A compact planetary speed reducer. |
+| <a href="addins/Planetary%20gearbox"><img src="https://raw.githubusercontent.com/lestrrat-3d/decad-gallery/4a452cdc74e783b7e8eb5512cec68d196423dbe4/models/planetarygearbox/images/hero.png" alt="The default two-stage planetary gearbox, fully assembled, with the ring gear and both end covers cut open to show the planets, carriers, shafts and bearings inside" width="240"></a> | [Planetary gearbox](addins/Planetary%20gearbox) | A compact planetary speed reducer. |
 
 <!-- addins:end -->
 

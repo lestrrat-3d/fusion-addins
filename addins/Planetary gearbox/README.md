@@ -1,7 +1,7 @@
 # Planetary gearbox
 
 A Fusion add-in that rebuilds the decad-gallery model `planetarygearbox`: a fixed internal ring gear housing one or
-more stages, each with a sun gear, planet gears on 608ZZ bearings, a carrier and a shaft, closed by two bearing covers
+more stages, each with a sun gear, planet gears on 605ZZ bearings, a carrier and a shaft, closed by two bearing covers
 that eight M2 bolts and eight M2 nuts hold to the ring. It takes the gallery's inputs with the gallery's defaults and
 uses the gallery's input rules. Bodies are grouped the way the gallery groups them: the `Planetary Gearbox`
 component holds one sub-component per gallery container (`Housing`, `Cover Bearings`, `Bolts`, `Nuts`, `Shafts`,
@@ -12,7 +12,7 @@ dialog turns them off, and the `Ear count` and `Ear bore diameter` inputs are di
 
 ## Gallery revision
 
-Gallery revision: 791aeb255270dfb80a29ed65aa417096997bf30a (`GALLERY_REVISION` in `config.py`)
+Gallery revision: 4a452cdc74e783b7e8eb5512cec68d196423dbe4 (`GALLERY_REVISION` in `config.py`)
 
 The add-in translates decad-gallery at this commit: `models/planetarygearbox` and the models it builds from,
 `models/spurgear`, `models/ballbearing`, `models/m2bolt` and `models/m2nut`.

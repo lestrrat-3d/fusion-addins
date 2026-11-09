@@ -1,7 +1,7 @@
 """Gearbox inputs, defaults and placement frame.
 
 Own copy of decad-gallery models/planetarygearbox params.go (DefaultParams, Ratio, constants) and the validity
-and axes rules of r3 NewFrame, and params.go clearance constants (a800069), plus EarCount and EarBoreDiameter (791aeb2).
+and axes rules of r3 NewFrame, and params.go clearance constants (a800069), plus EarCount and EarBoreDiameter (44d180a).
 """
 
 from __future__ import annotations
@@ -24,6 +24,8 @@ TOOL_MARGIN = 1.0
 GEAR_ROOT_MODULE_CLEARANCE_FACTOR = 0.25
 LOOSE_GEAR_CLEARANCE = 0.5
 GEAR_ROOT_MEASUREMENT_MARGIN = 0.02
+# Radial clearance of a bore or pocket that holds a purchased bearing fixed [params.go seatClearance].
+SEAT_CLEARANCE = 0.05
 FIT_CLEARANCE = 0.25
 PLANET_BEARING_LIFT = FIT_CLEARANCE
 PIN_COLLAR_CLEARANCE = FIT_CLEARANCE
@@ -131,7 +133,7 @@ class Params:
     seat_chamfer: float = 0.5
     edge_chamfer: float = MIN_EDGE_CHAMFER
     input_shaft_length: float = 12.0
-    bearing_clearance: float = 0.25
+    bearing_clearance: float = SEAT_CLEARANCE
     carrier_wall: float = 3.0
     ring_wall: float = 7.0
     backlash: float = 0.15

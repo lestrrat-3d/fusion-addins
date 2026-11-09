@@ -102,10 +102,10 @@ FACE_LOOPS = {
     # ear bores are three more single-edge loops that no rule keeps.
     "ring": ([(True, 12, 44.0), (False, 284, 34.5)] + [(False, 1, 39.3)] * 4 + [(False, 1, 49.0)] * 3,
              [(True, 12, 44.0), (False, 284, 34.5)] + [(False, 1, 39.3)] * 4 + [(False, 1, 49.0)] * 3),
-    "cover": ([(True, 1, 44.0)] + [(False, 4, 17.9)] * 3 + [(False, 1, 9.0)] + [(False, 1, 39.3)] * 4,
-              [(True, 1, 44.0)] + [(False, 4, 17.9)] * 3 + [(False, 1, 38.5)] * 4 + [(False, 1, 14.25)]),
-    "carrier": ([(True, 6, 27.75), (False, 12, 4.0)] + [(False, 1, 25.95)] * 3,
-                [(True, 6, 27.75), (False, 12, 4.0)]),
+    "cover": ([(True, 1, 44.0)] + [(False, 4, 13.25)] * 3 + [(False, 1, 5.0)] + [(False, 1, 39.3)] * 4,
+              [(True, 1, 44.0)] + [(False, 4, 13.25)] * 3 + [(False, 1, 38.5)] * 4 + [(False, 1, 10.25)]),
+    "carrier": ([(True, 6, 26.25), (False, 12, 2.5)] + [(False, 1, 25.95)] * 3,
+                [(True, 6, 26.25), (False, 12, 2.5)]),
 }
 
 
