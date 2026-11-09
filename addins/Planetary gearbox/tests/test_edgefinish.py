@@ -30,8 +30,8 @@ D1_WIDE = derive(P1_WIDE)
 # part -> (volume at c = 0.5, volume at c = 1.0)
 VOLUMES = {
     "ring": (81.0455, 323.1348),
-    "cover": (178.0549, 715.6292),
-    "carrier": (37.6209, 149.4363),
+    "cover": (179.0232, 719.4680),
+    "carrier": (35.2647, 140.0115),
 }
 
 
@@ -72,7 +72,7 @@ class EdgeFinishTest(unittest.TestCase):
     def test_keep_loop(self):
         cases = (
             (OUTER, True, 1, 44.0, True),
-            (OUTER, False, 1, 9.0, False),
+            (OUTER, False, 1, 5.0, False),
             (OUTER, False, 4, 17.9, False),
             (OUTER, True, 6, 27.75, True),
             (WINDOWS_AND_RIM, True, 1, 44.0, True),
@@ -81,9 +81,9 @@ class EdgeFinishTest(unittest.TestCase):
             (WINDOWS_AND_RIM, False, 1, 14.25, False),
             (LIP, True, 1, 44.0, True),
             (LIP, False, 4, 17.9, True),
-            (LIP, False, 1, 9.0, True),
-            (LIP, False, 1, 9.0009, True),
-            (LIP, False, 1, 9.002, False),
+            (LIP, False, 1, 5.0, True),
+            (LIP, False, 1, 5.0009, True),
+            (LIP, False, 1, 5.002, False),
             (LIP, False, 1, 39.3, False),
             (LIP, False, 0, -1.0, False),
         )
@@ -111,17 +111,17 @@ class EdgeFinishTest(unittest.TestCase):
                 self.assertAlmostEqual(edge_chamfer_volume(p, derive(p), "ring"), want, delta=1e-3)
 
     def test_window_chamfer_volume(self):
-        self.assertAlmostEqual(window_chamfer_volume(D1, 0.5), 17.0004, delta=1e-3)
-        self.assertAlmostEqual(window_chamfer_volume(D1_WIDE, 1.0), 68.6570, delta=1e-3)
+        self.assertAlmostEqual(window_chamfer_volume(D1, 0.5), 17.6851, delta=1e-3)
+        self.assertAlmostEqual(window_chamfer_volume(D1_WIDE, 1.0), 71.3912, delta=1e-3)
         poly = loop_polygon(cover_window_loops(P1, D1)[0], math.radians(0.05))
         self.assertAlmostEqual(window_chamfer_volume(D1, 0.5), offset_removed(poly, 0.5), delta=1e-4)
 
     def test_lip_rim(self):
-        self.assertAlmostEqual(edgefinish._rim(9.0, 0.5, False), 7.1995, delta=1e-3)
-        self.assertAlmostEqual(edgefinish._rim(9.0, 1.0, False), 29.3215, delta=1e-3)
+        self.assertAlmostEqual(edgefinish._rim(5.0, 0.5, False), 4.0579, delta=1e-3)
+        self.assertAlmostEqual(edgefinish._rim(5.0, 1.0, False), 16.7552, delta=1e-3)
 
     def test_carrier_perimeter(self):
-        self.assertAlmostEqual(edgefinish._perimeter(carrier_plate_outline(P1, D1)), 151.5307, delta=1e-3)
+        self.assertAlmostEqual(edgefinish._perimeter(carrier_plate_outline(P1, D1)), 142.1059, delta=1e-3)
 
 
 if __name__ == "__main__":

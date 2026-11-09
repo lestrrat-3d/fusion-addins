@@ -219,7 +219,7 @@ def build_planet(ctx: BuildContext) -> adsk.fusion.BRepBody:
 
 
 def build_bearing(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildBearing / ballbearing Build] The 608ZZ envelope: a ring from the bore to the outer diameter."""
+    """[buildBearing / ballbearing Build] The 605ZZ envelope: a ring from the bore to the outer diameter."""
     b = ctx.d.bearing
     sk = fusion.new_sketch(ctx.comp, f"{ctx.part} ring")
     fusion.draw_circle(sk, (0.0, 0.0), b.outer_diameter / 2)

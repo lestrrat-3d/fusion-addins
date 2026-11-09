@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 
-from .bearing import Bearing, bearing_608zz
+from .bearing import Bearing, bearing_605zz
 from .fasteners import head_pocket_diameter
 from .params import (
     ARM_MARGIN,
@@ -53,7 +53,7 @@ def rim_inner_radius(bolt_circle: float) -> float:
 def derive(p: Params) -> Dims:
     """Compute the derived dimensions of p. Does not validate p."""
     m = p.module
-    b = bearing_608zz()
+    b = bearing_605zz()
     ring_root = m * p.ring_teeth / 2 + gear_root_depth(m)
     ring_outer = ring_root + p.ring_wall
     bolt_circle = (ring_root + ring_outer) / 2

@@ -165,7 +165,7 @@ def part_probes(p: Params, d: Dims) -> dict[str, list[Probe]]:
     ]
     probes["nut"] = [Probe("body", (1.5, 0.0, 0.8), INSIDE), Probe("bore", (0.0, 0.0, 0.8), OUTSIDE)]
 
-    bearing = [Probe("race", ((4.0 + 11.0) / 2, 0.0, wb / 2), INSIDE), Probe("bore", (0.0, 0.0, wb / 2), OUTSIDE)]
+    bearing = [Probe("race", ((d.bearing.bore_diameter + d.bearing.outer_diameter) / 4, 0.0, wb / 2), INSIDE), Probe("bore", (0.0, 0.0, wb / 2), OUTSIDE)]
     probes["housing_bearing"] = list(bearing)
     probes["planet_bearing"] = list(bearing)
 

@@ -3,7 +3,7 @@ import math
 import unittest
 
 import _support  # noqa: F401
-from gen.bearing import Bearing, bearing_608zz
+from gen.bearing import Bearing, bearing_605zz
 from gen.dims import derive, rim_inner_radius
 from gen.inputs import INPUT_SPECS, params_from_values
 from gen.params import (
@@ -26,16 +26,16 @@ REFERENCE_DIMS = {
     "ring_tip": 34.5,
     "ring_root": 37.0,
     "ring_outer": 44.0,
-    "pin": 7.5,
-    "shaft": 7.5,
-    "shaft_bore": 8.0,
-    "pocket": 22.5,
-    "lip": 18,
-    "collar": 9.9,
-    "cover_boss": 28.5,
-    "cover_hub": 34.5,
-    "boss": 13.5,
-    "arm": 9.5,
+    "pin": 4.5,
+    "shaft": 4.5,
+    "shaft_bore": 5.0,
+    "pocket": 14.1,
+    "lip": 10,
+    "collar": 6.9,
+    "cover_boss": 20.1,
+    "cover_hub": 26.1,
+    "boss": 10.5,
+    "arm": 6.5,
     "bolt_circle": 40.5,
     "rim_inner": 37.0,
     "stage_pitch": 13,
@@ -58,7 +58,7 @@ class ParamsTest(unittest.TestCase):
         for name, want in REFERENCE_DIMS.items():
             with self.subTest(name=name):
                 near(self, getattr(d, name), want)
-        self.assertEqual(d.bearing, Bearing(8, 22, 7))
+        self.assertEqual(d.bearing, Bearing(5, 14, 5))
 
     def test_rim_inner_radius(self):
         self.assertAlmostEqual(rim_inner_radius(40.5), 37.0, places=12)
@@ -71,7 +71,7 @@ class ParamsTest(unittest.TestCase):
 
     def test_new_defaults(self):
         self.assertEqual(default_params().bolt_hole_diameter, 2.4)
-        self.assertEqual(default_params().bearing_clearance, 0.25)
+        self.assertEqual(default_params().bearing_clearance, 0.05)
         self.assertEqual(default_params().edge_chamfer, 0.5)
         self.assertEqual(MIN_EDGE_CHAMFER, 0.5)
 
@@ -84,7 +84,7 @@ class ParamsTest(unittest.TestCase):
         near(self, ratio(dataclasses.replace(default_params(), stages=2)), (1 + 71 / 13) ** 2)
 
     def test_bearing(self):
-        self.assertEqual(bearing_608zz(), Bearing(8, 22, 7))
+        self.assertEqual(bearing_605zz(), Bearing(5, 14, 5))
 
     def test_input_specs(self):
         ids = [s.id for s in INPUT_SPECS]

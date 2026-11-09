@@ -169,7 +169,8 @@ def part_volume(p: Params, d: Dims, part: str, fillet_radius: float | None = Non
         value -= edgefinish.edge_chamfer_volume(p, d, part)
         return Expect(value, 0.002 * value)
     if part in ("housing_bearing", "planet_bearing"):
-        value = math.pi / 4 * (22.0**2 - 8.0**2) * 7.0
+        b = d.bearing
+        value = math.pi / 4 * (b.outer_diameter**2 - b.bore_diameter**2) * b.width
         return Expect(value, 0.001 * value)
     if part == "carrier":
         hull = polygon_area(loop_polygon(carrier_plate_outline(p, d)))
@@ -224,7 +225,7 @@ def part_local_bounds(p: Params, d: Dims, part: str) -> tuple[float, float, floa
     elif part == "cover":
         xmax = d.ring_outer
     elif part in ("housing_bearing", "planet_bearing"):
-        xmax = 11.0
+        xmax = d.bearing.outer_diameter / 2
     elif part == "carrier":
         xmax = d.orbit + d.boss / 2
     else:

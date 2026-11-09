@@ -38,7 +38,7 @@ INPUT_SPECS: tuple[InputSpec, ...] = (
     InputSpec("key_depth", "Key depth", "length", 1.1),
     InputSpec("key_width", "Key width", "length", 2),
     InputSpec("input_shaft_length", "Input shaft length", "length", 12),
-    InputSpec("bearing_clearance", "Bearing clearance", "length", 0.25),
+    InputSpec("bearing_clearance", "Bearing clearance", "length", 0.05),
     InputSpec("seat_chamfer", "Seat chamfer", "length", 0.5),
     InputSpec("edge_chamfer", "Edge chamfer", "length", 0.5),
     InputSpec("carrier_wall", "Carrier wall", "length", 3),

@@ -16,7 +16,7 @@ CASES = [
     ({"bolt_hole_diameter": 6}, "bolt holes"),
     ({"ring_wall": 3}, "bolt holes"),
     ({"carrier_wall": 12}, "no room for spokes"),
-    ({"gear_thickness": 7.5}, "gear thickness"),
+    ({"gear_thickness": 5.5}, "gear thickness"),
     ({"key_depth": 3}, "key depth"),
     ({"key_width": 5}, "key width"),
     ({"seat_chamfer": 2}, "seat chamfer"),
@@ -32,7 +32,7 @@ CASES = [
     ({"pressure_angle": math.pi / 2}, "pressure angle"),
     ({"sun_teeth": 2}, "sun teeth"),
     ({"stage_gap": 0.5}, "stage gap"),
-    ({"bearing_clearance": 0.2}, "bearing clearance"),
+    ({"bearing_clearance": 0.04}, "bearing clearance"),
     ({"key_width": 0.5}, "key width"),
     ({"bolt_hole_diameter": 2.1}, "M2 bolt shank"),
     ({"bolt_hole_diameter": 2.3}, "clearance hole"),
@@ -63,9 +63,9 @@ class ValidateTest(unittest.TestCase):
             validate(dataclasses.replace(default_params(), ring_teeth=72))
         self.assertEqual(str(cm.exception), "ring teeth 72 must equal sun teeth + 2 * planet teeth = 71")
         with self.assertRaises(ValidationError) as cm:
-            validate(dataclasses.replace(default_params(), gear_thickness=7.5))
+            validate(dataclasses.replace(default_params(), gear_thickness=5.5))
         self.assertEqual(
-            str(cm.exception), "gear thickness 7.5 leaves less than 1 for the lip behind a 7 wide bearing"
+            str(cm.exception), "gear thickness 5.5 leaves less than 1 for the lip behind a 5 wide bearing"
         )
         with self.assertRaises(ValidationError) as cm:
             validate(dataclasses.replace(default_params(), gear_thickness=float("nan")))
@@ -75,7 +75,7 @@ class ValidateTest(unittest.TestCase):
         cases = [
             ({"planet_count": 6}, "neighbouring planet centers are 20.999999999999996 apart; tips need 31.46 for at "
              "least 0.5 clearance"),
-            ({"module": 0.5}, "the 8 mm shaft bore leaves less than one module of wall under the sun root"),
+            ({"module": 0.5}, "the 5 mm shaft bore leaves less than one module of wall under the sun root"),
             ({"key_width": 0.5}, "key width 0.5 must exceed 0.5 for the shaft clearance"),
             ({"bolt_hole_diameter": 2.1}, "bolt hole diameter 2.1 is under the 2.4 clearance hole for the M2 bolt "
              "shank 2"),
@@ -87,8 +87,8 @@ class ValidateTest(unittest.TestCase):
             ({"stage_gap": 0.5}, "stage gap 0.5 is out of range"),
             ({"edge_chamfer": 0.4}, "edge chamfer 0.4 is out of range"),
             ({"edge_chamfer": float("inf")}, "EdgeChamfer must be finite, got +Inf"),
-            ({"bearing_clearance": 0.2}, "bearing clearance 0.2 is out of range"),
-            ({"bolt_hole_diameter": 3.4, "ring_wall": 13, "carrier_wall": 9.25},
+            ({"bearing_clearance": 0.04}, "bearing clearance 0.04 is out of range"),
+            ({"bolt_hole_diameter": 3.4, "ring_wall": 13, "carrier_wall": 10.75},
              "carrier radius 34 does not leave more than 0.5 clearance from ring tip radius 34.5"),
         ]
         for changes, want in cases:
@@ -107,14 +107,14 @@ class ValidateTest(unittest.TestCase):
             validate(dataclasses.replace(base, bolt_hole_diameter=2.39))
         with self.assertRaisesRegex(ValidationError, "bolt holes"):
             validate(dataclasses.replace(base, bolt_hole_diameter=4.01))
-        cb = (1.0 * 29 / 2 - (1.0 + 0.5 + 0.02)) - 1.0 - 22.0 / 2
+        cb = (1.0 * 29 / 2 - (1.0 + 0.5 + 0.02)) - 1.0 - 14.0 / 2
         validate(dataclasses.replace(base, bearing_clearance=cb))
         with self.assertRaisesRegex(ValidationError, "bearing pocket"):
             validate(dataclasses.replace(base, bearing_clearance=cb + 0.01))
         wide = dataclasses.replace(base, bolt_hole_diameter=3.4, ring_wall=13)
-        validate(dataclasses.replace(wide, carrier_wall=9.24))
+        validate(dataclasses.replace(wide, carrier_wall=10.74))
         with self.assertRaisesRegex(ValidationError, "carrier radius"):
-            validate(dataclasses.replace(wide, carrier_wall=9.25))
+            validate(dataclasses.replace(wide, carrier_wall=10.75))
 
     def test_planet_count_divisibility_message(self):
         with self.assertRaises(ValidationError) as cm:
