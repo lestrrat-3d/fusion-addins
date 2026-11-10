@@ -18,8 +18,8 @@ REFERENCE = {
     "input_shaft": (487.3039, 0.5),
     "output_shaft": (433.1170, 0.5),
     "carrier": (4078.8416, 0.5),
-    "cover": (8622.1831, 0.5),
-    "ring": (31856.0663, 0.5),
+    "cover": (8776.8819, 0.5),
+    "ring": (32122.5836, 0.5),
     "sun": (843.4660, 2.0),
     "planet": (4054.4277, 2.0),
     "bolt": (38.9151, 0.001),
@@ -35,8 +35,8 @@ Z_K1 = {
     "Input Shaft": (-21, 8),
     "Front Bolt 1": (-4, 4),
     "Rear Bolt 1": (8, 16),
-    "Front Nut 1": (0.1, 1.7),
-    "Rear Nut 1": (10.3, 11.9),
+    "Front Nut 1": (0.2, 1.8),
+    "Rear Nut 1": (10.2, 11.8),
     "Sun Gear 1": (0, 8),
     "Planet Gear 1.1": (0, 8),
     "Planet Gear 1.2": (0, 8),
@@ -52,7 +52,7 @@ Z_K2 = {
     "Ring Gear": (-1, 26),
     "Front Bolt 1": (-4, 4),
     "Rear Bolt 1": (21, 29),
-    "Rear Nut 1": (23.3, 24.9),
+    "Rear Nut 1": (23.2, 24.8),
     "Planet Bearing 2.1": (16.25, 21.25),
     "Rear Cover": (26, 34),
     "Rear Bearing": (29, 34),
@@ -73,13 +73,13 @@ class ExpectedTest(unittest.TestCase):
 
     def test_ring_volume_two_stages(self):
         got = part_volume(P2, D2, "ring")
-        self.assertLessEqual(abs(got.value - 61655.7360), 0.5, f"volume {got.value}")
+        self.assertLessEqual(abs(got.value - 62241.1349), 0.5, f"volume {got.value}")
 
     def test_ring_volume_without_ears(self):
         p = dataclasses.replace(P1, ear_count=0)
         got = part_volume(p, derive(p), "ring")
-        self.assertLessEqual(abs(got.value - 28606.8598), 0.5, f"volume {got.value}")
-        self.assertEqual(part_local_bounds(p, derive(p), "ring")[2], 44.0)
+        self.assertLessEqual(abs(got.value - 28873.4669), 0.5, f"volume {got.value}")
+        self.assertEqual(part_local_bounds(p, derive(p), "ring")[2], 44.1)
 
     def test_planet_volume_with_fillet_fallback(self):
         p = default_params()
@@ -109,7 +109,7 @@ class ExpectedTest(unittest.TestCase):
     def test_local_bounds(self):
         want = {
             "sun": (0, 8, 7.48),
-            "ring": (1, 15, 47.43524478543748),
+            "ring": (1, 15, 47.521847325815926),
             "carrier": (-9, 3, 26.25),
             "input_shaft": (-21, 8, None),
             "bolt": (-6, 2, 1.9),

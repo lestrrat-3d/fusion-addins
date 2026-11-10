@@ -127,7 +127,7 @@ class Params:
     carrier_thickness: float = 3.0
     stage_gap: float = 1.0
     cover_thickness: float = 3.0
-    bolt_hole_diameter: float = 2.4
+    bolt_hole_diameter: float = 2.6
     key_depth: float = 1.1
     key_width: float = 2.0
     seat_chamfer: float = 0.5
@@ -135,7 +135,7 @@ class Params:
     input_shaft_length: float = 12.0
     bearing_clearance: float = SEAT_CLEARANCE
     carrier_wall: float = 3.0
-    ring_wall: float = 7.0
+    ring_wall: float = 7.1
     backlash: float = 0.15
     output_shaft_length: float = 12.0
     ear_count: int = 3

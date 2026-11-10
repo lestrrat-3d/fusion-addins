@@ -25,7 +25,7 @@ REFERENCE_DIMS = {
     "sun_root": 5.0,
     "ring_tip": 34.5,
     "ring_root": 37.0,
-    "ring_outer": 44.0,
+    "ring_outer": 44.1,
     "pin": 4.5,
     "shaft": 4.5,
     "shaft_bore": 5.0,
@@ -36,8 +36,8 @@ REFERENCE_DIMS = {
     "cover_hub": 26.1,
     "boss": 10.5,
     "arm": 6.5,
-    "bolt_circle": 40.5,
-    "rim_inner": 37.0,
+    "bolt_circle": 40.55,
+    "rim_inner": 36.85,
     "stage_pitch": 13,
     "ring_length": 14,
 }
@@ -61,7 +61,7 @@ class ParamsTest(unittest.TestCase):
         self.assertEqual(d.bearing, Bearing(5, 14, 5))
 
     def test_rim_inner_radius(self):
-        self.assertAlmostEqual(rim_inner_radius(40.5), 37.0, places=12)
+        self.assertAlmostEqual(rim_inner_radius(40.55), 36.85, places=12)
 
     def test_gear_root_clearance(self):
         for m, want in ((0.5, 0.5), (1, 0.5), (2, 0.5), (4, 1.0)):
@@ -70,7 +70,7 @@ class ParamsTest(unittest.TestCase):
         near(self, gear_root_depth(1.0), 1.5)
 
     def test_new_defaults(self):
-        self.assertEqual(default_params().bolt_hole_diameter, 2.4)
+        self.assertEqual(default_params().bolt_hole_diameter, 2.6)
         self.assertEqual(default_params().bearing_clearance, 0.05)
         self.assertEqual(default_params().edge_chamfer, 0.5)
         self.assertEqual(MIN_EDGE_CHAMFER, 0.5)

@@ -126,7 +126,7 @@ def part_probes(p: Params, d: Dims) -> dict[str, list[Probe]]:
         Probe("bore", (0.0, 0.0, zr), OUTSIDE),
     ]
     # Deviation from decad-gallery: the bolt-hole probes above stay; Fusion's point containment is exact for a
-    # 2.4 mm hole (README deviations).
+    # 2.6 mm hole (README deviations).
     # Nut cavities: closed hexagonal pockets, NUT_ROOF of material between the cavity and each end face.
     z_f = RING_MARGIN + NUT_ROOF + nut_cavity_height() / 2
     z_r = RING_MARGIN + d.ring_length - NUT_ROOF - nut_cavity_height() / 2

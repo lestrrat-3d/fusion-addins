@@ -22,7 +22,7 @@ def with_ears(**changes):
 class EarGeometryTest(unittest.TestCase):
     def test_dimensions(self):
         self.assertEqual(ears.ear_half_width(4), 5)
-        self.assertEqual(ears.ear_center_radius(44, 4), 49)
+        self.assertEqual(ears.ear_center_radius(44.1, 4), 49.1)
         self.assertAlmostEqual(ears.ear_angle(0, 3), math.pi / 2, places=12)
         self.assertAlmostEqual(ears.ear_angle(1, 3), math.radians(210), places=12)
         self.assertAlmostEqual(ears.ear_angle(2, 3), math.radians(330), places=12)
@@ -31,16 +31,16 @@ class EarGeometryTest(unittest.TestCase):
         got = ears.ear_bore_centers(P1, D1)
         self.assertEqual(len(got), 3)
         for (x, y), deg in zip(got, (90, 210, 330)):
-            self.assertAlmostEqual(x, 49 * math.cos(math.radians(deg)), places=9)
-            self.assertAlmostEqual(y, 49 * math.sin(math.radians(deg)), places=9)
+            self.assertAlmostEqual(x, 49.1 * math.cos(math.radians(deg)), places=9)
+            self.assertAlmostEqual(y, 49.1 * math.sin(math.radians(deg)), places=9)
         p, d = with_ears(ear_count=0)
         self.assertEqual(ears.ear_bore_centers(p, d), [])
 
     def test_outline_without_ears_is_the_circle(self):
         p, d = with_ears(ear_count=0)
-        self.assertEqual(ears.ring_outline(p, d), Circle((0.0, 0.0), 44.0))
-        self.assertEqual(ears.ring_xmax(p, d), 44.0)
-        self.assertAlmostEqual(ears.ring_blank_area(p, d), math.pi * 44**2, places=9)
+        self.assertEqual(ears.ring_outline(p, d), Circle((0.0, 0.0), 44.1))
+        self.assertEqual(ears.ring_xmax(p, d), 44.1)
+        self.assertAlmostEqual(ears.ring_blank_area(p, d), math.pi * 44.1**2, places=9)
 
     def test_outline_is_one_closed_loop(self):
         for count in (1, 2, 3, 4, 6):
@@ -58,8 +58,8 @@ class EarGeometryTest(unittest.TestCase):
 
     def test_ear_edges_have_the_gallery_shape(self):
         loop = ears.ring_outline(P1, D1)
-        half, centre = 5.0, 49.0
-        root = math.sqrt(44.0**2 - half**2)
+        half, centre = 5.0, 49.1
+        root = math.sqrt(44.1**2 - half**2)
         # The first ear is on +Y: its straight edges run parallel to Y, half a width either side of it.
         down, end, up, outer = loop[:4]
         self.assertAlmostEqual(down.start[0], half, places=9)
@@ -72,7 +72,7 @@ class EarGeometryTest(unittest.TestCase):
             if isinstance(c, Arc):
                 r = math.dist(c.start, c.center)
                 self.assertAlmostEqual(math.dist(c.end, c.center), r, places=9)
-                self.assertTrue(abs(r - 44.0) < 1e-9 or abs(r - half) < 1e-9, r)
+                self.assertTrue(abs(r - 44.1) < 1e-9 or abs(r - half) < 1e-9, r)
 
     def test_area_matches_the_sampled_outline(self):
         for changes in ({}, {"ear_count": 1}, {"ear_count": 2, "ear_bore_diameter": 6.0}, {"ear_count": 6}):
@@ -86,9 +86,9 @@ class EarGeometryTest(unittest.TestCase):
         # ears_test.go: section = strip + half circle - bore, per ear, beyond the outer circle.
         p, d = with_ears(ear_count=2, ear_bore_diameter=6.0)
         half = 6.0 / 2 + 3
-        wall = math.sqrt(44**2 - half**2)
-        strip = 2 * half * (44 + half) - (half * wall + 44**2 * math.asin(half / 44))
-        want = math.pi * 44**2 + 2 * (strip + math.pi * half * half / 2 - math.pi * 6.0**2 / 4)
+        wall = math.sqrt(44.1**2 - half**2)
+        strip = 2 * half * (44.1 + half) - (half * wall + 44.1**2 * math.asin(half / 44.1))
+        want = math.pi * 44.1**2 + 2 * (strip + math.pi * half * half / 2 - math.pi * 6.0**2 / 4)
         self.assertAlmostEqual(ears.ring_blank_area(p, d), want, places=9)
 
     def test_xmax_matches_the_sampled_outline(self):
@@ -99,9 +99,9 @@ class EarGeometryTest(unittest.TestCase):
                 self.assertAlmostEqual(ears.ring_xmax(p, d), max(x for x, _ in poly), delta=1e-4)
         # Two ears on the Y axis reach no further along X than the outer wall.
         p, d = with_ears(ear_count=2, ear_bore_diameter=6.0)
-        self.assertAlmostEqual(ears.ring_xmax(p, d), 44.0, places=9)
+        self.assertAlmostEqual(ears.ring_xmax(p, d), 44.1, places=9)
         p, d = with_ears()
-        self.assertAlmostEqual(ears.ring_xmax(p, d), 49 * math.cos(math.radians(30)) + 5, places=9)
+        self.assertAlmostEqual(ears.ring_xmax(p, d), 49.1 * math.cos(math.radians(30)) + 5, places=9)
 
 
 class EarValidationTest(unittest.TestCase):

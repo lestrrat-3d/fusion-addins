@@ -33,8 +33,9 @@ NUT_CHAMFER_ANGLE = 30.0  # degrees
 NUT_CHAMFER_MARGIN = 0.2
 NUT_CHAMFER_REACH = 0.3
 # fasteners.go
-FASTENER_CLEARANCE = 0.1
-MIN_BOLT_HOLE_DIAMETER = 2.4  # fasteners.go minBoltHoleDiameter: the M2 clearance hole
+HEAD_CLEARANCE = 0.3  # radial gap between a bolt head and its pocket, and between the shank and its hole
+NUT_CLEARANCE = 0.2  # gap between a nut and its cavity: radial beyond the nut's corners, axial at each face
+MIN_BOLT_HOLE_DIAMETER = SHANK_DIAMETER + 2 * HEAD_CLEARANCE  # fasteners.go minBoltHoleDiameter
 COVER_FLOOR = 1.0
 POCKET_MARGIN = 1.0
 FASTENER_LENGTH = 6.0
@@ -47,15 +48,16 @@ def nut_across_corners() -> float:
 
 
 def head_pocket_diameter() -> float:
-    return HEAD_DIAMETER + 2 * FASTENER_CLEARANCE
+    return HEAD_DIAMETER + 2 * HEAD_CLEARANCE
 
 
-def nut_pocket_flats() -> float:
-    return NUT_ACROSS_FLATS + 2 * FASTENER_CLEARANCE
+def nut_pocket_diameter() -> float:
+    """Diameter of the round nut cavity: the circle through the nut's corners plus NUT_CLEARANCE radially."""
+    return 2 * (NUT_ACROSS_FLATS / math.sqrt(3) + NUT_CLEARANCE)
 
 
 def nut_cavity_height() -> float:
-    return NUT_THICKNESS + 2 * FASTENER_CLEARANCE
+    return NUT_THICKNESS + 2 * NUT_CLEARANCE
 
 
 def nut_angle(angle: float) -> float:

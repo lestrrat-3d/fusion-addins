@@ -21,7 +21,7 @@ from .fasteners import (
     SHANK_DIAMETER,
     head_pocket_diameter,
     nut_cavity_height,
-    nut_pocket_flats,
+    nut_pocket_diameter,
 )
 from .params import (
     BOLT_RIM_MARGIN,
@@ -180,7 +180,7 @@ def validate(p: Params) -> None:
             f"cover thickness {n(p.cover_thickness)} leaves less than {n(COVER_FLOOR)} "
             f"under a {n(HEAD_HEIGHT)} tall bolt head"
         )
-    reach = max(nut_pocket_flats(), head_pocket_diameter()) / 2
+    reach = max(nut_pocket_diameter(), head_pocket_diameter()) / 2
     if d.bolt_circle - reach < d.ring_root + POCKET_MARGIN or d.bolt_circle + reach > d.ring_outer - POCKET_MARGIN:
         raise ValidationError(
             f"bolt head and nut pockets of radius {n(reach)} do not fit the ring wall {n(p.ring_wall)} "

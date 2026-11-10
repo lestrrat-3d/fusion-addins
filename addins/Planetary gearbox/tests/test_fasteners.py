@@ -12,7 +12,7 @@ from gen.fasteners import (
     nut_angle,
     nut_cavity_height,
     nut_chamfer_section,
-    nut_pocket_flats,
+    nut_pocket_diameter,
 )
 from gen.polygon import polygon_area
 
@@ -42,12 +42,12 @@ class FastenersTest(unittest.TestCase):
             self.assertAlmostEqual(c.start[1], v, places=12)
 
     def test_min_bolt_hole(self):
-        self.assertEqual(MIN_BOLT_HOLE_DIAMETER, 2.4)
+        self.assertEqual(MIN_BOLT_HOLE_DIAMETER, 2.6)
 
     def test_sizes(self):
-        self.assertAlmostEqual(head_pocket_diameter(), 4.0, places=12)
-        self.assertAlmostEqual(nut_pocket_flats(), 4.2, places=12)
-        self.assertAlmostEqual(nut_cavity_height(), 1.8, places=12)
+        self.assertAlmostEqual(head_pocket_diameter(), 4.4, places=12)
+        self.assertAlmostEqual(nut_pocket_diameter(), 5.018802153517006, places=12)
+        self.assertAlmostEqual(nut_cavity_height(), 2.0, places=12)
         self.assertAlmostEqual(nut_across_corners(), 4.618802153517006, places=12)
 
     def test_nut_angle(self):

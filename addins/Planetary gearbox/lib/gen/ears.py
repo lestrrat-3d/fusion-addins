@@ -11,7 +11,7 @@ import math
 
 from .curves import Arc, Circle, Line, Loop, Point
 from .dims import Dims
-from .fasteners import POCKET_MARGIN, head_pocket_diameter, nut_pocket_flats
+from .fasteners import POCKET_MARGIN, head_pocket_diameter, nut_pocket_diameter
 from .params import Params
 from .report import fmt_num as n
 from .sections import bolt_angles
@@ -142,7 +142,7 @@ def validate_ears(p: Params, d: Dims) -> str | None:
             )
     # A bolt site is clear of an ear when its pockets stay beyond the ear's side edge, or the ear lies on the far
     # side of the axis.
-    reach = max(nut_pocket_flats(), head_pocket_diameter()) / 2 + POCKET_MARGIN
+    reach = max(nut_pocket_diameter(), head_pocket_diameter()) / 2 + POCKET_MARGIN
     for i in range(p.ear_count):
         for b in bolt_angles():
             delta = ear_angle(i, p.ear_count) - b

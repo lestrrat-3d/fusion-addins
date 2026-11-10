@@ -77,12 +77,12 @@ class ValidateTest(unittest.TestCase):
              "least 0.5 clearance"),
             ({"module": 0.5}, "the 5 mm shaft bore leaves less than one module of wall under the sun root"),
             ({"key_width": 0.5}, "key width 0.5 must exceed 0.5 for the shaft clearance"),
-            ({"bolt_hole_diameter": 2.1}, "bolt hole diameter 2.1 is under the 2.4 clearance hole for the M2 bolt "
+            ({"bolt_hole_diameter": 2.1}, "bolt hole diameter 2.1 is under the 2.6 clearance hole for the M2 bolt "
              "shank 2"),
-            ({"bolt_hole_diameter": 1.5}, "bolt hole diameter 1.5 is under the 2.4 clearance hole for the M2 bolt "
+            ({"bolt_hole_diameter": 1.5}, "bolt hole diameter 1.5 is under the 2.6 clearance hole for the M2 bolt "
              "shank 2"),
             ({"cover_thickness": 2.5}, "cover thickness 2.5 leaves less than 1 under a 2 tall bolt head"),
-            ({"ring_wall": 6}, "bolt head and nut pockets of radius 2.1 do not fit the ring wall 6 with 1 of "
+            ({"ring_wall": 6}, "bolt head and nut pockets of radius 2.5094010767585035 do not fit the ring wall 6 with 1 of "
              "material either side"),
             ({"stage_gap": 0.5}, "stage gap 0.5 is out of range"),
             ({"edge_chamfer": 0.4}, "edge chamfer 0.4 is out of range"),
@@ -102,11 +102,11 @@ class ValidateTest(unittest.TestCase):
         validate(dataclasses.replace(base, edge_chamfer=0.5))
         validate(dataclasses.replace(base, edge_chamfer=1.0))
         validate(dataclasses.replace(base, bolt_hole_diameter=4))
-        validate(dataclasses.replace(base, bolt_hole_diameter=2.4))
+        validate(dataclasses.replace(base, bolt_hole_diameter=2.6))
         with self.assertRaisesRegex(ValidationError, "clearance hole"):
-            validate(dataclasses.replace(base, bolt_hole_diameter=2.39))
+            validate(dataclasses.replace(base, bolt_hole_diameter=2.59))
         with self.assertRaisesRegex(ValidationError, "bolt holes"):
-            validate(dataclasses.replace(base, bolt_hole_diameter=4.01))
+            validate(dataclasses.replace(base, bolt_hole_diameter=4.11))
         cb = (1.0 * 29 / 2 - (1.0 + 0.5 + 0.02)) - 1.0 - 14.0 / 2
         validate(dataclasses.replace(base, bearing_clearance=cb))
         with self.assertRaisesRegex(ValidationError, "bearing pocket"):

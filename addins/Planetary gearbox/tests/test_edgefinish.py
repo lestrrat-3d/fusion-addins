@@ -29,8 +29,8 @@ D1_WIDE = derive(P1_WIDE)
 
 # part -> (volume at c = 0.5, volume at c = 1.0)
 VOLUMES = {
-    "ring": (81.0455, 323.1348),
-    "cover": (179.0232, 719.4680),
+    "ring": (81.2017, 323.7595),
+    "cover": (178.7189, 718.2510),
     "carrier": (35.2647, 140.0115),
 }
 
@@ -105,14 +105,14 @@ class EdgeFinishTest(unittest.TestCase):
                     self.assertEqual(edge_chamfer_volume(P1, D1, name), 0.0)
 
     def test_edge_chamfer_volume_ring_without_ears(self):
-        for c, want in ((0.5, 68.8532), (1.0, 274.3658)):
+        for c, want in ((0.5, 69.0103), (1.0, 274.9941)):
             with self.subTest(chamfer=c):
                 p = dataclasses.replace(P1, ear_count=0, edge_chamfer=c)
                 self.assertAlmostEqual(edge_chamfer_volume(p, derive(p), "ring"), want, delta=1e-3)
 
     def test_window_chamfer_volume(self):
-        self.assertAlmostEqual(window_chamfer_volume(D1, 0.5), 17.6851, delta=1e-3)
-        self.assertAlmostEqual(window_chamfer_volume(D1_WIDE, 1.0), 71.3912, delta=1e-3)
+        self.assertAlmostEqual(window_chamfer_volume(D1, 0.5), 17.6084, delta=1e-3)
+        self.assertAlmostEqual(window_chamfer_volume(D1_WIDE, 1.0), 71.0836, delta=1e-3)
         poly = loop_polygon(cover_window_loops(P1, D1)[0], math.radians(0.05))
         self.assertAlmostEqual(window_chamfer_volume(D1, 0.5), offset_removed(poly, 0.5), delta=1e-4)
 

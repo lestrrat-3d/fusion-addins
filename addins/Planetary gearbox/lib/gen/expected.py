@@ -35,7 +35,7 @@ from .fasteners import (
     head_pocket_diameter,
     nut_across_corners,
     nut_cavity_height,
-    nut_pocket_flats,
+    nut_pocket_diameter,
 )
 from .params import PIN_COLLAR_CLEARANCE, PIN_COLLAR_THICKNESS, PLANET_BEARING_LIFT, Params
 from .polygon import polygon_area
@@ -155,7 +155,7 @@ def part_volume(p: Params, d: Dims, part: str, fillet_radius: float | None = Non
     if part == "ring":
         tool = _area(gears.ring_tool(p))
         bolts = 4 * math.pi * (p.bolt_hole_diameter / 2) ** 2
-        cavities = 8 * (math.sqrt(3) / 2 * nut_pocket_flats() ** 2 - math.pi * (p.bolt_hole_diameter / 2) ** 2)
+        cavities = 8 * math.pi * ((nut_pocket_diameter() / 2) ** 2 - (p.bolt_hole_diameter / 2) ** 2)
         value = (ring_blank_area(p, d) - bolts - tool) * d.ring_length - cavities * nut_cavity_height()
         value -= edgefinish.edge_chamfer_volume(p, d, part)
         return Expect(value, 0.002 * value)

@@ -122,22 +122,22 @@ class LayoutTest(unittest.TestCase):
 
     def test_fastener_poses(self):
         poses = self.poses(P1, D1)
-        c = 40.5 * math.cos(math.pi / 4)
+        c = 40.55 * math.cos(math.pi / 4)
         self.check_pose(poses["Front Bolt 1"], 0, c, c, -2, flip=True)
         self.check_pose(poses["Rear Bolt 1"], 0, c, c, 14)
-        self.check_pose(poses["Front Nut 1"], -math.pi / 4, c, c, 0.1)
-        self.check_pose(poses["Rear Nut 4"], 5 * math.pi / 4, c, -c, 10.3)
+        self.check_pose(poses["Front Nut 1"], -math.pi / 4, c, c, 0.2)
+        self.check_pose(poses["Rear Nut 4"], 5 * math.pi / 4, c, -c, 10.2)
         self.assertLess(abs(poses["Planet Bearing 1.1"].z - 3.25), 1e-12)
 
     def test_nut_cavity_and_head_pocket_poses(self):
         cav = layout.nut_cavity_poses(P1, D1)
         self.assertEqual(len(cav), 8)
-        self.assertEqual([round(q.z, 9) for q in cav], [2.0] * 4 + [12.2] * 4)
+        self.assertEqual([round(q.z, 9) for q in cav], [2.0] * 4 + [12.0] * 4)
         for i, q in enumerate(cav):
             a = math.pi / 4 + (i % 4) * math.pi / 2
-            self.assertLess(abs(q.x - 40.5 * math.cos(a)), 1e-12)
-            self.assertLess(abs(q.y - 40.5 * math.sin(a)), 1e-12)
-            self.assertLess(abs(q.angle - (math.pi / 4 + (i % 4) * math.pi / 2 - math.pi / 2)), 1e-12)
+            self.assertLess(abs(q.x - 40.55 * math.cos(a)), 1e-12)
+            self.assertLess(abs(q.y - 40.55 * math.sin(a)), 1e-12)
+            self.assertEqual(q.angle, 0.0)  # the cavity is round
         heads = layout.head_pocket_poses(D1)
         self.assertEqual(len(heads), 4)
         self.assertTrue(all(h.z == 0 and h.angle == 0 and not h.flip for h in heads))
