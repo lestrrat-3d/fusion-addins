@@ -34,7 +34,7 @@ INPUT_SPECS: tuple[InputSpec, ...] = (
     InputSpec("carrier_thickness", "Carrier thickness", "length", 3),
     InputSpec("stage_gap", "Stage gap", "length", 1),
     InputSpec("cover_thickness", "Cover thickness", "length", 3),
-    InputSpec("bolt_hole_diameter", "Bolt hole diameter", "length", 2.4),
+    InputSpec("bolt_hole_diameter", "Bolt hole diameter", "length", 2.6),
     InputSpec("key_depth", "Key depth", "length", 1.1),
     InputSpec("key_width", "Key width", "length", 2),
     InputSpec("input_shaft_length", "Input shaft length", "length", 12),
@@ -42,7 +42,7 @@ INPUT_SPECS: tuple[InputSpec, ...] = (
     InputSpec("seat_chamfer", "Seat chamfer", "length", 0.5),
     InputSpec("edge_chamfer", "Edge chamfer", "length", 0.5),
     InputSpec("carrier_wall", "Carrier wall", "length", 3),
-    InputSpec("ring_wall", "Ring wall", "length", 7),
+    InputSpec("ring_wall", "Ring wall", "length", 7.1),
     InputSpec("output_shaft_length", "Output shaft length", "length", 12),
     # Directive (docs/planetarygearbox/directives.md): the mounting ears are on by default and a check box turns them
     # off. The gallery has only EarCount (0 = no ears); an unchecked box gives 0, see params_from_values.

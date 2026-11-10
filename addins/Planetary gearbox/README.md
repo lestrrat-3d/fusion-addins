@@ -12,7 +12,7 @@ dialog turns them off, and the `Ear count` and `Ear bore diameter` inputs are di
 
 ## Gallery revision
 
-Gallery revision: 4a452cdc74e783b7e8eb5512cec68d196423dbe4 (`GALLERY_REVISION` in `config.py`)
+Gallery revision: 59e2f0e838c3871f854ac0c5cd45f8b921d3943b (`GALLERY_REVISION` in `config.py`)
 
 The add-in translates decad-gallery at this commit: `models/planetarygearbox` and the models it builds from,
 `models/spurgear`, `models/ballbearing`, `models/m2bolt` and `models/m2nut`.

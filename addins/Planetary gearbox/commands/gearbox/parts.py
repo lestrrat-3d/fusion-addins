@@ -32,7 +32,7 @@ from ...lib.gen.fasteners import (
     hexagon_loop,
     nut_cavity_height,
     nut_chamfer_section,
-    nut_pocket_flats,
+    nut_pocket_diameter,
 )
 from ...lib.gen.params import (
     PIN_COLLAR_CLEARANCE,
@@ -253,9 +253,9 @@ def build_ring(ctx: BuildContext) -> adsk.fusion.BRepBody:
     profile = fusion.profile_with_loops(sk, 5 + p.ear_count, "ring ring_blank_sketch")
     blank = fusion.extrude(ctx, profile, RING_MARGIN, length, "ring ring_blank_extrude")
 
-    # [cutNutPockets] Eight closed hexagonal nut cavities, one single-tool cut each, before the tooth cut.
+    # [cutNutPockets] Eight closed round nut cavities, one single-tool cut each, before the tooth cut.
     sk = fusion.new_sketch(ctx.comp, "ring nut cavity")
-    fusion.draw_loop(sk, hexagon_loop(nut_pocket_flats()))
+    fusion.draw_circle(sk, (0.0, 0.0), nut_pocket_diameter() / 2)
     profile = fusion.profile_with_loops(sk, 1, "ring nut_cavity_sketch", only=True)
     cavity = fusion.extrude(ctx, profile, 0.0, nut_cavity_height(), "ring nut_cavity_extrude")
     for cut_tool in _tool_instances(ctx, cavity, layout.nut_cavity_poses(p, d), "ring nut_cavity"):

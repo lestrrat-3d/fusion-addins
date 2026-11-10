@@ -62,7 +62,7 @@ class SectionsTest(unittest.TestCase):
             self.assertEqual(len(loop), 4)
             self.assertTrue(loop_is_closed(loop))
             poly = loop_polygon(loop)
-            self.assertLess(abs(polygon_area(poly) - 1099.0225), 0.05)
+            self.assertLess(abs(polygon_area(poly) - 1088.384), 0.05)
             polys.append(poly)
         spoke = polar(28, 30)
         self.assertFalse(any(point_in_polygon(poly, spoke) for poly in polys))
@@ -70,7 +70,7 @@ class SectionsTest(unittest.TestCase):
 
     def test_window_reach(self):
         # Port of the gallery cover test: each window reaches the rim line.
-        rim = D.ring_outer - P.ring_wall / 2 - (3.8 / 2 + 0.1) - 1.5
+        rim = D.ring_outer - P.ring_wall / 2 - (3.8 / 2 + 0.3) - 1.5
         loops = cover_window_loops(P, D)
         self.assertEqual(len(loops), 3)
         for loop in loops:
@@ -80,7 +80,7 @@ class SectionsTest(unittest.TestCase):
     def test_bolt_holes(self):
         for x, y in bolt_hole_centers(D):
             r = math.hypot(x, y)
-            self.assertLess(abs(r - 40.5), 1e-9)
+            self.assertLess(abs(r - 40.55), 1e-9)
             self.assertGreaterEqual(r - P.bolt_hole_diameter / 2, D.ring_root + BOLT_RIM_MARGIN)
             self.assertLessEqual(r + P.bolt_hole_diameter / 2, D.ring_outer - BOLT_RIM_MARGIN)
 
@@ -90,8 +90,8 @@ class SectionsTest(unittest.TestCase):
         for i, (x, y, a) in enumerate(sites):
             want = math.pi / 4 + i * math.pi / 2
             self.assertAlmostEqual(a, want, places=12)
-            self.assertAlmostEqual(x, 40.5 * math.cos(want), places=12)
-            self.assertAlmostEqual(y, 40.5 * math.sin(want), places=12)
+            self.assertAlmostEqual(x, 40.55 * math.cos(want), places=12)
+            self.assertAlmostEqual(y, 40.55 * math.sin(want), places=12)
 
 
 if __name__ == "__main__":

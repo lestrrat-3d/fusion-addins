@@ -11,9 +11,9 @@ import math
 
 from .dims import Dims
 from .fasteners import (
-    FASTENER_CLEARANCE,
     FASTENER_LENGTH,
     HEAD_HEIGHT,
+    NUT_CLEARANCE,
     NUT_ROOF,
     NUT_THICKNESS,
     nut_angle,
@@ -226,7 +226,7 @@ def instances(p: Params, d: Dims) -> list[Instance]:
     for i, (x, y, a) in enumerate(sites):
         out.append(Instance(front_bolt_name(i), "bolt", Pose(flip=True, x=x, y=y, z=-(g + tv) + HEAD_HEIGHT)))
         out.append(
-            Instance(front_nut_name(i), "nut", Pose(nut_angle(a), x, y, -g + NUT_ROOF + FASTENER_CLEARANCE))
+            Instance(front_nut_name(i), "nut", Pose(nut_angle(a), x, y, -g + NUT_ROOF + NUT_CLEARANCE))
         )
     for i, (x, y, a) in enumerate(sites):
         out.append(Instance(rear_bolt_name(i), "bolt", Pose(0.0, x, y, end + tv - HEAD_HEIGHT)))
@@ -234,7 +234,7 @@ def instances(p: Params, d: Dims) -> list[Instance]:
             Instance(
                 rear_nut_name(i),
                 "nut",
-                Pose(nut_angle(a), x, y, end - NUT_ROOF - FASTENER_CLEARANCE - NUT_THICKNESS),
+                Pose(nut_angle(a), x, y, end - NUT_ROOF - NUT_CLEARANCE - NUT_THICKNESS),
             )
         )
     for k in range(p.stages):
@@ -266,8 +266,8 @@ def nut_cavity_poses(p: Params, d: Dims) -> list[Pose]:
     """Ring-local poses of the nut cavity tool: front four, then rear four [cutNutPockets]."""
     out: list[Pose] = []
     for z in (RING_MARGIN + NUT_ROOF, RING_MARGIN + d.ring_length - NUT_ROOF - nut_cavity_height()):
-        for x, y, a in fastener_sites(d):
-            out.append(Pose(nut_angle(a), x, y, z))
+        for x, y, _ in fastener_sites(d):
+            out.append(Pose(0.0, x, y, z))
     return out
 
 
