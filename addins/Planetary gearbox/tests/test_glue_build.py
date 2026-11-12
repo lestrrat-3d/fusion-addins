@@ -140,6 +140,11 @@ def install(world, fusion, face_loops=FACE_LOOPS):
 
         return f
 
+    def split_body(ctx, body, pose, what):
+        world.calls.append(("split", what))
+        world.alive.remove(body)
+        return tuple(FakeBody(world, ctx.comp, ctx.part) for _ in range(2))
+
     def revolve(ctx, profile, what):
         world.calls.append(("revolve", what))
         return FakeBody(world, ctx.comp, ctx.part)
@@ -172,6 +177,7 @@ def install(world, fusion, face_loops=FACE_LOOPS):
         "cut": combine,
         "pattern": pattern,
         "copy_body": copy_body,
+        "split_body": split_body,
         "move": move,
         "fillet": record("fillet"),
         "chamfer": chamfer,
@@ -256,6 +262,20 @@ class GlueBuildTest(unittest.TestCase):
 
     def test_two_stages(self):
         self.check_names({"stages": 2}, 46)
+
+    def test_pins_shafts_not_split_by_default(self):
+        world, _ = self.run_build(stages=2)
+        self.assertEqual([c for c in world.calls if c[0] == "split"], [])
+
+    def test_split_pins_shafts(self):
+        p = dataclasses.replace(default_params(), stages=2, split_pins_shafts=True)
+        world, _ = self.run_build(stages=2, split_pins_shafts=True)
+        split = [i.name for i in layout.instances(p, derive(p)) if i.part in layout.SPLIT_PARTS]
+        self.assertEqual(len(split), 3 + 6)
+        self.assertEqual(sorted(c[1] for c in world.calls if c[0] == "split"), sorted(f"{n} split" for n in split))
+        self.assertEqual(world.count, 46 + len(split))
+        halves = sorted(b.name for b in world.alive if b.comp.name in (containers.SHAFTS, containers.CARRIER_PINS))
+        self.assertEqual(halves, sorted(h for n in split for h in layout.split_names(n)))
 
     def test_planet_fillet_second_attempt(self):
         attempts = []

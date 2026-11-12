@@ -143,6 +143,9 @@ class Params:
     output_shaft_length: float = 12.0
     ear_count: int = 3
     ear_bore_diameter: float = 4.0
+    # Add-in option, not a gallery input (docs/planetarygearbox/directives.md): cut every carrier pin and shaft in two along the
+    # plane through its axis that is parallel to the D flat.
+    split_pins_shafts: bool = False
     placement: Frame | None = None
 
 

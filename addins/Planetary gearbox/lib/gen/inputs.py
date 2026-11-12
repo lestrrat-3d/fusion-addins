@@ -18,6 +18,7 @@ class InputSpec:
 
 
 EARS_ID = "ears"
+SPLIT_ID = "split_pins_shafts"
 
 # Deviation: the pressure angle is entered in degrees (Fusion's "deg" value input displays degrees) and is
 # radians once read back, as in the gallery. See README "Deviations from decad-gallery".
@@ -49,6 +50,8 @@ INPUT_SPECS: tuple[InputSpec, ...] = (
     InputSpec("ear_count", "Ear count", "count", 3, needs=EARS_ID),
     InputSpec("ear_bore_diameter", "Ear bore diameter", "length", 4, needs=EARS_ID),
     InputSpec("backlash", "Backlash", "length", 0.15),
+    # Directive: an extra option, off by default, that splits every carrier pin and shaft in two. Not a gallery input.
+    InputSpec(SPLIT_ID, "Split pins/shafts", "bool", 0),
 )
 
 
@@ -65,4 +68,5 @@ def params_from_values(values: dict[str, float]) -> Params:
         kwargs[spec.id] = int(v) if spec.kind == "count" else float(v)
     if not values[EARS_ID]:
         kwargs["ear_count"] = 0
+    kwargs["split_pins_shafts"] = bool(values[SPLIT_ID])
     return Params(**kwargs)  # pyright: ignore[reportArgumentType]

@@ -89,8 +89,8 @@ class ParamsTest(unittest.TestCase):
     def test_input_specs(self):
         ids = [s.id for s in INPUT_SPECS]
         self.assertEqual(len(ids), len(set(ids)))
-        # Placement is chosen by selection in the dialog, so the table holds the 24 gallery inputs and the ears box.
-        self.assertEqual(len(ids), 25)
+        # Placement is chosen by selection in the dialog, so the table holds the 24 gallery inputs, the ears box and the split box.
+        self.assertEqual(len(ids), 26)
         self.assertEqual(ids.index("edge_chamfer"), ids.index("seat_chamfer") + 1)
         fields = {f.name for f in dataclasses.fields(default_params())}
         self.assertEqual(set(ids) - fields, {"ears"})
@@ -117,6 +117,16 @@ class ParamsTest(unittest.TestCase):
         values["ear_bore_diameter"] = 6
         p = params_from_values(values)
         self.assertEqual((p.ear_count, p.ear_bore_diameter), (2, 6.0))
+
+    def test_split_pins_shafts_off_by_default(self):
+        specs = {s.id: s for s in INPUT_SPECS}
+        self.assertEqual((specs["split_pins_shafts"].kind, specs["split_pins_shafts"].default), ("bool", 0))
+        self.assertFalse(default_params().split_pins_shafts)
+        values = {s.id: s.default for s in INPUT_SPECS}
+        values["pressure_angle"] = 20 * math.pi / 180
+        self.assertFalse(params_from_values(values).split_pins_shafts)
+        values["split_pins_shafts"] = 1
+        self.assertTrue(params_from_values(values).split_pins_shafts)
 
     def test_params_from_values_defaults(self):
         values = {s.id: s.default for s in INPUT_SPECS}

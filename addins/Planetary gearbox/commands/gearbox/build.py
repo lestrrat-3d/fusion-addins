@@ -77,6 +77,27 @@ def _place(ctx: BuildContext, part: str, master: adsk.fusion.BRepBody) -> list[t
     return placed
 
 
+def _split_pins_shafts(ctx: BuildContext, built: list[tuple[str, str, adsk.fusion.BRepBody]]) -> None:
+    """Add-in option: cut every carrier pin and shaft in two on the plane through its axis parallel to the D flat.
+
+    Runs after the build checks, which expect whole bodies. The halves replace the body in its container."""
+    poses = {inst.name: inst.pose for inst in layout.instances(ctx.p, ctx.d)}
+    for part, name, body in built:
+        if part not in layout.SPLIT_PARTS:
+            continue
+        ctx.part = part
+        ctx.comp = ctx.container_comps[containers.container_of(part)]
+        whole = fusion.body_report(body)[1] if ctx.log.enabled else 0.0
+        halves = fusion.split_body(ctx, body, poses[name], f"{name} split")
+        for half, half_name in zip(halves, layout.split_names(name)):
+            half.name = half_name
+        if ctx.log.enabled:
+            parts_volume = sum(fusion.body_report(h)[1] for h in halves)
+            if abs(parts_volume - whole) > 1e-3 * max(whole, 1.0):
+                ctx.log.write("split", [("name", name), ("volume_mm3", parts_volume), ("expected_mm3", whole),
+                                        ("result", "FAIL")])
+
+
 def build_gearbox(design: adsk.fusion.Design, p: Params, log: Log) -> None:
     if design.designType != adsk.fusion.DesignTypes.ParametricDesignType:
         raise fusion.BuildError("switch the design to parametric (capture design history) and run again")
@@ -128,5 +149,7 @@ def build_gearbox(design: adsk.fusion.Design, p: Params, log: Log) -> None:
             if not body.isSolid:
                 raise fusion.BuildError(f"{name}: result is not a solid")
     checks.run_all(ctx, built, PLACE_INSTANCES, time.time() - started)
+    if p.split_pins_shafts:
+        _split_pins_shafts(ctx, built)
     if placed_frame and PLACEMENT_VIA_TRANSFORM2:
         occ.transform2 = fusion.frame_matrix(p.placement)
