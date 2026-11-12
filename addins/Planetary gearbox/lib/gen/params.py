@@ -14,7 +14,6 @@ Vec3 = tuple[float, float, float]
 LIP_WIDTH = 2.0
 LIP_THICKNESS = 1.0
 COLLAR_CLEARANCE = 0.5
-KEY_COUNT = 3
 BOLT_RIM_MARGIN = 1.5
 ARM_MARGIN = 1.0
 COLLAR_MARGIN = 1.2
@@ -28,8 +27,13 @@ GEAR_ROOT_MEASUREMENT_MARGIN = 0.02
 SEAT_CLEARANCE = 0.05
 FIT_CLEARANCE = 0.25
 PLANET_BEARING_LIFT = FIT_CLEARANCE
-PIN_COLLAR_CLEARANCE = FIT_CLEARANCE
-PIN_COLLAR_THICKNESS = FIT_CLEARANCE
+PIN_SHOULDER_CLEARANCE = FIT_CLEARANCE  # params.go pinShoulderClearance: pin's thick part above the bearing's race
+PIN_SHOULDER_REACH = FIT_CLEARANCE  # params.go pinShoulderReach: shortest thick part below the plate
+# params.go pressFitClearance: radial gap between a thick D part and its socket or hole in the carrier plate.
+PRESS_FIT_CLEARANCE = 0.05
+STEP_OVERLAP = 0.05  # params.go stepOverlap: how far a thin rod reaches into its thick part
+MIN_SOCKET_WALL = 1.0  # params.go minSocketWall: plate kept around a pin socket at mid-plate
+MIN_SOCKET_FACE_WALL = 0.5  # params.go minSocketFaceWall: plate kept between a socket and the chamfered outline
 MIN_EDGE_CHAMFER = 0.5  # [edgefinish.go MinEdgeChamfer]
 
 
@@ -128,8 +132,7 @@ class Params:
     stage_gap: float = 1.0
     cover_thickness: float = 3.0
     bolt_hole_diameter: float = 2.6
-    key_depth: float = 1.1
-    key_width: float = 2.0
+    flat_depth: float = 0.5
     seat_chamfer: float = 0.5
     edge_chamfer: float = MIN_EDGE_CHAMFER
     input_shaft_length: float = 12.0

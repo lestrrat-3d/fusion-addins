@@ -1,7 +1,7 @@
 """Body containers of the gearbox and the check that stands in for decad VerifyContainers.
 
 Own copy of decad-gallery models/planetarygearbox container.go (container names, moveBodies) and container_test.go
-(requireContainers) at a800069.
+(requireContainers) at 92c1f03.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ COVER_BEARINGS = "Cover Bearings"
 SUN_GEARS = "Sun Gears"
 PLANET_GEARS = "Planet Gears"
 PLANET_BEARINGS = "Planet Bearings"
+CARRIER_PINS = "Carrier Pins"
 CARRIERS = "Carriers"
 SHAFTS = "Shafts"
 BOLTS = "Bolts"
@@ -32,6 +33,7 @@ CONTAINER_NAMES: tuple[str, ...] = (
     SUN_GEARS,
     PLANET_GEARS,
     PLANET_BEARINGS,
+    CARRIER_PINS,
     CARRIERS,
 )
 PART_CONTAINERS: dict[str, str] = {
@@ -44,6 +46,7 @@ PART_CONTAINERS: dict[str, str] = {
     "sun": SUN_GEARS,
     "planet": PLANET_GEARS,
     "planet_bearing": PLANET_BEARINGS,
+    "carrier_pin": CARRIER_PINS,
     "carrier": CARRIERS,
     "link_shaft": SHAFTS,
     "output_shaft": SHAFTS,

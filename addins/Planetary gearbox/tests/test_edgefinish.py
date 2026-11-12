@@ -30,8 +30,8 @@ D1_WIDE = derive(P1_WIDE)
 # part -> (volume at c = 0.5, volume at c = 1.0)
 VOLUMES = {
     "ring": (81.2017, 323.7595),
-    "cover": (178.7189, 718.2510),
-    "carrier": (35.2647, 140.0115),
+    "cover": (178.0191, 715.4484),
+    "carrier": (35.6574, 141.5823),
 }
 
 
@@ -111,8 +111,8 @@ class EdgeFinishTest(unittest.TestCase):
                 self.assertAlmostEqual(edge_chamfer_volume(p, derive(p), "ring"), want, delta=1e-3)
 
     def test_window_chamfer_volume(self):
-        self.assertAlmostEqual(window_chamfer_volume(D1, 0.5), 17.6084, delta=1e-3)
-        self.assertAlmostEqual(window_chamfer_volume(D1_WIDE, 1.0), 71.0836, delta=1e-3)
+        self.assertAlmostEqual(window_chamfer_volume(D1, 0.5), 17.4918, delta=1e-3)
+        self.assertAlmostEqual(window_chamfer_volume(D1_WIDE, 1.0), 70.6165, delta=1e-3)
         poly = loop_polygon(cover_window_loops(P1, D1)[0], math.radians(0.05))
         self.assertAlmostEqual(window_chamfer_volume(D1, 0.5), offset_removed(poly, 0.5), delta=1e-4)
 
@@ -121,7 +121,7 @@ class EdgeFinishTest(unittest.TestCase):
         self.assertAlmostEqual(edgefinish._rim(5.0, 1.0, False), 16.7552, delta=1e-3)
 
     def test_carrier_perimeter(self):
-        self.assertAlmostEqual(edgefinish._perimeter(carrier_plate_outline(P1, D1)), 142.1059, delta=1e-3)
+        self.assertAlmostEqual(edgefinish._perimeter(carrier_plate_outline(P1, D1)), 143.6767, delta=1e-3)
 
 
 if __name__ == "__main__":

@@ -104,7 +104,7 @@ FACE_LOOPS = {
              [(True, 12, 44.0), (False, 284, 34.5)] + [(False, 1, 39.3)] * 4 + [(False, 1, 49.0)] * 3),
     "cover": ([(True, 1, 44.0)] + [(False, 4, 13.25)] * 3 + [(False, 1, 5.0)] + [(False, 1, 39.3)] * 4,
               [(True, 1, 44.0)] + [(False, 4, 13.25)] * 3 + [(False, 1, 38.5)] * 4 + [(False, 1, 10.25)]),
-    "carrier": ([(True, 6, 26.25), (False, 12, 2.5)] + [(False, 1, 25.95)] * 3,
+    "carrier": ([(True, 6, 26.25), (False, 12, 2.5)] + [(False, 2, 18.8)] * 3,
                 [(True, 6, 26.25), (False, 12, 2.5)]),
 }
 
@@ -252,10 +252,10 @@ class GlueBuildTest(unittest.TestCase):
             self.assertTrue(r.ok, (r.name, r.detail))
 
     def test_one_stage(self):
-        self.check_names({}, 31)
+        self.check_names({}, 34)
 
     def test_two_stages(self):
-        self.check_names({"stages": 2}, 40)
+        self.check_names({"stages": 2}, 46)
 
     def test_planet_fillet_second_attempt(self):
         attempts = []
@@ -316,9 +316,17 @@ class GlueBuildTest(unittest.TestCase):
         for i, c in enumerate(calls):
             if c == ("combine", "cover head_pocket_cut"):
                 self.assertGreater(i, join)
-        self.assertIn(("extrude", "carrier pin_collar_extrude"), calls)
-        thin, _ = self.run_build(stage_gap=0.75)
-        self.assertIn(("extrude", "carrier pin_collar_extrude"), thin.calls)
+        # The carrier has one socket tool, copied for the other two planets and cut in one boolean; no pins stand on it.
+        self.assertEqual(calls.count(("extrude", "carrier pin socket_extrude")), 1)
+        self.assertEqual(calls.count(("pattern", "carrier socket_pattern")), 1)
+        self.assertEqual(calls.count(("combine", "carrier socket_cut")), 1)
+        self.assertNotIn(("combine", "carrier carrier_join"), calls)
+        # Each pin is its own part: a rod and a D thick part joined once.
+        for gap in (1.0, 0.75):
+            world, _ = self.run_build(stage_gap=gap)
+            for what in ("rod", "thick"):
+                self.assertIn(("extrude", f"carrier_pin {what}_extrude"), world.calls)
+            self.assertEqual(world.calls.count(("combine", "carrier_pin pin_join")), 1)
 
     def test_ring_blank_sketch_has_the_ear_bores(self):
         for changes, loops in (({}, 8), ({"ear_count": 0}, 5), ({"ear_count": 2, "ear_bore_diameter": 6.0}, 7)):
@@ -335,6 +343,22 @@ class GlueBuildTest(unittest.TestCase):
         world, _ = self.run_build(ear_count=0, face_loops=plain)
         finish = [c for c in world.chamfers if c[0].startswith("ring edge_chamfer")]
         self.assertEqual(finish, [("ring edge_chamfer z=1", 1, 0.5, False), ("ring edge_chamfer z=15", 1, 0.5, False)])
+
+    def test_shaft_flat_calls(self):
+        world, _ = self.run_build(stages=2)
+        calls = world.calls
+        # One flat box per span: input 1, link 1, output none (its thin rod stays round). The flat is not patterned.
+        self.assertEqual(len([c for c in calls if c[1].endswith("flat_box_extrude")]), 2)
+        self.assertFalse([c for c in calls if "key" in c[1]])
+        for part in ("input_shaft", "link_shaft"):
+            self.assertIn(("combine", f"{part} flat_cut"), calls)
+        self.assertNotIn(("combine", "output_shaft flat_cut"), calls)
+        for part in ("link_shaft", "output_shaft"):
+            self.assertIn(("combine", f"{part} step_join"), calls)
+        self.assertIn(("combine", "sun d_bore_cut"), calls)
+        self.assertEqual(calls.count(("extrude", "carrier shaft_hole_extrude")), 1)
+        flat_off, _ = self.run_build(flat_depth=0.0)
+        self.assertFalse([c for c in flat_off.calls if "flat_box" in c[1] or "flat_cut" in c[1] or "d_bore" in c[1]])
 
     def test_edge_finishing_calls(self):
         world, _ = self.run_build()

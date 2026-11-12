@@ -15,8 +15,6 @@ from gen.sections import (
     bolt_hole_centers,
     carrier_plate_outline,
     cover_window_loops,
-    key_box,
-    key_tool_section,
 )
 
 P1 = default_params()
@@ -26,20 +24,25 @@ D2 = derive(P2)
 A = P1.pressure_angle
 
 
-def in_key_tool(p, d, x, y):
-    sec = key_tool_section(p, d)
-    if isinstance(sec, Circle):
-        return math.hypot(x, y) < sec.radius
-    return point_in_polygon(loop_polygon(sec), (x, y))
+def in_flat_tool(p, d, x, y):
+    """The sun bore and carrier hole, written from the gallery's words: a disc 0.05 mm outside the shaft, cut by a flat
+    0.05 mm outside the shaft's flat, which is Flat depth inside the disc's +X edge."""
+    radius = d.shaft / 2 + 0.05
+    if p.flat_depth == 0:
+        return math.hypot(x, y) < d.shaft_bore / 2
+    return math.hypot(x, y) < radius and x < radius - p.flat_depth
 
 
-def in_groove(p, d, x, y):
-    (x0, y0), (x1, y1) = key_box(p, d)
-    for k in range(3):
-        qx, qy = rotate((x, y), -2 * math.pi * k / 3)
-        if x0 <= qx <= x1 and y0 <= qy <= y1:
-            return True
-    return False
+def in_thick_d(p, d, x, y, extra=0.0):
+    """The D thick part of a pin or shaft (extra = 0), or its socket and hole (extra = 0.05): a disc of the shaft
+    collar diameter, cut by a flat Flat depth inside the disc's +X edge."""
+    radius = d.collar / 2 + extra
+    return math.hypot(x, y) < radius and (p.flat_depth == 0 or x < radius - p.flat_depth)
+
+
+def in_flat(p, d, x):
+    """The shaft's flat: the strip from Flat depth inside the shaft's +X edge outwards."""
+    return x >= d.shaft / 2 - p.flat_depth
 
 
 def in_nut_hex(lx, ly, half_width):
@@ -77,7 +80,7 @@ def material(p, d, part, pt):
     wb = d.bearing.width
     if part == "sun":
         gd = gears.sun_gear(p)
-        return 0 <= z <= t and point_in_polygon(gear_outline_polygon(gd, 60), (x, y)) and not in_key_tool(p, d, x, y)
+        return 0 <= z <= t and point_in_polygon(gear_outline_polygon(gd, 60), (x, y)) and not in_flat_tool(p, d, x, y)
     if part == "planet":
         gd = gears.planet_gear(p)
         if not (0 <= z <= t) or not point_in_polygon(gear_outline_polygon(gd, 60), (x, y)):
@@ -130,14 +133,23 @@ def material(p, d, part, pt):
     if part in ("housing_bearing", "planet_bearing"):
         return 0 <= z <= wb and 4 < r < 11
     if part == "carrier":
-        if 0 <= z <= tc:
-            return point_in_polygon(loop_polygon(carrier_plate_outline(p, d)), (x, y)) and not in_key_tool(p, d, x, y)
-        if -(p.gear_thickness + p.stage_gap) <= z < 0:
-            for q in range(p.planet_count):
-                a = planet_orbit_angle(p, q)
-                dist = math.hypot(x - d.orbit * math.cos(a), y - d.orbit * math.sin(a))
-                if dist < d.pin / 2 or (z >= -p.stage_gap + 0.5 and dist < d.collar / 2):
-                    return True
+        if not 0 <= z <= tc:
+            return False
+        if not point_in_polygon(loop_polygon(carrier_plate_outline(p, d)), (x, y)) or in_thick_d(p, d, x, y, 0.05):
+            return False
+        # A D socket through the plate for each pin: the thick part's radius plus 0.05, flat on the outer side.
+        for q in range(p.planet_count):
+            lx, ly = rotate((x, y), -planet_orbit_angle(p, q))
+            if in_thick_d(p, d, lx - d.orbit, ly, 0.05):
+                return False
+        return True
+    if part == "carrier_pin":
+        g = p.stage_gap
+        thick_bottom = -g + 0.5
+        if -(p.gear_thickness + g) <= z <= thick_bottom:
+            return r < d.pin / 2
+        if thick_bottom < z <= tc:
+            return in_thick_d(p, d, x, y)
         return False
     spec = {
         "input_shaft": layout.input_shaft_spec,
@@ -146,10 +158,12 @@ def material(p, d, part, pt):
     }[part](p, d)
     if not (spec.bottom <= z <= spec.top):
         return False
+    if spec.thick_top is not None and z <= spec.thick_top:
+        return in_thick_d(p, d, x, y)
     in_collar = spec.collar is not None and spec.collar[0] <= z <= spec.collar[1] and r < d.collar / 2
     if r >= d.shaft / 2 and not in_collar:
         return False
-    return not (p.key_depth > 0 and in_spans(z, spec.grooves) and in_groove(p, d, x, y) and r < d.shaft / 2)
+    return not (p.flat_depth > 0 and in_spans(z, spec.flats) and in_flat(p, d, x) and r < d.shaft / 2)
 
 
 def fastener_target_material(p, d, target_name, pt):
@@ -189,7 +203,7 @@ class ProbesTest(unittest.TestCase):
                                  p.ear_count)
 
     def test_probes_round_shafts(self):
-        p = dataclasses.replace(P2, key_depth=0.0)
+        p = dataclasses.replace(P2, flat_depth=0.0)
         self.check(p, derive(p))
 
     def test_fastener_points(self):

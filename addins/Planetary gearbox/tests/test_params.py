@@ -26,16 +26,16 @@ REFERENCE_DIMS = {
     "ring_tip": 34.5,
     "ring_root": 37.0,
     "ring_outer": 44.1,
-    "pin": 4.5,
-    "shaft": 4.5,
-    "shaft_bore": 5.0,
+    "pin": 5.0,
+    "shaft": 5.0,
+    "shaft_bore": 5.1,
     "pocket": 14.1,
     "lip": 10,
-    "collar": 6.9,
+    "collar": 7.4,
     "cover_boss": 20.1,
     "cover_hub": 26.1,
-    "boss": 10.5,
-    "arm": 6.5,
+    "boss": 11.0,
+    "arm": 7.0,
     "bolt_circle": 40.55,
     "rim_inner": 36.85,
     "stage_pitch": 13,
@@ -89,8 +89,8 @@ class ParamsTest(unittest.TestCase):
     def test_input_specs(self):
         ids = [s.id for s in INPUT_SPECS]
         self.assertEqual(len(ids), len(set(ids)))
-        # Placement is chosen by selection in the dialog, so the table holds the 25 gallery inputs and the ears box.
-        self.assertEqual(len(ids), 26)
+        # Placement is chosen by selection in the dialog, so the table holds the 24 gallery inputs and the ears box.
+        self.assertEqual(len(ids), 25)
         self.assertEqual(ids.index("edge_chamfer"), ids.index("seat_chamfer") + 1)
         fields = {f.name for f in dataclasses.fields(default_params())}
         self.assertEqual(set(ids) - fields, {"ears"})

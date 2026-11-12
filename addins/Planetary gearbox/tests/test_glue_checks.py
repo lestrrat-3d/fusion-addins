@@ -101,7 +101,7 @@ class PointChecksTest(unittest.TestCase):
             return ctx.log.records
 
     def test_run_all_counts(self):
-        for stages, bodies, total in ((1, 31, 111), (2, 40, 142)):
+        for stages, bodies, total in ((1, 34, 121), (2, 46, 161)):
             with self.subTest(stages=stages):
                 records = self.run_all(stages)
                 summary = [f for e, f in records if e == "summary"]
@@ -132,7 +132,7 @@ class PointChecksTest(unittest.TestCase):
             ctx.log = FakeLog()
             ctx.box.name = "Planetary Gearbox"
             with mock.patch.object(checks.fusion, "component_tree", return_value=tree):
-                self.assertEqual(checks._container_checks(ctx), (8, 2))
+                self.assertEqual(checks._container_checks(ctx), (9, 2))
             self.assertIn(
                 ("container", {"name": "Bolts", "bodies": 9, "expected": 8, "detail": "extra Rear Nut 4",
                                "result": "FAIL"}),

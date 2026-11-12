@@ -34,6 +34,7 @@ K1 = {
     "Sun Gears": ["Sun Gear 1"],
     "Planet Gears": ["Planet Gear 1.1", "Planet Gear 1.2", "Planet Gear 1.3"],
     "Planet Bearings": ["Planet Bearing 1.1", "Planet Bearing 1.2", "Planet Bearing 1.3"],
+    "Carrier Pins": ["Carrier Pin 1.1", "Carrier Pin 1.2", "Carrier Pin 1.3"],
     "Carriers": ["Carrier 1"],
 }
 
@@ -62,6 +63,7 @@ class ContainersTest(unittest.TestCase):
                 "Sun Gears",
                 "Planet Gears",
                 "Planet Bearings",
+                "Carrier Pins",
                 "Carriers",
             ),
         )
@@ -76,16 +78,16 @@ class ContainersTest(unittest.TestCase):
         self.assertEqual(list(got), list(CONTAINER_NAMES))
         self.assertEqual(got, K1)
         got2 = expected_bodies(P2, D2)
-        self.assertEqual([len(v) for v in got2.values()], [3, 2, 8, 8, 3, 2, 6, 6, 2])
+        self.assertEqual([len(v) for v in got2.values()], [3, 2, 8, 8, 3, 2, 6, 6, 6, 2])
         self.assertEqual(got2["Shafts"], ["Input Shaft", "Link Shaft 1", "Output Shaft"])
         for p, got_ in ((P1, got), (P2, got2)):
             self.assertEqual(sum(len(v) for v in got_.values()), layout.expected_body_count(p))
 
     def test_all_good(self):
         found = found_from(K1)
-        self.assertEqual(check_root(found, 0), RootResult(0, 9, 9, True, ""))
+        self.assertEqual(check_root(found, 0), RootResult(0, 10, 10, True, ""))
         results = check_containers(found, K1)
-        self.assertEqual(len(results), 9)
+        self.assertEqual(len(results), 10)
         for r in results:
             self.assertTrue(r.ok)
             self.assertEqual(r.detail, "")
@@ -94,7 +96,7 @@ class ContainersTest(unittest.TestCase):
         results = {r.name: r for r in check_containers(found_from(moved_nut()), K1)}
         self.assertEqual(results["Bolts"], ContainerResult("Bolts", 9, 8, False, "extra Rear Nut 4"))
         self.assertEqual(results["Nuts"], ContainerResult("Nuts", 7, 8, False, "missing Rear Nut 4"))
-        self.assertEqual(sum(r.ok for r in results.values()), 7)
+        self.assertEqual(sum(r.ok for r in results.values()), 8)
 
     def test_body_in_root(self):
         self.assertEqual(check_root(found_from(K1), 1).detail, "1 bodies outside containers")

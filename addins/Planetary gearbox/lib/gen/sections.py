@@ -1,7 +1,7 @@
-"""2D sections of the carrier, cover and key tool as closed loops of lines and arcs.
+"""2D sections of the carrier, cover and flat tool as closed loops of lines and arcs.
 
 Own copy of decad-gallery models/planetarygearbox carrier.go and cover.go section geometry
-(a800069: bore key tool with FIT_CLEARANCE).
+(f22a29d: D-shaped bore tool, with PRESS_FIT_CLEARANCE since d8cf8d8).
 """
 
 from __future__ import annotations
@@ -10,72 +10,98 @@ import math
 
 from .curves import Arc, Circle, Line, Loop, Point, rotate
 from .dims import Dims
-from .params import COVER_SPOKES, FIT_CLEARANCE, KEY_COUNT, Params
+from .params import COVER_SPOKES, PRESS_FIT_CLEARANCE, Params
 from .phase import planet_orbit_angle
 
 _ORIGIN: Point = (0.0, 0.0)
 
 
-def _segment_area(r: float, h: float, floor: float) -> float:
-    """Part of the disc of radius r inside |y| < h with x > floor."""
-    w = math.sqrt(r * r - h * h)
-    return 2 * (h * w / 2 + r * r / 2 * math.asin(h / r) - floor * h)
+def _segment_area(r: float, floor: float) -> float:
+    """Area of the part of the disc of radius r beyond the line x = floor (the circle segment of a flat)."""
+    return r * r * math.acos(floor / r) - floor * math.sqrt(r * r - floor * floor)
 
 
-def groove_area(p: Params, d: Dims) -> float:
-    """Area of one keyway groove cut from the shaft section."""
+def d_area(radius: float, depth: float) -> float:
+    """Area of a disc of the given radius less the segment beyond a flat `depth` inside its +X rim."""
+    if depth == 0:
+        return math.pi * radius * radius
+    return math.pi * radius * radius - _segment_area(radius, radius - depth)
+
+
+def d_section(center_x: float, radius: float, depth: float) -> Loop | Circle:
+    """A D section about (center_x, 0): a disc with a flat `depth` inside its +X rim (a circle when depth is 0).
+
+    The loop is an arc about the center from the flat's upper end round to its lower end, and the line across the flat
+    [extrudeDSection].
+    """
+    center: Point = (center_x, 0.0)
+    if depth == 0:
+        return Circle(center, radius)
+    f = radius - depth
+    h = math.sqrt(radius * radius - f * f)
+    upper: Point = (center_x + f, h)
+    lower: Point = (center_x + f, -h)
+    return [Arc(center, upper, lower), Line(lower, upper)]
+
+
+def flat_area(p: Params, d: Dims) -> float:
+    """Area of the circle segment the flat cuts from the shaft section."""
     r = d.shaft / 2
-    return _segment_area(r, p.key_width / 2, r - p.key_depth)
+    return _segment_area(r, r - p.flat_depth)
 
 
 def _bore_radius(d: Dims) -> float:
-    """Radius of the key tool's round part: the shaft plus the fit clearance [extrudeKeyTool]."""
-    return d.shaft / 2 + FIT_CLEARANCE
+    """Radius of the flat tool's round part: the shaft plus the fit clearance [extrudeFlatTool]."""
+    return d.shaft / 2 + PRESS_FIT_CLEARANCE
 
 
-def _bore_half_width(p: Params) -> float:
-    return (p.key_width - 2 * FIT_CLEARANCE) / 2
+def flat_tool_area(p: Params, d: Dims) -> float:
+    return d_area(_bore_radius(d), p.flat_depth)
 
 
-def key_tool_area(p: Params, d: Dims) -> float:
-    if p.key_depth == 0:
-        return math.pi * (d.shaft_bore / 2) ** 2
-    rb = _bore_radius(d)
-    return math.pi * rb * rb - KEY_COUNT * _segment_area(rb, _bore_half_width(p), rb - p.key_depth)
+def flat_tool_section(p: Params, d: Dims) -> Loop | Circle:
+    """The sun bore: a D section about the axis, PRESS_FIT_CLEARANCE outside the shaft's (a circle without a flat)."""
+    return d_section(0.0, _bore_radius(d), p.flat_depth)
 
 
-def key_tool_section(p: Params, d: Dims) -> Loop | Circle:
-    """The bore's round section less the three keyway grooves, as one loop (a circle without grooves)."""
-    if p.key_depth == 0:
-        return Circle(_ORIGIN, d.shaft_bore / 2)
-    r = _bore_radius(d)
-    h = _bore_half_width(p)
-    floor = r - p.key_depth
-    w = math.sqrt(r * r - h * h)
-    upper: list[Point] = []
-    fup: list[Point] = []
-    flo: list[Point] = []
-    lower: list[Point] = []
-    for k in range(KEY_COUNT):
-        theta = 2 * math.pi * k / KEY_COUNT
-        upper.append(rotate((w, h), theta))
-        fup.append(rotate((floor, h), theta))
-        flo.append(rotate((floor, -h), theta))
-        lower.append(rotate((w, -h), theta))
-    loop: Loop = []
-    for k in range(KEY_COUNT):
-        loop.append(Line(lower[k], flo[k]))
-        loop.append(Line(flo[k], fup[k]))
-        loop.append(Line(fup[k], upper[k]))
-        loop.append(Arc(_ORIGIN, upper[k], lower[(k + 1) % KEY_COUNT]))
-    return loop
+def socket_radius(d: Dims) -> float:
+    """Radius of the D socket through the carrier plate, and of its centre hole: the thick part's radius plus the
+    press-fit clearance."""
+    return d.collar / 2 + PRESS_FIT_CLEARANCE
 
 
-def key_box(p: Params, d: Dims) -> tuple[Point, Point]:
-    """Corners of the keyway groove's box on the +X side of the shaft."""
+def socket_section(p: Params, d: Dims) -> Loop | Circle:
+    """The tool for the socket of planet 0, at (orbit, 0); the other sockets are copies turned about the axis."""
+    return d_section(d.orbit, socket_radius(d), p.flat_depth)
+
+
+def socket_area(p: Params, d: Dims) -> float:
+    return d_area(socket_radius(d), p.flat_depth)
+
+
+def carrier_hole_section(p: Params, d: Dims) -> Loop | Circle:
+    """The centre hole of the carrier, a D section about the axis that takes a link or output shaft's thick part."""
+    return d_section(0.0, socket_radius(d), p.flat_depth)
+
+
+def carrier_hole_area(p: Params, d: Dims) -> float:
+    return d_area(socket_radius(d), p.flat_depth)
+
+
+def thick_area(p: Params, d: Dims) -> float:
+    return d_area(d.collar / 2, p.flat_depth)
+
+
+def thick_section(p: Params, d: Dims) -> Loop | Circle:
+    """The thick part of a carrier pin, a link shaft or the output shaft, about its own axis."""
+    return d_section(0.0, d.collar / 2, p.flat_depth)
+
+
+def flat_box(p: Params, d: Dims) -> tuple[Point, Point]:
+    """Corners of the flat's box on the +X side of the shaft: Flat depth inside the edge to a millimeter beyond it,
+    and a millimeter wider than the shaft on each side."""
     r = d.shaft / 2
-    h = p.key_width / 2
-    return ((r - p.key_depth, -h), (r + 1, h))
+    return ((r - p.flat_depth, -(r + 1)), (r + 1, r + 1))
 
 
 def pin_centers(p: Params, d: Dims) -> list[Point]:

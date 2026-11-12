@@ -37,10 +37,18 @@ from .fasteners import (
     nut_cavity_height,
     nut_pocket_diameter,
 )
-from .params import PIN_COLLAR_CLEARANCE, PIN_COLLAR_THICKNESS, PLANET_BEARING_LIFT, Params
+from .params import Params
 from .polygon import polygon_area
 from .report import Expect
-from .sections import carrier_plate_outline, cover_window_loops, groove_area, key_tool_area
+from .sections import (
+    carrier_hole_area,
+    carrier_plate_outline,
+    cover_window_loops,
+    flat_area,
+    flat_tool_area,
+    socket_area,
+    thick_area,
+)
 
 _DENSE = 60
 
@@ -142,7 +150,7 @@ def part_volume(p: Params, d: Dims, part: str, fillet_radius: float | None = Non
             gd = dataclasses.replace(gd, fillet=fillet_radius)
         f = _fillet_allowance(gd, t)
         if part == "sun":
-            bore = key_tool_area(p, d)
+            bore = flat_tool_area(p, d)
             value = (_area(gd) - bore) * t + f
         else:
             value = (
@@ -175,15 +183,15 @@ def part_volume(p: Params, d: Dims, part: str, fillet_radius: float | None = Non
     if part == "carrier":
         hull = polygon_area(loop_polygon(carrier_plate_outline(p, d)))
         n = p.planet_count
-        g = p.stage_gap
-        collar_len = g - PLANET_BEARING_LIFT - PIN_COLLAR_CLEARANCE
-        has_collar = g >= PLANET_BEARING_LIFT + PIN_COLLAR_CLEARANCE + PIN_COLLAR_THICKNESS
-        value = (
-            (hull - key_tool_area(p, d)) * p.carrier_thickness
-            + n * math.pi * d.pin**2 / 4 * (t + g)
-            + (n * math.pi / 4 * (d.collar**2 - d.pin**2) * collar_len if has_collar else 0.0)
-        )
+        # The sockets and the centre hole pass through the whole plate.
+        value = (hull - carrier_hole_area(p, d) - n * socket_area(p, d)) * p.carrier_thickness
         value -= edgefinish.edge_chamfer_volume(p, d, part)
+        return Expect(value, 0.002 * value)
+    if part == "carrier_pin":
+        # The rod reaches into the thick part, so it counts only up to the thick part's lower face.
+        spans = layout.pin_spans(p)
+        rod = math.pi * (d.pin / 2) ** 2 * (spans.thick[0] - spans.rod[0])
+        value = rod + thick_area(p, d) * (spans.thick[1] - spans.thick[0])
         return Expect(value, 0.002 * value)
     if part == "bolt":
         value = _bolt_volume(FASTENER_LENGTH)
@@ -199,13 +207,20 @@ def part_volume(p: Params, d: Dims, part: str, fillet_radius: float | None = Non
     if spec is None:
         raise ValueError(f"{part} does not exist with {p.stages} stage(s)")
     r = d.shaft / 2
+    if spec.thick_top is not None:
+        # D thick part, then the thin rod; the flat cuts only the rod.
+        rod_bottom = spec.bottom + spec.thick_top
+        value = thick_area(p, d) * spec.thick_top + math.pi * r * r * (spec.top - rod_bottom)
+        if p.flat_depth > 0:
+            value -= flat_area(p, d) * sum(_overlap((rod_bottom, spec.top), lo, hi) for lo, hi in spec.flats)
+        return Expect(value, 0.002 * value)
     value = math.pi * r * r * (spec.top - spec.bottom)
     if spec.collar is not None:
         lo, hi = spec.collar
         value += math.pi * (d.collar**2 / 4 - r * r) * (hi - lo)
-    if p.key_depth > 0:
-        cut = sum(_overlap((spec.bottom, spec.top), lo, hi) for lo, hi in spec.grooves)
-        value -= 3 * groove_area(p, d) * cut
+    if p.flat_depth > 0:
+        cut = sum(_overlap((spec.bottom, spec.top), lo, hi) for lo, hi in spec.flats)
+        value -= flat_area(p, d) * cut
     return Expect(value, 0.002 * value)
 
 
@@ -228,6 +243,9 @@ def part_local_bounds(p: Params, d: Dims, part: str) -> tuple[float, float, floa
         xmax = d.bearing.outer_diameter / 2
     elif part == "carrier":
         xmax = d.orbit + d.boss / 2
+    elif part == "carrier_pin":
+        # The thick part's flat is on +X in the pin's own frame (no flat when the depth is 0).
+        xmax = d.collar / 2 - p.flat_depth
     else:
         xmax = None
     return (zmin, zmax, xmax)

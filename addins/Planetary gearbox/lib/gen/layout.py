@@ -1,7 +1,7 @@
 """Axial layout, instance poses and body names.
 
 Own copy of decad-gallery models/planetarygearbox planetarygearbox.go (Named, build, buildHousing), place.go and the
-shaft spans of carrier.go / cover.go, and fasteners.go (buildFasteners, fastener names) at a800069.
+shaft spans of carrier.go / cover.go, and fasteners.go (buildFasteners, fastener names) at 92c1f03.
 """
 
 from __future__ import annotations
@@ -19,7 +19,16 @@ from .fasteners import (
     nut_angle,
     nut_cavity_height,
 )
-from .params import COLLAR_CLEARANCE, FIT_CLEARANCE, PLANET_BEARING_LIFT, RING_MARGIN, Params, Vec3
+from .params import (
+    COLLAR_CLEARANCE,
+    FIT_CLEARANCE,
+    PIN_SHOULDER_CLEARANCE,
+    PLANET_BEARING_LIFT,
+    RING_MARGIN,
+    STEP_OVERLAP,
+    Params,
+    Vec3,
+)
 from .phase import planet_orbit_angle, planet_tooth_angle
 from .sections import fastener_sites
 
@@ -42,6 +51,7 @@ PARTS = (
     "sun",
     "planet",
     "planet_bearing",
+    "carrier_pin",
     "carrier",
     "link_shaft",
     "output_shaft",
@@ -74,6 +84,10 @@ def planet_name(k: int, i: int) -> str:
 
 def bearing_name(k: int, i: int) -> str:
     return f"Planet Bearing {k + 1}.{i + 1}"
+
+
+def pin_name(k: int, i: int) -> str:
+    return f"Carrier Pin {k + 1}.{i + 1}"
 
 
 def carrier_name(k: int) -> str:
@@ -132,7 +146,9 @@ class ShaftSpec:
     bottom: float
     top: float
     collar: tuple[float, float] | None  # None when the collar is empty
-    grooves: tuple[tuple[float, float], ...]
+    flats: tuple[tuple[float, float], ...]
+    # Top of the D thick part of a link or output shaft, from bottom; None for the input shaft, a plain rod.
+    thick_top: float | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -152,23 +168,18 @@ def input_shaft_spec(p: Params, d: Dims) -> ShaftSpec:
         bottom=-(g + tv + wb + p.input_shaft_length),
         top=p.gear_thickness,
         collar=_collar(-(g + tv), -COLLAR_CLEARANCE),
-        grooves=((0.0, p.gear_thickness + 1),),
+        flats=((0.0, p.gear_thickness + 1),),
     )
 
 
 def link_shaft_spec(p: Params, d: Dims) -> ShaftSpec | None:
+    """[buildSteppedShaft] A D thick part pressed through the carrier, ending FIT_CLEARANCE short of the next sun, and
+    a thin rod through that sun's bore with one flat over the sun."""
     if p.stages == 1:
         return None
     g, tc = p.stage_gap, p.carrier_thickness
     top = p.gear_thickness + tc + g
-    if g > COLLAR_CLEARANCE:
-        return ShaftSpec(
-            0.0,
-            top,
-            (tc + COLLAR_CLEARANCE / 2, tc + g - COLLAR_CLEARANCE / 2),
-            ((-1.0, tc), (tc + g, top + 1)),
-        )
-    return ShaftSpec(0.0, top, None, ((-1.0, top + 1),))
+    return ShaftSpec(0.0, top, None, ((tc + g, top + 1),), thick_top=tc + g - FIT_CLEARANCE)
 
 
 def output_shaft_spec(p: Params, d: Dims) -> ShaftSpec:
@@ -176,9 +187,26 @@ def output_shaft_spec(p: Params, d: Dims) -> ShaftSpec:
     return ShaftSpec(
         bottom=0.0,
         top=tc + g + tv + wb + p.output_shaft_length,
-        collar=_collar(tc + COLLAR_CLEARANCE, tc + g + tv - FIT_CLEARANCE),
-        grooves=((-1.0, tc),),
+        collar=None,
+        flats=(),
+        thick_top=tc + g + tv - FIT_CLEARANCE,
     )
+
+
+@dataclasses.dataclass(frozen=True)
+class PinSpans:
+    """Axial ranges of a carrier pin's rod and thick part, in the pin's own frame (z = 0 is the plate's lower face)."""
+
+    rod: tuple[float, float]
+    thick: tuple[float, float]
+
+
+def pin_spans(p: Params) -> PinSpans:
+    """[buildPin] The rod reaches STEP_OVERLAP into the thick part, so the union crosses faces. The thick part ends
+    level with the plate's upper face."""
+    hang = p.gear_thickness + p.stage_gap
+    thick_bottom = -p.stage_gap + PLANET_BEARING_LIFT + PIN_SHOULDER_CLEARANCE
+    return PinSpans(rod=(-hang, thick_bottom + STEP_OVERLAP), thick=(thick_bottom, p.carrier_thickness))
 
 
 def part_local_z(p: Params, d: Dims, part: str) -> tuple[float, float]:
@@ -197,7 +225,9 @@ def part_local_z(p: Params, d: Dims, part: str) -> tuple[float, float]:
     if part in ("sun", "planet"):
         return (0.0, p.gear_thickness)
     if part == "carrier":
-        return (-(p.gear_thickness + p.stage_gap), p.carrier_thickness)
+        return (0.0, p.carrier_thickness)
+    if part == "carrier_pin":
+        return (pin_spans(p).rod[0], pin_spans(p).thick[1])
     spec = {
         "input_shaft": input_shaft_spec,
         "link_shaft": link_shaft_spec,
@@ -247,6 +277,12 @@ def instances(p: Params, d: Dims) -> list[Instance]:
             zb = z + t - wb + PLANET_BEARING_LIFT
             out.append(Instance(bearing_name(k, i), "planet_bearing", Pose(0.0, x, y, zb)))
         zc = z + t + g
+        for i in range(p.planet_count):
+            phi = planet_orbit_angle(p, i)
+            # The pin turns with its orbit angle, so its flat faces the same way as its socket.
+            out.append(
+                Instance(pin_name(k, i), "carrier_pin", Pose(phi, d.orbit * math.cos(phi), d.orbit * math.sin(phi), zc))
+            )
         out.append(Instance(carrier_name(k), "carrier", Pose(z=zc)))
         last = k == p.stages - 1
         out.append(Instance(shaft_name(k, p.stages), "output_shaft" if last else "link_shaft", Pose(z=zc)))
@@ -277,4 +313,4 @@ def head_pocket_poses(d: Dims) -> list[Pose]:
 
 
 def expected_body_count(p: Params) -> int:
-    return 6 + 16 + p.stages * (3 + 2 * p.planet_count)  # 8 bolts + 8 nuts
+    return 6 + 16 + p.stages * (3 + 3 * p.planet_count)  # 8 bolts + 8 nuts
