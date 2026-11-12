@@ -11,6 +11,9 @@ component holds one sub-component per gallery container (`Housing`, `Cover Beari
 of its container. As in the gallery, the ring, the covers and the carriers have a 45° chamfer (`Edge chamfer`, 0.5 mm) on
 the edges of their large flat faces. The ring has three mounting ears by default; the `Mounting ears` check box in the
 dialog turns them off, and the `Ear count` and `Ear bore diameter` inputs are disabled while it is unchecked.
+The `Split pins/shafts` check box is off by default; when it is checked, each carrier pin and each shaft is cut in two
+along the plane through its axis that is parallel to the D flat, so each becomes two bodies (`<name> Half 1`,
+`<name> Half 2`).
 
 ## Gallery revision
 

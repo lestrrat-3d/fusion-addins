@@ -57,6 +57,15 @@ PARTS = (
     "output_shaft",
 )
 
+SPLIT_PARTS = ("carrier_pin", "input_shaft", "link_shaft", "output_shaft")
+
+
+def split_names(name: str) -> tuple[str, str]:
+    """Names of a split pin's or shaft's two halves: the half on the -X side of the plane through its axis that is
+    parallel to the D flat (the plane's normal is the part's local +X), then the half on the +X side, which holds
+    the flat."""
+    return f"{name} Half 1", f"{name} Half 2"
+
 
 def sun_name(k: int) -> str:
     return f"Sun Gear {k + 1}"

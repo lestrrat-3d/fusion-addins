@@ -278,6 +278,82 @@ def chamfer(
             raise BuildError(f"{what}: Fusion created no chamfer")
 
 
+def _plane_through_axis(
+    comp: adsk.fusion.Component,
+    origin: tuple[float, float, float],
+    normal: tuple[float, float, float],
+    what: str,
+    made: list[adsk.fusion.ConstructionPlane],
+) -> adsk.fusion.ConstructionPlane:
+    """A construction plane through `origin` (mm) with the given unit normal, parallel to the Z axis.
+
+    A parametric design takes no setByPlane, so the YZ plane is turned about the Z axis to face the normal, then
+    offset to pass through the origin. The result is read back and checked. Every plane it adds goes into `made`."""
+    planes = comp.constructionPlanes
+    angle = math.atan2(normal[1], normal[0])
+    for sign in (1.0, -1.0):
+        if abs(angle) < 1e-12:
+            turned = comp.yZConstructionPlane  # the normal is already +X
+        else:
+            turn = planes.createInput()
+            if not turn.setByAngle(comp.zConstructionAxis, adsk.core.ValueInput.createByReal(sign * angle),
+                                   comp.yZConstructionPlane):
+                raise BuildError(f"{what}: Fusion rejected the turned construction plane")
+            turned = planes.add(turn)
+            made.append(turned)
+        n = turned.geometry.normal
+        if abs(n.x * normal[0] + n.y * normal[1]) < 1.0 - 1e-6:
+            continue  # turned the wrong way
+        o = turned.geometry.origin
+        sgn = 1.0 if n.x * normal[0] + n.y * normal[1] > 0 else -1.0
+        dist = ((cm(origin[0]) - o.x) * n.x + (cm(origin[1]) - o.y) * n.y) * sgn
+        if abs(dist) < 1e-9:
+            return turned
+        shift = planes.createInput()
+        if not shift.setByOffset(turned, adsk.core.ValueInput.createByReal(dist)):
+            raise BuildError(f"{what}: Fusion rejected the offset construction plane")
+        plane = planes.add(shift)
+        made.append(plane)
+        g = plane.geometry
+        off = abs((g.origin.x - cm(origin[0])) * normal[0] + (g.origin.y - cm(origin[1])) * normal[1])
+        par = abs(g.normal.x * normal[0] + g.normal.y * normal[1])
+        if off > 1e-6 or par < 1.0 - 1e-6:
+            raise BuildError(f"{what}: split plane is {mm_from_cm(off):.4f} mm off the axis (parallel {par:.6f})")
+        return plane
+    raise BuildError(f"{what}: no turn of the YZ plane faces the flat")
+
+
+def split_body(
+    ctx: BuildContext, body: adsk.fusion.BRepBody, pose: Pose, what: str
+) -> tuple[adsk.fusion.BRepBody, ...]:
+    """Cut a placed pin or shaft in two along the plane through its axis whose normal is the pose's local +X.
+
+    Returns the half on the -X side, then the half on the +X side."""
+    made: list[adsk.fusion.ConstructionPlane] = []
+    with _step(what):
+        origin, x_axis, _, _ = pose.axes()
+        if abs(pose.angle) < 1e-12 and origin[0] == 0.0 and origin[1] == 0.0:
+            tool = ctx.comp.yZConstructionPlane
+        else:
+            tool = _plane_through_axis(ctx.comp, origin, x_axis, what, made)
+        inp = ctx.comp.features.splitBodyFeatures.createInput(body, tool, True)
+        feat = ctx.comp.features.splitBodyFeatures.add(inp)
+        count = 0 if feat is None else feat.bodies.count
+        if count != 2:
+            raise BuildError(f"{what}: split produced {count} bodies, expected 2")
+
+        def side(b: adsk.fusion.BRepBody) -> float:
+            """Signed distance (cm) of the body's box center from the plane, along the normal."""
+            lo, hi = b.boundingBox.minPoint, b.boundingBox.maxPoint
+            return ((lo.x + hi.x) / 2 - cm(origin[0])) * x_axis[0] + ((lo.y + hi.y) / 2 - cm(origin[1])) * x_axis[1]
+
+        for plane in made:
+            plane.isLightBulbOn = False  # the planes are tools only; hide them once used
+        halves = [feat.bodies.item(0), feat.bodies.item(1)]
+        halves.sort(key=side)
+        return tuple(halves)
+
+
 def copy_body(ctx: BuildContext, body: adsk.fusion.BRepBody, what: str) -> adsk.fusion.BRepBody:
     with _step(what):
         feat = ctx.comp.features.copyPasteBodies.add(body)
