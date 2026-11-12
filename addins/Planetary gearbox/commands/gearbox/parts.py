@@ -7,6 +7,7 @@ import typing
 import adsk.fusion
 
 from ...lib.gen import edgefinish, gears, layout
+from ...lib.gen.bridge import BRIDGE_THICKNESS, bridge_disc_diameter, nut_bridge_poses
 from ...lib.gen.curves import Circle, Loop
 from ...lib.gen.ears import ear_bore_centers, ring_outline
 from ...lib.gen.involute import (
@@ -267,7 +268,20 @@ def build_ring(ctx: BuildContext) -> adsk.fusion.BRepBody:
     cavity = fusion.extrude(ctx, profile, 0.0, nut_cavity_height(), "ring nut_cavity_extrude")
     for cut_tool in _tool_instances(ctx, cavity, layout.nut_cavity_poses(p, d), "ring nut_cavity"):
         blank = fusion.cut(ctx, blank, [cut_tool], "ring nut_cavity_cut")
-    ring = _require_solid(ctx, fusion.cut(ctx, blank, [tool], "ring ring_cut"))
+
+    # Deviation from decad-gallery: sacrificial bridge layers, only when the `Sacrificial bridging` box is checked
+    # (docs/planetarygearbox/directives.md). The ring prints with +Z up, so each nut cavity's roof is its +Z end. A
+    # BRIDGE_THICKNESS disc fills the bolt hole directly above that roof, so the first layer over the cavity is whole.
+    # The disc is part of the ring and is drilled out after printing. Its diameter reaches into the hole wall so the
+    # join overlaps volume.
+    if p.sacrificial_bridging:
+        sk = fusion.new_sketch(ctx.comp, "ring bridge")
+        fusion.draw_circle(sk, (0.0, 0.0), bridge_disc_diameter(p.bolt_hole_diameter) / 2)
+        profile = fusion.profile_with_loops(sk, 1, "ring bridge_sketch", only=True)
+        layer = fusion.extrude(ctx, profile, 0.0, BRIDGE_THICKNESS, "ring bridge_extrude")
+        for layer_tool in _tool_instances(ctx, layer, nut_bridge_poses(p, d), "ring bridge"):
+            blank = fusion.join(ctx, blank, [layer_tool], "ring bridge_join")
+    ring =_require_solid(ctx, fusion.cut(ctx, blank, [tool], "ring ring_cut"))
     finish_face_edges(ctx, ring)
     return ring
 

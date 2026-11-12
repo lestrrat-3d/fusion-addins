@@ -1,7 +1,9 @@
 import dataclasses
+import math
 import unittest
 
 import _support  # noqa: F401
+from gen.bridge import nut_bridge_volume
 from gen.dims import derive
 from gen.expected import assembled_z, part_local_bounds, part_volume
 from gen.params import default_params
@@ -77,6 +79,13 @@ class ExpectedTest(unittest.TestCase):
     def test_ring_volume_two_stages(self):
         got = part_volume(P2, D2, "ring")
         self.assertLessEqual(abs(got.value - 62241.1349), 0.5, f"volume {got.value}")
+
+    def test_ring_volume_with_bridging(self):
+        p = dataclasses.replace(P1, sacrificial_bridging=True)
+        got = part_volume(p, derive(p), "ring")
+        plain = part_volume(P1, D1, "ring")
+        self.assertAlmostEqual(got.value - plain.value, nut_bridge_volume(P1), places=9)
+        self.assertAlmostEqual(nut_bridge_volume(P1), 8 * math.pi * 1.3**2 * 0.3, places=9)
 
     def test_ring_volume_without_ears(self):
         p = dataclasses.replace(P1, ear_count=0)

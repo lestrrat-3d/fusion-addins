@@ -146,6 +146,8 @@ class Params:
     # Add-in option, not a gallery input (docs/planetarygearbox/directives.md): cut every carrier pin and shaft in two along the
     # plane through its axis that is parallel to the D flat.
     split_pins_shafts: bool = False
+    # Add-in option, not a gallery input: add the ring's sacrificial bridge layers (lib/gen/bridge.py).
+    sacrificial_bridging: bool = False
     placement: Frame | None = None
 
 

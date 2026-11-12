@@ -332,6 +332,9 @@ class GlueBuildTest(unittest.TestCase):
         first_cavity = calls.index(("combine", "ring nut_cavity_cut"))
         self.assertGreater(first_cavity, calls.index(("extrude", "ring ring_blank_extrude")))
         self.assertLess(first_cavity, calls.index(("combine", "ring ring_cut")))
+        # The default build has no bridge layers.
+        self.assertEqual(calls.count(("combine", "ring bridge_join")), 0)
+        self.assertNotIn(("extrude", "ring bridge_extrude"), calls)
         join = calls.index(("combine", "cover cover_join"))
         for i, c in enumerate(calls):
             if c == ("combine", "cover head_pocket_cut"):
@@ -347,6 +350,17 @@ class GlueBuildTest(unittest.TestCase):
             for what in ("rod", "thick"):
                 self.assertIn(("extrude", f"carrier_pin {what}_extrude"), world.calls)
             self.assertEqual(world.calls.count(("combine", "carrier_pin pin_join")), 1)
+
+    def test_ring_bridging_calls(self):
+        world, _ = self.run_build(sacrificial_bridging=True)
+        calls = world.calls
+        # One bridge layer per nut cavity, joined after the last cavity is cut and before the tooth cut.
+        self.assertEqual(calls.count(("combine", "ring bridge_join")), 8)
+        self.assertEqual(calls.count(("copy", "ring bridge_copy")), 7)
+        last_cavity = len(calls) - 1 - calls[::-1].index(("combine", "ring nut_cavity_cut"))
+        first_bridge = calls.index(("combine", "ring bridge_join"))
+        self.assertGreater(first_bridge, last_cavity)
+        self.assertLess(first_bridge, calls.index(("combine", "ring ring_cut")))
 
     def test_ring_blank_sketch_has_the_ear_bores(self):
         for changes, loops in (({}, 8), ({"ear_count": 0}, 5), ({"ear_count": 2, "ear_bore_diameter": 6.0}, 7)):
