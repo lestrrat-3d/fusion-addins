@@ -6,6 +6,7 @@ import dataclasses
 import math
 
 from . import gears, layout
+from .bridge import BRIDGE_THICKNESS
 from .dims import Dims
 from .ears import ear_angle, ear_center_radius, ear_half_width
 from .involute import gear_outline_polygon
@@ -134,6 +135,7 @@ def part_probes(p: Params, d: Dims) -> dict[str, list[Probe]]:
     # Deviation from decad-gallery: the bolt-hole probes above stay; Fusion's point containment is exact for a
     # 2.6 mm hole (README deviations).
     # Nut cavities: closed hexagonal pockets, NUT_ROOF of material between the cavity and each end face.
+    h = nut_cavity_height()
     z_f = RING_MARGIN + NUT_ROOF + nut_cavity_height() / 2
     z_r = RING_MARGIN + d.ring_length - NUT_ROOF - nut_cavity_height() / 2
     bc = d.bolt_circle
@@ -144,6 +146,14 @@ def part_probes(p: Params, d: Dims) -> dict[str, list[Probe]]:
     probes["ring"].append(Probe("front nut roof", _polar(bc + 1.65, a0, RING_MARGIN + NUT_ROOF / 2), INSIDE))
     probes["ring"].append(Probe("rear nut roof", _polar(bc + 1.65, a0, RING_MARGIN + d.ring_length - NUT_ROOF / 2),
                                 INSIDE))
+    # Sacrificial bridge layers (not in the gallery model): the bolt hole is filled for BRIDGE_THICKNESS directly above
+    # each cavity's roof, so a point on the bolt circle in the middle of that span is material.
+    layer_f = z_f + h / 2 + BRIDGE_THICKNESS / 2
+    layer_r = z_r + h / 2 + BRIDGE_THICKNESS / 2
+    if p.sacrificial_bridging:
+        for i, a in enumerate(bolt_angles()):
+            probes["ring"].append(Probe(f"front bridge layer {i}", _polar(bc, a, layer_f), INSIDE))
+            probes["ring"].append(Probe(f"rear bridge layer {i}", _polar(bc, a, layer_r), INSIDE))
     probes["ring"] += _ear_probes(p, d, zr)
 
     r_s = (d.cover_hub / 2 + d.rim_inner) / 2

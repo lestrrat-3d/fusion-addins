@@ -94,7 +94,15 @@ def material(p, d, part, pt):
         tool = gear_outline_polygon(gd, 60, angle=ring_tooth_angle(p))
         if not (lo <= z <= hi) or not in_ring_blank(p, d, x, y) or point_in_polygon(tool, (x, y)):
             return False
-        if not all(math.hypot(x - bx, y - by) > p.bolt_hole_diameter / 2 for bx, by in bolt_hole_centers(d)):
+        # Sacrificial bridge layers: the bolt hole is solid for 0.3 mm directly above each nut cavity, which is 2.0 mm
+        # tall (1.6 mm nut and 0.2 mm each side) and starts 1 mm inside its end face.
+        rm = layout.RING_MARGIN
+        in_layer = p.sacrificial_bridging and (
+            (rm + 3.0 <= z <= rm + 3.3) or (rm + d.ring_length - 1 <= z <= rm + d.ring_length - 0.7)
+        )
+        if not in_layer and not all(
+            math.hypot(x - bx, y - by) > p.bolt_hole_diameter / 2 for bx, by in bolt_hole_centers(d)
+        ):
             return False
         front = layout.RING_MARGIN + 1 <= z <= layout.RING_MARGIN + 2.8
         rear = layout.RING_MARGIN + d.ring_length - 2.8 <= z <= layout.RING_MARGIN + d.ring_length - 1
@@ -191,6 +199,10 @@ class ProbesTest(unittest.TestCase):
 
     def test_probes_two_stages(self):
         self.check(P2, D2)
+
+    def test_probes_with_bridging(self):
+        p = dataclasses.replace(P1, sacrificial_bridging=True)
+        self.check(p, derive(p))
 
     def test_probes_ear_variants(self):
         for changes in ({"ear_count": 0}, {"ear_count": 1}, {"ear_count": 2, "ear_bore_diameter": 6.0},

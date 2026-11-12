@@ -89,8 +89,9 @@ class ParamsTest(unittest.TestCase):
     def test_input_specs(self):
         ids = [s.id for s in INPUT_SPECS]
         self.assertEqual(len(ids), len(set(ids)))
-        # Placement is chosen by selection in the dialog, so the table holds the 24 gallery inputs, the ears box and the split box.
-        self.assertEqual(len(ids), 26)
+        # Placement is chosen by selection in the dialog, so the table holds the 24 gallery inputs, the ears box, the
+        # split box and the sacrificial bridging box.
+        self.assertEqual(len(ids), 27)
         self.assertEqual(ids.index("edge_chamfer"), ids.index("seat_chamfer") + 1)
         fields = {f.name for f in dataclasses.fields(default_params())}
         self.assertEqual(set(ids) - fields, {"ears"})
@@ -127,6 +128,16 @@ class ParamsTest(unittest.TestCase):
         self.assertFalse(params_from_values(values).split_pins_shafts)
         values["split_pins_shafts"] = 1
         self.assertTrue(params_from_values(values).split_pins_shafts)
+
+    def test_sacrificial_bridging_off_by_default(self):
+        specs = {s.id: s for s in INPUT_SPECS}
+        self.assertEqual((specs["sacrificial_bridging"].kind, specs["sacrificial_bridging"].default), ("bool", 0))
+        self.assertFalse(default_params().sacrificial_bridging)
+        values = {s.id: s.default for s in INPUT_SPECS}
+        values["pressure_angle"] = 20 * math.pi / 180
+        self.assertFalse(params_from_values(values).sacrificial_bridging)
+        values["sacrificial_bridging"] = 1
+        self.assertTrue(params_from_values(values).sacrificial_bridging)
 
     def test_params_from_values_defaults(self):
         values = {s.id: s.default for s in INPUT_SPECS}

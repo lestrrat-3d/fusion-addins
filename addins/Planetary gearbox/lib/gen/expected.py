@@ -8,6 +8,7 @@ import dataclasses
 import math
 
 from . import edgefinish, layout
+from .bridge import nut_bridge_volume
 from .curves import loop_polygon
 from .dims import Dims
 from .ears import ring_blank_area, ring_xmax
@@ -166,6 +167,8 @@ def part_volume(p: Params, d: Dims, part: str, fillet_radius: float | None = Non
         cavities = 8 * math.pi * ((nut_pocket_diameter() / 2) ** 2 - (p.bolt_hole_diameter / 2) ** 2)
         value = (ring_blank_area(p, d) - bolts - tool) * d.ring_length - cavities * nut_cavity_height()
         value -= edgefinish.edge_chamfer_volume(p, d, part)
+        if p.sacrificial_bridging:
+            value += nut_bridge_volume(p)  # sacrificial bridge layers, not in the gallery model
         return Expect(value, 0.002 * value)
     if part == "cover":
         bolts = 4 * math.pi * (p.bolt_hole_diameter / 2) ** 2
