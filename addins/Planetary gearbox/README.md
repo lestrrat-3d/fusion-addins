@@ -17,7 +17,7 @@ along the plane through its axis that is parallel to the D flat, so each becomes
 
 ## Gallery revision
 
-Gallery revision: 92c1f036a79c37bad6076122818240b3d0f12919 (`GALLERY_REVISION` in `config.py`)
+Gallery revision: 7302e55e86987d27568c9634a00b4efc51d6b02b (`GALLERY_REVISION` in `config.py`)
 
 The add-in translates decad-gallery at this commit: `models/planetarygearbox` and the models it builds from,
 `models/spurgear`, `models/ballbearing`, `models/m2bolt` and `models/m2nut`.
