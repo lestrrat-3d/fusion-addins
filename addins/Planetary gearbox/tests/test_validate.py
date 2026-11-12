@@ -17,8 +17,8 @@ CASES = [
     ({"ring_wall": 3}, "bolt holes"),
     ({"carrier_wall": 12}, "no room for spokes"),
     ({"gear_thickness": 5.5}, "gear thickness"),
-    ({"key_depth": 3}, "key depth"),
-    ({"key_width": 5}, "key width"),
+    ({"flat_depth": 3}, "flat depth"),
+    ({"carrier_thickness": 1.9}, "carrier thickness"),
     ({"seat_chamfer": 2}, "seat chamfer"),
     ({"edge_chamfer": 0.49}, "edge chamfer"),
     ({"edge_chamfer": 1.01}, "edge chamfer"),
@@ -33,7 +33,6 @@ CASES = [
     ({"sun_teeth": 2}, "sun teeth"),
     ({"stage_gap": 0.5}, "stage gap"),
     ({"bearing_clearance": 0.04}, "bearing clearance"),
-    ({"key_width": 0.5}, "key width"),
     ({"bolt_hole_diameter": 2.1}, "M2 bolt shank"),
     ({"bolt_hole_diameter": 2.3}, "clearance hole"),
     ({"bolt_hole_diameter": 1.5}, "shank"),
@@ -75,8 +74,11 @@ class ValidateTest(unittest.TestCase):
         cases = [
             ({"planet_count": 6}, "neighbouring planet centers are 20.999999999999996 apart; tips need 31.46 for at "
              "least 0.5 clearance"),
-            ({"module": 0.5}, "the 5 mm shaft bore leaves less than one module of wall under the sun root"),
-            ({"key_width": 0.5}, "key width 0.5 must exceed 0.5 for the shaft clearance"),
+            ({"module": 0.5}, "the 5.1 mm shaft bore leaves less than one module of wall under the sun root"),
+            ({"flat_depth": 1.3}, "flat depth 1.3 is out of range"),
+            ({"carrier_thickness": 1.9}, "carrier thickness 1.9 is out of range"),
+            ({"flat_depth": -0.1}, "flat depth -0.1 is out of range"),
+            ({"flat_depth": float("nan")}, "FlatDepth must be finite, got NaN"),
             ({"bolt_hole_diameter": 2.1}, "bolt hole diameter 2.1 is under the 2.6 clearance hole for the M2 bolt "
              "shank 2"),
             ({"bolt_hole_diameter": 1.5}, "bolt hole diameter 1.5 is under the 2.6 clearance hole for the M2 bolt "
@@ -88,7 +90,7 @@ class ValidateTest(unittest.TestCase):
             ({"edge_chamfer": 0.4}, "edge chamfer 0.4 is out of range"),
             ({"edge_chamfer": float("inf")}, "EdgeChamfer must be finite, got +Inf"),
             ({"bearing_clearance": 0.04}, "bearing clearance 0.04 is out of range"),
-            ({"bolt_hole_diameter": 3.4, "ring_wall": 13, "carrier_wall": 10.75},
+            ({"bolt_hole_diameter": 3.4, "ring_wall": 13, "carrier_wall": 10.5},
              "carrier radius 34 does not leave more than 0.5 clearance from ring tip radius 34.5"),
         ]
         for changes, want in cases:
@@ -100,6 +102,7 @@ class ValidateTest(unittest.TestCase):
     def test_boundaries(self):
         base = default_params()
         validate(dataclasses.replace(base, edge_chamfer=0.5))
+        validate(dataclasses.replace(base, carrier_thickness=2))
         validate(dataclasses.replace(base, edge_chamfer=1.0))
         validate(dataclasses.replace(base, bolt_hole_diameter=4))
         validate(dataclasses.replace(base, bolt_hole_diameter=2.6))
@@ -112,9 +115,20 @@ class ValidateTest(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "bearing pocket"):
             validate(dataclasses.replace(base, bearing_clearance=cb + 0.01))
         wide = dataclasses.replace(base, bolt_hole_diameter=3.4, ring_wall=13)
-        validate(dataclasses.replace(wide, carrier_wall=10.74))
+        validate(dataclasses.replace(wide, carrier_wall=10.49))
         with self.assertRaisesRegex(ValidationError, "carrier radius"):
-            validate(dataclasses.replace(wide, carrier_wall=10.75))
+            validate(dataclasses.replace(wide, carrier_wall=10.5))
+
+    def test_press_fit_rules(self):
+        base = default_params()
+        validate(dataclasses.replace(base, flat_depth=1.19))
+        validate(dataclasses.replace(base, carrier_wall=2.25))
+        with self.assertRaisesRegex(ValidationError, "flat depth 1.2 must stay under the 1.2 collar margin"):
+            validate(dataclasses.replace(base, flat_depth=1.2))
+        with self.assertRaisesRegex(ValidationError, "carrier wall 2.2 leaves .* of plate around a pin socket, less than 1$"):
+            validate(dataclasses.replace(base, carrier_wall=2.2))
+        with self.assertRaisesRegex(ValidationError, "carrier wall 2.5 and edge chamfer 1 leave 0.25 of plate"):
+            validate(dataclasses.replace(base, carrier_wall=2.5, edge_chamfer=1.0))
 
     def test_planet_count_divisibility_message(self):
         with self.assertRaises(ValidationError) as cm:

@@ -1,18 +1,20 @@
 # Planetary gearbox
 
 A Fusion add-in that rebuilds the decad-gallery model `planetarygearbox`: a fixed internal ring gear housing one or
-more stages, each with a sun gear, planet gears on 605ZZ bearings, a carrier and a shaft, closed by two bearing covers
-that eight M2 bolts and eight M2 nuts hold to the ring. It takes the gallery's inputs with the gallery's defaults and
+more stages, each with a sun gear, planet gears on 605ZZ bearings, a separate press-fit pin for each planet, a carrier
+plate and a shaft, closed by two bearing covers that eight M2 bolts and eight M2 nuts hold to the ring. The shafts and
+the pins have a D-shaped flat (`Flat depth`) that fits the D-shaped bores of the suns and the carrier. The default
+gearbox has 34 bodies, and each further stage adds 12. It takes the gallery's inputs with the gallery's defaults and
 uses the gallery's input rules. Bodies are grouped the way the gallery groups them: the `Planetary Gearbox`
 component holds one sub-component per gallery container (`Housing`, `Cover Bearings`, `Bolts`, `Nuts`, `Shafts`,
-`Sun Gears`, `Planet Gears`, `Planet Bearings`, `Carriers`), and each body sits in the sub-component of its
-container. As in the gallery, the ring, the covers and the carriers have a 45° chamfer (`Edge chamfer`, 0.5 mm) on
+`Sun Gears`, `Planet Gears`, `Planet Bearings`, `Carrier Pins`, `Carriers`), and each body sits in the sub-component
+of its container. As in the gallery, the ring, the covers and the carriers have a 45° chamfer (`Edge chamfer`, 0.5 mm) on
 the edges of their large flat faces. The ring has three mounting ears by default; the `Mounting ears` check box in the
 dialog turns them off, and the `Ear count` and `Ear bore diameter` inputs are disabled while it is unchecked.
 
 ## Gallery revision
 
-Gallery revision: 59e2f0e838c3871f854ac0c5cd45f8b921d3943b (`GALLERY_REVISION` in `config.py`)
+Gallery revision: 92c1f036a79c37bad6076122818240b3d0f12919 (`GALLERY_REVISION` in `config.py`)
 
 The add-in translates decad-gallery at this commit: `models/planetarygearbox` and the models it builds from,
 `models/spurgear`, `models/ballbearing`, `models/m2bolt` and `models/m2nut`.
@@ -33,7 +35,7 @@ Fusion.
 After each build the add-in compares every built body with the expected values from `lib/gen/`:
 volume, z range against the assembled position, and point containment probes (the ring's include its ears and their bores). For a placed build it also checks that
 gear outline points lie outside the neighbouring gear (meshing), that bolt and nut surface points lie outside the cover
-and ring they pass through (fit), and that the component tree has the gallery's nine containers with the right bodies.
+and ring they pass through (fit), and that the component tree has the gallery's ten containers with the right bodies.
 This stands in for the gallery's `VerifyContainers`, which Fusion does not have.
 
 Text Commands shows only these lines: `planetarygearbox fingerprint <64 hex>` and `planetarygearbox gallery <40 hex>`

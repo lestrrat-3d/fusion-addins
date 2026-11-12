@@ -12,9 +12,10 @@ from gen.sections import (
     carrier_plate_outline,
     cover_window_loops,
     fastener_sites,
-    groove_area,
-    key_tool_area,
-    key_tool_section,
+    flat_area,
+    flat_box,
+    flat_tool_area,
+    flat_tool_section,
 )
 
 P = default_params()
@@ -27,28 +28,34 @@ def polar(r, deg):
 
 
 class SectionsTest(unittest.TestCase):
-    def test_key_tool(self):
-        loop = key_tool_section(P, D)
+    def test_flat_tool(self):
+        loop = flat_tool_section(P, D)
         assert not isinstance(loop, Circle)
-        self.assertEqual(len(loop), 12)
+        # An arc about the origin and the line across the flat, which sits at x = 2.55 - 0.5 = 2.05.
+        self.assertEqual(len(loop), 2)
         self.assertTrue(loop_is_closed(loop))
+        self.assertEqual(loop[0].start, (2.05, 1.51657508881031))
+        self.assertEqual(loop[0].end, (2.05, -1.51657508881031))
         area = polygon_area(loop_polygon(loop))
-        self.assertLess(abs(area - 14.8561), 1e-3)
-        self.assertLess(abs(key_tool_area(P, D) - 14.85606), 1e-4)
-        self.assertLess(abs(groove_area(P, D) - 2.047119), 1e-6)
+        self.assertLess(abs(area - 19.39551), 1e-3)
+        # pi 2.55^2 less the circle segment beyond x = 2.05: 6.5025 acos(2.05/2.55) - 2.05 * sqrt(2.3).
+        self.assertLess(abs(flat_tool_area(P, D) - 19.395506), 1e-6)
+        # The shaft's own segment beyond x = 2 on its 2.5 radius.
+        self.assertLess(abs(flat_area(P, D) - 1.021882), 1e-6)
+        self.assertEqual(flat_box(P, D), ((2.0, -3.5), (3.5, 3.5)))
 
-    def test_key_tool_round(self):
-        p = dataclasses.replace(P, key_depth=0.0)
-        sec = key_tool_section(p, derive(p))
+    def test_flat_tool_round(self):
+        p = dataclasses.replace(P, flat_depth=0.0)
+        sec = flat_tool_section(p, derive(p))
         self.assertIsInstance(sec, Circle)
-        self.assertLess(abs(key_tool_area(p, derive(p)) - math.pi * 6.25), 1e-9)
+        self.assertLess(abs(flat_tool_area(p, derive(p)) - math.pi * 2.55 ** 2), 1e-9)
 
     def test_carrier_plate(self):
         loop = carrier_plate_outline(P, D)
         self.assertEqual(len(loop), 6)
         self.assertTrue(loop_is_closed(loop))
         poly = loop_polygon(loop)
-        self.assertLess(abs(polygon_area(poly) - 1232.342), 1e-2)
+        self.assertLess(abs(polygon_area(poly) - 1268.065), 1e-2)
         self.assertTrue(point_in_polygon(poly, polar(12, 60)))
         self.assertTrue(point_in_polygon(poly, polar(15, 60)))
         self.assertFalse(point_in_polygon(poly, polar(20, 60)))
@@ -62,7 +69,7 @@ class SectionsTest(unittest.TestCase):
             self.assertEqual(len(loop), 4)
             self.assertTrue(loop_is_closed(loop))
             poly = loop_polygon(loop)
-            self.assertLess(abs(polygon_area(poly) - 1088.384), 0.05)
+            self.assertLess(abs(polygon_area(poly) - 1076.339), 0.05)
             polys.append(poly)
         spoke = polar(28, 30)
         self.assertFalse(any(point_in_polygon(poly, spoke) for poly in polys))

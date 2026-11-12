@@ -42,6 +42,9 @@ NAMES_K1 = [
     "Planet Bearing 1.2",
     "Planet Gear 1.3",
     "Planet Bearing 1.3",
+    "Carrier Pin 1.1",
+    "Carrier Pin 1.2",
+    "Carrier Pin 1.3",
     "Carrier 1",
     "Output Shaft",
 ]
@@ -55,14 +58,14 @@ def near_vec(test, got, want, tol=1e-12):
 class LayoutTest(unittest.TestCase):
     def test_names_k1(self):
         self.assertEqual([i.name for i in layout.instances(P1, D1)], NAMES_K1)
-        self.assertEqual(layout.expected_body_count(P1), 31)
+        self.assertEqual(layout.expected_body_count(P1), 34)
 
     def test_names_k2(self):
         names = [i.name for i in layout.instances(P2, D2)]
-        self.assertEqual(len(names), 40)
+        self.assertEqual(len(names), 46)
         self.assertIn("Link Shaft 1", names)
         self.assertEqual(names[-2:], ["Carrier 2", "Output Shaft"])
-        self.assertEqual(layout.expected_body_count(P2), 40)
+        self.assertEqual(layout.expected_body_count(P2), 46)
 
     def test_parts_are_known(self):
         for inst in layout.instances(P2, D2):
@@ -70,20 +73,19 @@ class LayoutTest(unittest.TestCase):
 
     def test_shaft_specs(self):
         s = layout.input_shaft_spec(P1, D1)
-        self.assertEqual((s.bottom, s.top, s.collar, s.grooves), (-21, 8, (-4, -0.5), ((0, 9),)))
+        self.assertEqual((s.bottom, s.top, s.collar, s.flats), (-21, 8, (-4, -0.5), ((0, 9),)))
         s = layout.output_shaft_spec(P1, D1)
-        self.assertEqual((s.bottom, s.top, s.collar, s.grooves), (0, 24, (3.5, 6.75), ((-1, 3),)))
+        self.assertEqual((s.bottom, s.top, s.collar, s.flats, s.thick_top), (0, 24, None, (), 6.75))
         self.assertIsNone(layout.link_shaft_spec(P1, D1))
         s = layout.link_shaft_spec(P2, D2)
         assert s is not None
-        self.assertEqual((s.bottom, s.top, s.collar, s.grooves), (0, 12, (3.25, 3.75), ((-1, 3), (4, 13))))
+        self.assertEqual((s.bottom, s.top, s.collar, s.flats, s.thick_top), (0, 12, None, ((4, 13),), 3.75))
 
-    def test_link_spec_thin_gap(self):
-        p = dataclasses.replace(P2, stage_gap=0.5)
+    def test_link_spec_least_gap(self):
+        p = dataclasses.replace(P2, stage_gap=0.75)
         s = layout.link_shaft_spec(p, derive(p))
         assert s is not None
-        self.assertIsNone(s.collar)
-        self.assertEqual(s.grooves, ((-1, 12.5),))
+        self.assertEqual((s.top, s.flats, s.thick_top), (11.75, ((3.75, 12.75),), 3.5))
 
     def test_pose(self):
         self.assertEqual(layout.Pose(flip=True, z=-1).apply((1, 2, 3)), (1, -2, -4))
@@ -109,7 +111,7 @@ class LayoutTest(unittest.TestCase):
         self.assertEqual(
             layout.PARTS,
             ("ring", "cover", "housing_bearing", "input_shaft", "bolt", "nut", "sun", "planet", "planet_bearing",
-             "carrier", "link_shaft", "output_shaft"),
+             "carrier_pin", "carrier", "link_shaft", "output_shaft"),
         )
 
     def poses(self, p, d):
@@ -149,7 +151,8 @@ class LayoutTest(unittest.TestCase):
 
     def test_part_local_z(self):
         self.assertEqual(layout.part_local_z(P1, D1, "ring"), (1, 15))
-        self.assertEqual(layout.part_local_z(P1, D1, "carrier"), (-9, 3))
+        self.assertEqual(layout.part_local_z(P1, D1, "carrier"), (0, 3))
+        self.assertEqual(layout.part_local_z(P1, D1, "carrier_pin"), (-9, 3))
         with self.assertRaises(ValueError):
             layout.part_local_z(P1, D1, "link_shaft")
 

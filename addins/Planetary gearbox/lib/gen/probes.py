@@ -18,9 +18,9 @@ from .fasteners import (
     nut_across_corners,
     nut_cavity_height,
 )
-from .params import FIT_CLEARANCE, KEY_COUNT, RING_MARGIN, Params, Vec3
+from .params import PRESS_FIT_CLEARANCE, RING_MARGIN, Params, Vec3
 from .phase import planet_orbit_angle, planet_tooth_angle, ring_tooth_angle
-from .sections import bolt_angles, spoke_angle
+from .sections import bolt_angles, socket_radius, spoke_angle
 
 INSIDE = "inside"
 OUTSIDE = "outside"
@@ -44,10 +44,6 @@ def _polar(r: float, angle: float, z: float = 0.0) -> Vec3:
     return (r * math.cos(angle), r * math.sin(angle), z)
 
 
-def _deg(angle: float) -> int:
-    return int(round(math.degrees(angle)))
-
-
 def _bolt_probes(d: Dims, z: float) -> list[Probe]:
     out = [Probe(f"bolt hole {i}", _polar(d.bolt_circle, a, z), OUTSIDE) for i, a in enumerate(bolt_angles())]
     out += [Probe(f"rim {i}", _polar(d.bolt_circle, i * math.pi / 2, z), INSIDE) for i in range(4)]
@@ -59,6 +55,17 @@ def _collar_probe(spec: layout.ShaftSpec, r: float, d: Dims) -> list[Probe]:
         return []
     lo, hi = spec.collar
     return [Probe("collar", ((r + d.collar / 2) / 2, 0.0, (lo + hi) / 2), INSIDE)]
+
+
+def _thick_probes(p: Params, d: Dims, spec: layout.ShaftSpec) -> list[Probe]:
+    """Probes in the D thick part of a link or output shaft: material on the round side, none past the flat."""
+    assert spec.thick_top is not None
+    z = spec.thick_top / 2
+    rk = d.collar / 2 - p.flat_depth / 2 if p.flat_depth > 0 else d.collar / 2 - 0.25
+    out = [Probe("thick", (-rk, 0.0, z), INSIDE), Probe("beside thick", (d.collar / 2 + 0.5, 0.0, z), OUTSIDE)]
+    if p.flat_depth > 0:
+        out.append(Probe("thick flat", (rk, 0.0, z), OUTSIDE))
+    return out
 
 
 def _ear_probes(p: Params, d: Dims, z: float) -> list[Probe]:
@@ -87,11 +94,10 @@ def part_probes(p: Params, d: Dims) -> dict[str, list[Probe]]:
     t, tc, tv, g = p.gear_thickness, p.carrier_thickness, p.cover_thickness, p.stage_gap
     wb = d.bearing.width
     r = d.shaft / 2
-    keyed = p.key_depth > 0
-    # Shaft probes sit mid-groove (rg); bore probes sit mid-way between the bore tool's floor and its round (rt).
-    rg = r - p.key_depth / 2 if keyed else r / 2
-    rt = r + FIT_CLEARANCE - p.key_depth / 2
-    thetas = [2 * math.pi * k / KEY_COUNT for k in range(KEY_COUNT)]
+    flat = p.flat_depth > 0
+    # Shaft probes sit mid-flat (rg); bore probes sit mid-way between the bore tool's flat and its round (rt).
+    rg = r - p.flat_depth / 2 if flat else r / 2
+    rt = r + PRESS_FIT_CLEARANCE - p.flat_depth / 2
     sun_gd = gears.sun_gear(p)
     planet_gd = gears.planet_gear(p)
     ring_pitch = p.module * p.ring_teeth / 2
@@ -100,10 +106,10 @@ def part_probes(p: Params, d: Dims) -> dict[str, list[Probe]]:
     probes: dict[str, list[Probe]] = {}
 
     sun: list[Probe] = []
-    if keyed:
-        for th in thetas:
-            sun.append(Probe(f"bore tooth {_deg(th)}", _polar(rt, th, t / 2), INSIDE))
-            sun.append(Probe(f"bore {_deg(th)}", _polar(rt, th + math.pi / 3, t / 2), OUTSIDE))
+    if flat:
+        sun.append(Probe("bore tooth", (rt, 0.0, t / 2), INSIDE))
+        sun.append(Probe("bore round side", (-rt, 0.0, t / 2), OUTSIDE))
+        sun.append(Probe("bore", (0.0, 0.0, t / 2), OUTSIDE))
     else:
         sun.append(Probe("bore", (0.0, 0.0, t / 2), OUTSIDE))
     sun.append(Probe("tooth zero", (sun_gd.pitch, 0.0, t / 2), INSIDE))
@@ -171,53 +177,59 @@ def part_probes(p: Params, d: Dims) -> dict[str, list[Probe]]:
 
     n = p.planet_count
     e = d.orbit * math.cos(math.pi / n) + d.boss / 2
-    hang = -(t + g) / 2
+    rs = socket_radius(d)
     carrier = [
         Probe("plate between pins", _polar((r + e) / 2, math.pi / n, tc / 2), INSIDE),
         Probe("plate near edge", _polar(e - 1.5, math.pi / n, tc / 2), INSIDE),
         Probe("beyond edge", _polar(e + 2.5, math.pi / n, tc / 2), OUTSIDE),
-        Probe("pin boss", (d.orbit, 0.0, tc / 2), INSIDE),
+        Probe("pin boss", (d.orbit + rs + 0.5, 0.0, tc / 2), INSIDE),
+        Probe("pin socket low", (d.orbit, 0.0, tc / 4), OUTSIDE),
+        Probe("pin socket high", (d.orbit, 0.0, 3 * tc / 4), OUTSIDE),
         Probe("shaft hole", (0.0, 0.0, tc / 2), OUTSIDE),
         Probe("hole round side", (-(r - 1.5), 0.0, tc / 2), OUTSIDE),
     ]
-    if keyed:
-        carrier.append(Probe("hole tooth", (rt, 0.0, tc / 2), INSIDE))
-    carrier += [
-        Probe("pin", (d.orbit, 0.0, hang), INSIDE),
-        Probe("beside pin", (d.orbit + d.pin / 2 + 2, 0.0, hang), OUTSIDE),
-        Probe("above plate", (d.orbit, 0.0, tc + 0.5), OUTSIDE),
-    ]
+    if flat:
+        carrier.append(Probe("hole tooth", (rs - p.flat_depth / 2, 0.0, tc / 2), INSIDE))
+        # The socket's flat faces outward on planet 0's side: the plate keeps a tooth beyond it.
+        carrier.append(Probe("socket tooth", (d.orbit + rs - p.flat_depth / 2, 0.0, tc / 4), INSIDE))
+    carrier.append(Probe("above plate", (d.orbit, 0.0, tc + 0.5), OUTSIDE))
     probes["carrier"] = carrier
+
+    # Carrier pin, in its own frame: a thin rod below, then the D thick part that passes through the plate's socket.
+    spans = layout.pin_spans(p)
+    rod_z = (spans.rod[0] + spans.thick[0]) / 2
+    thick_z = (spans.thick[0] + spans.thick[1]) / 2
+    rk = d.collar / 2 - p.flat_depth / 2 if flat else d.collar / 2 - 0.25
+    pin: list[Probe] = [
+        Probe("rod", (d.pin / 4, 0.0, rod_z), INSIDE),
+        Probe("beside rod", (d.pin / 2 + 0.75, 0.0, rod_z), OUTSIDE),
+        Probe("thick", (-rk, 0.0, thick_z), INSIDE),
+        Probe("beside thick", (d.collar / 2 + 0.5, 0.0, thick_z), OUTSIDE),
+        Probe("above thick", (0.0, 0.0, spans.thick[1] + 0.2), OUTSIDE),
+    ]
+    if flat:
+        pin.append(Probe("thick flat", (rk, 0.0, thick_z), OUTSIDE))
+    probes["carrier_pin"] = pin
 
     spec = layout.input_shaft_spec(p, d)
     shaft: list[Probe] = []
-    if keyed:
-        for th in thetas:
-            shaft.append(Probe(f"groove {_deg(th)}", _polar(rg, th, t / 2), OUTSIDE))
-            shaft.append(Probe(f"round {_deg(th)}", _polar(rg, th + math.pi / 3, t / 2), INSIDE))
+    if flat:
+        shaft.append(Probe("flat", (rg, 0.0, t / 2), OUTSIDE))
+        shaft.append(Probe("round side", (-rg, 0.0, t / 2), INSIDE))
     shaft.append(Probe("under front bearing", (rg, 0.0, -(g + tv + wb / 2)), INSIDE))
     probes["input_shaft"] = shaft + _collar_probe(spec, r, d)
 
     link = layout.link_shaft_spec(p, d)
     if link is not None:
-        lp: list[Probe] = []
-        if keyed:
-            for th in thetas:
-                lp.append(Probe(f"groove {_deg(th)}", _polar(rg, th, tc / 2), OUTSIDE))
-            for th in thetas:
-                lp.append(Probe(f"sun groove {_deg(th)}", _polar(rg, th, (tc + g + link.top) / 2), OUTSIDE))
-        if link.collar is not None:
-            lo, hi = link.collar
-            lp.append(Probe("collar over groove", (rg, 0.0, (lo + hi) / 2), INSIDE))
+        lp = _thick_probes(p, d, link)
+        if flat:
+            lp.append(Probe("sun flat", (rg, 0.0, (tc + g + link.top) / 2), OUTSIDE))
         probes["link_shaft"] = lp
 
     out = layout.output_shaft_spec(p, d)
-    op: list[Probe] = []
-    if keyed:
-        for th in thetas:
-            op.append(Probe(f"groove {_deg(th)}", _polar(rg, th, tc / 2), OUTSIDE))
+    op = _thick_probes(p, d, out)
     op.append(Probe("round under bearing", (rg, 0.0, out.top - p.output_shaft_length - wb / 2), INSIDE))
-    probes["output_shaft"] = op + _collar_probe(out, r, d)
+    probes["output_shaft"] = op
     return probes
 
 

@@ -7,7 +7,7 @@ import typing
 import adsk.fusion
 
 from ...lib.gen import edgefinish, gears, layout
-from ...lib.gen.curves import Circle
+from ...lib.gen.curves import Circle, Loop
 from ...lib.gen.ears import ear_bore_centers, ring_outline
 from ...lib.gen.involute import (
     GearDims,
@@ -35,20 +35,21 @@ from ...lib.gen.fasteners import (
     nut_pocket_diameter,
 )
 from ...lib.gen.params import (
-    PIN_COLLAR_CLEARANCE,
-    PIN_COLLAR_THICKNESS,
-    PLANET_BEARING_LIFT,
     RING_MARGIN,
+    STEP_OVERLAP,
     TOOL_MARGIN,
 )
 from ...lib.gen.phase import ring_tooth_angle
 from ...lib.gen.report import fmt_num
 from ...lib.gen.sections import (
     bolt_hole_centers,
+    carrier_hole_section,
     carrier_plate_outline,
     cover_window_loops,
-    key_box,
-    key_tool_section,
+    flat_box,
+    flat_tool_section,
+    socket_section,
+    thick_section,
 )
 from . import fusion
 
@@ -147,28 +148,34 @@ def _fillet_with_fallback(ctx: BuildContext, what: str, gd: GearDims, edges: lis
     ctx.log.write("fallback", [("part", name), ("step", "root_fillet"), ("radius_mm", 0.0)])
 
 
-def extrude_key_tool(ctx: BuildContext, what: str, z: float, length: float) -> adsk.fusion.BRepBody:
-    """The shaft's round section less the three keyways, extruded from z for length [extrudeKeyTool]."""
-    sk = fusion.new_sketch(ctx.comp, f"{what} key tool")
-    section = key_tool_section(ctx.p, ctx.d)
+def extrude_d_section(
+    ctx: BuildContext, what: str, section: Loop | Circle, z: float, length: float
+) -> adsk.fusion.BRepBody:
+    """A D section (or the round one without a flat) extruded from z for length [extrudeDSection]."""
+    sk = fusion.new_sketch(ctx.comp, what)
     if isinstance(section, Circle):
         fusion.draw_circle(sk, section.center, section.radius)
     else:
         fusion.draw_loop(sk, section)
-    profile = fusion.profile_with_loops(sk, 1, f"{what} key_tool_sketch", only=True)
-    return fusion.extrude(ctx, profile, z, length, f"{what} key_tool_extrude")
+    profile = fusion.profile_with_loops(sk, 1, f"{what}_sketch", only=True)
+    return fusion.extrude(ctx, profile, z, length, f"{what}_extrude")
+
+
+def extrude_flat_tool(ctx: BuildContext, what: str, z: float, length: float) -> adsk.fusion.BRepBody:
+    """The shaft's D section (round less the flat), extruded from z for length [extrudeFlatTool]."""
+    return extrude_d_section(ctx, f"{what} flat_tool", flat_tool_section(ctx.p, ctx.d), z, length)
 
 
 def build_sun(ctx: BuildContext) -> adsk.fusion.BRepBody:
     """[buildSun]"""
     p, d = ctx.p, ctx.d
-    keyed = p.key_depth > 0
+    flat = p.flat_depth > 0
     gd = gears.sun_gear(p)
-    # [buildSun] The unkeyed sun bore is the shaft bore, with the fit clearance.
-    sun = build_spur(ctx, "sun", gd, p.gear_thickness, 0.0 if keyed else d.shaft_bore)
-    if keyed:
-        tool = extrude_key_tool(ctx, "sun", -TOOL_MARGIN, p.gear_thickness + 2 * TOOL_MARGIN)
-        sun = fusion.cut(ctx, sun, [tool], "sun keyed_bore_cut")
+    # [buildSun] The sun bore without a flat is the shaft bore, with the fit clearance.
+    sun = build_spur(ctx, "sun", gd, p.gear_thickness, 0.0 if flat else d.shaft_bore)
+    if flat:
+        tool = extrude_flat_tool(ctx, "sun", -TOOL_MARGIN, p.gear_thickness + 2 * TOOL_MARGIN)
+        sun = fusion.cut(ctx, sun, [tool], "sun d_bore_cut")
     return _require_solid(ctx, sun)
 
 
@@ -299,43 +306,55 @@ def build_cover(ctx: BuildContext) -> adsk.fusion.BRepBody:
 
 
 def build_carrier(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildCarrier] Plate on the pin bosses, pins (with collars) down, keyed shaft hole; then the plate outline is
-    chamfered on both faces."""
+    """[buildCarrier] Plate on the pin bosses, a D-shaped socket through it for each pin, a wider D-shaped centre hole
+    for the shafts' thick part; then the plate outline is chamfered on both faces."""
     p, d = ctx.p, ctx.d
-    t, tc, g, n = p.gear_thickness, p.carrier_thickness, p.stage_gap, p.planet_count
+    tc, n = p.carrier_thickness, p.planet_count
     sk = fusion.new_sketch(ctx.comp, "carrier plate")
     fusion.draw_loop(sk, carrier_plate_outline(p, d))
     profile = fusion.profile_with_loops(sk, 1, "carrier plate_sketch", only=True)
     plate = fusion.extrude(ctx, profile, 0.0, tc, "carrier plate_extrude")
 
-    sk = fusion.new_sketch(ctx.comp, "carrier pin")
-    fusion.draw_circle(sk, (d.orbit, 0.0), d.pin / 2)
-    profile = fusion.profile_with_loops(sk, 1, "carrier pin_sketch", only=True)
-    pin = fusion.extrude(ctx, profile, -(t + g), t + g + tc / 2, "carrier pin_extrude")
-    # [buildCarrier] The collar starts a pin-collar clearance above the lifted planet bearing.
-    collar_start = -g + PLANET_BEARING_LIFT + PIN_COLLAR_CLEARANCE
-    if g >= PLANET_BEARING_LIFT + PIN_COLLAR_CLEARANCE + PIN_COLLAR_THICKNESS:
-        sk = fusion.new_sketch(ctx.comp, "carrier pin collar")
-        fusion.draw_circle(sk, (d.orbit, 0.0), d.collar / 2)
-        profile = fusion.profile_with_loops(sk, 1, "carrier pin_collar_sketch", only=True)
-        collar = fusion.extrude(ctx, profile, collar_start, -collar_start + tc / 2, "carrier pin_collar_extrude")
-        pin = fusion.join(ctx, pin, [collar], "carrier pin_join")
-    pins = fusion.pattern(ctx, pin, n, "carrier pin_pattern") if n > 1 else [pin]
-    carrier = fusion.join(ctx, plate, pins, "carrier carrier_join")
-    hole = extrude_key_tool(ctx, "carrier", -1.0, tc + 2.0)
+    # One socket tool, copied round the axis. It starts a millimeter below the plate's face and ends a millimeter
+    # above the other, so the cut crosses both.
+    socket = extrude_d_section(ctx, "carrier pin socket", socket_section(p, d), -1.0, tc + 2.0)
+    sockets = fusion.pattern(ctx, socket, n, "carrier socket_pattern") if n > 1 else [socket]
+    carrier = fusion.cut(ctx, plate, sockets, "carrier socket_cut")
+    hole = extrude_d_section(ctx, "carrier shaft_hole", carrier_hole_section(p, d), -1.0, tc + 2.0)
     carrier = _require_solid(ctx, fusion.cut(ctx, carrier, [hole], "carrier shaft_hole_cut"))
     finish_face_edges(ctx, carrier)
     return carrier
 
 
+def build_pin(ctx: BuildContext) -> adsk.fusion.BRepBody:
+    """[buildPin] A carrier pin about its own axis: a thin rod for the planet bearing and a D thick part that passes
+    through the plate's socket."""
+    p, d = ctx.p, ctx.d
+    spans = layout.pin_spans(p)
+    rod = extrude_d_section(ctx, "carrier_pin rod", Circle((0.0, 0.0), d.pin / 2), spans.rod[0],
+                            spans.rod[1] - spans.rod[0])
+    thick = extrude_d_section(ctx, "carrier_pin thick", thick_section(p, d), spans.thick[0],
+                              spans.thick[1] - spans.thick[0])
+    return _require_solid(ctx, fusion.join(ctx, rod, [thick], "carrier_pin pin_join"))
+
+
 def build_shaft(ctx: BuildContext, spec: layout.ShaftSpec) -> adsk.fusion.BRepBody:
-    """[buildShaft, keyCut] Round rod, optional collar, three keyway grooves cut over each groove span."""
+    """[buildShaft, flatCut] Round rod, optional collar, the flat cut over each flat span."""
     p, d = ctx.p, ctx.d
     what = ctx.part
+    rod_bottom = spec.bottom
+    thick = None
+    if spec.thick_top is not None:
+        # [buildSteppedShaft] The D thick part first, then the thin rod from STEP_OVERLAP below its top.
+        thick = extrude_d_section(ctx, f"{what} thick", thick_section(p, d), spec.bottom,
+                                  spec.thick_top - spec.bottom)
+        rod_bottom = spec.bottom + spec.thick_top - STEP_OVERLAP
     sk = fusion.new_sketch(ctx.comp, f"{what} rod")
     fusion.draw_circle(sk, (0.0, 0.0), d.shaft / 2)
     profile = fusion.profile_with_loops(sk, 1, f"{what} rod_sketch", only=True)
-    rod = fusion.extrude(ctx, profile, spec.bottom, spec.top - spec.bottom, f"{what} rod_extrude")
+    rod = fusion.extrude(ctx, profile, rod_bottom, spec.top - rod_bottom, f"{what} rod_extrude")
+    if thick is not None:
+        rod = fusion.join(ctx, thick, [rod], f"{what} step_join")
     if spec.collar is not None:
         lo, hi = spec.collar
         sk = fusion.new_sketch(ctx.comp, f"{what} collar")
@@ -343,16 +362,15 @@ def build_shaft(ctx: BuildContext, spec: layout.ShaftSpec) -> adsk.fusion.BRepBo
         profile = fusion.profile_with_loops(sk, 1, f"{what} collar_sketch", only=True)
         collar = fusion.extrude(ctx, profile, lo, hi - lo, f"{what} collar_extrude")
         rod = fusion.join(ctx, rod, [collar], f"{what} collar_join")
-    if p.key_depth > 0:
+    if p.flat_depth > 0 and spec.flats:
         boxes: list[adsk.fusion.BRepBody] = []
-        a, b = key_box(p, d)
-        for lo, hi in spec.grooves:
-            sk = fusion.new_sketch(ctx.comp, f"{what} key box")
+        a, b = flat_box(p, d)
+        for lo, hi in spec.flats:
+            sk = fusion.new_sketch(ctx.comp, f"{what} flat box")
             fusion.draw_rectangle(sk, a, b)
-            profile = fusion.profile_with_loops(sk, 1, f"{what} key_box_sketch", only=True)
-            box = fusion.extrude(ctx, profile, lo, hi - lo, f"{what} key_box_extrude")
-            boxes += fusion.pattern(ctx, box, 3, f"{what} key_box_pattern")
-        rod = fusion.cut(ctx, rod, boxes, f"{what} keyway_cut")
+            profile = fusion.profile_with_loops(sk, 1, f"{what} flat_box_sketch", only=True)
+            boxes.append(fusion.extrude(ctx, profile, lo, hi - lo, f"{what} flat_box_extrude"))
+        rod = fusion.cut(ctx, rod, boxes, f"{what} flat_cut")
     return _require_solid(ctx, rod)
 
 

@@ -39,6 +39,7 @@ _BUILDERS = {
     "sun": parts.build_sun,
     "planet": parts.build_planet,
     "planet_bearing": parts.build_bearing,
+    "carrier_pin": parts.build_pin,
     "carrier": parts.build_carrier,
     "link_shaft": parts.build_link_shaft,
     "output_shaft": parts.build_output_shaft,

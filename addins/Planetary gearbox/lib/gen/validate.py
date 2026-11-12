@@ -27,10 +27,14 @@ from .params import (
     BOLT_RIM_MARGIN,
     FIT_CLEARANCE,
     LIP_THICKNESS,
+    COLLAR_MARGIN,
     LOOSE_GEAR_CLEARANCE,
     MIN_EDGE_CHAMFER,
-    PIN_COLLAR_CLEARANCE,
-    PIN_COLLAR_THICKNESS,
+    MIN_SOCKET_FACE_WALL,
+    MIN_SOCKET_WALL,
+    PIN_SHOULDER_CLEARANCE,
+    PIN_SHOULDER_REACH,
+    PRESS_FIT_CLEARANCE,
     PLANET_BEARING_LIFT,
     RING_MARGIN,
     SEAT_CLEARANCE,
@@ -62,8 +66,7 @@ def validate(p: Params) -> None:
         ("CoverThickness", p.cover_thickness),
         ("BoltHoleDiameter", p.bolt_hole_diameter),
         ("InputShaftLength", p.input_shaft_length),
-        ("KeyDepth", p.key_depth),
-        ("KeyWidth", p.key_width),
+        ("FlatDepth", p.flat_depth),
         ("SeatChamfer", p.seat_chamfer),
         ("EdgeChamfer", p.edge_chamfer),
         ("BearingClearance", p.bearing_clearance),
@@ -80,15 +83,14 @@ def validate(p: Params) -> None:
     for name, v, ok in (
         ("module", p.module, p.module > 0),
         ("gear thickness", p.gear_thickness, p.gear_thickness > 0),
-        ("carrier thickness", p.carrier_thickness, p.carrier_thickness > 0),
-        ("stage gap", p.stage_gap, p.stage_gap >= PLANET_BEARING_LIFT + PIN_COLLAR_CLEARANCE + PIN_COLLAR_THICKNESS),
+        ("carrier thickness", p.carrier_thickness, p.carrier_thickness >= 2),
+        ("stage gap", p.stage_gap, p.stage_gap >= PLANET_BEARING_LIFT + PIN_SHOULDER_CLEARANCE + PIN_SHOULDER_REACH),
         ("cover thickness", p.cover_thickness, p.cover_thickness > 0),
         ("bolt hole diameter", p.bolt_hole_diameter, p.bolt_hole_diameter > 0),
         ("input shaft length", p.input_shaft_length, p.input_shaft_length > 0),
-        ("key depth", p.key_depth, 0 <= p.key_depth <= b.bore_diameter / 4),
+        ("flat depth", p.flat_depth, 0 <= p.flat_depth <= b.bore_diameter / 4),
         ("seat chamfer", p.seat_chamfer, 0 <= p.seat_chamfer <= 1),
         ("edge chamfer", p.edge_chamfer, MIN_EDGE_CHAMFER <= p.edge_chamfer <= 1),
-        ("key width", p.key_width, 0 < p.key_width <= b.bore_diameter / 2),
         ("bearing clearance", p.bearing_clearance, p.bearing_clearance >= SEAT_CLEARANCE),
         ("carrier wall", p.carrier_wall, p.carrier_wall > 0),
         ("ring wall", p.ring_wall, p.ring_wall > 0),
@@ -131,11 +133,6 @@ def validate(p: Params) -> None:
     # 8. Placement.
     if p.placement is not None and not frame_is_valid(p.placement):
         raise ValidationError("invalid placement frame")
-
-    if p.key_depth > 0 and p.key_width <= 2 * FIT_CLEARANCE:
-        raise ValidationError(
-            f"key width {n(p.key_width)} must exceed {n(2 * FIT_CLEARANCE)} for the shaft clearance"
-        )
 
     # 9. Fit.
     d = derive(p)
@@ -198,6 +195,24 @@ def validate(p: Params) -> None:
             f"carrier radius {n(d.orbit + d.boss / 2)} does not leave more than {n(LOOSE_GEAR_CLEARANCE)} "
             f"clearance from ring tip radius {n(d.ring_tip)}"
         )
+    if p.flat_depth >= COLLAR_MARGIN:
+        raise ValidationError(
+            f"flat depth {n(p.flat_depth)} must stay under the {n(COLLAR_MARGIN)} collar margin, "
+            "so a thick part's flat stays outside its rod"
+        )
+    socket = d.collar / 2 + PRESS_FIT_CLEARANCE
+    wall = d.boss / 2 - socket
+    if wall < MIN_SOCKET_WALL:
+        raise ValidationError(
+            f"carrier wall {n(p.carrier_wall)} leaves {n(wall)} of plate around a pin socket, "
+            f"less than {n(MIN_SOCKET_WALL)}"
+        )
+    face = wall - p.edge_chamfer
+    if face < MIN_SOCKET_FACE_WALL:
+        raise ValidationError(
+            f"carrier wall {n(p.carrier_wall)} and edge chamfer {n(p.edge_chamfer)} leave {n(face)} of plate "
+            f"around a pin socket at the plate's face, less than {n(MIN_SOCKET_FACE_WALL)}"
+        )
 
     # The ears clear each other and the bolt sites [params.go validateEars].
     ear_error = validate_ears(p, d)
@@ -206,7 +221,7 @@ def validate(p: Params) -> None:
 
     # 10. Spur-gear limits, which the gallery raises at build time (ring, sun, planet order).
     # Deviation: checked here so the dialog shows them before building (README "Deviations from decad-gallery").
-    sun_bore = d.shaft_bore if p.key_depth == 0 else 0.0
+    sun_bore = d.shaft_bore if p.flat_depth == 0 else 0.0
     gears = (
         ("ring tooth spaces: ", p.ring_teeth, d.ring_length + 2 * RING_MARGIN, 0.0, -p.backlash),
         ("sun gear: ", p.sun_teeth, p.gear_thickness, sun_bore, p.backlash),

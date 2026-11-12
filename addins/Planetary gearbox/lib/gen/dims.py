@@ -1,4 +1,4 @@
-"""Derived dimensions. Own copy of decad-gallery models/planetarygearbox params.go derive() (a800069)."""
+"""Derived dimensions. Own copy of decad-gallery models/planetarygearbox params.go derive() (92c1f03)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from .params import (
     ARM_MARGIN,
     BOLT_RIM_MARGIN,
     COLLAR_MARGIN,
-    FIT_CLEARANCE,
+    PRESS_FIT_CLEARANCE,
     GEAR_ROOT_MEASUREMENT_MARGIN,
     LIP_WIDTH,
     Params,
@@ -60,7 +60,7 @@ def derive(p: Params) -> Dims:
     stage_pitch = p.gear_thickness + p.carrier_thickness + 2 * p.stage_gap
     pocket = b.outer_diameter + 2 * p.bearing_clearance
     cover_boss = pocket + 2 * p.carrier_wall
-    pin = b.bore_diameter - 2 * FIT_CLEARANCE
+    pin = b.bore_diameter  # params.go: zero clearance in the bearing bore (96e8435)
     shaft = pin
     return Dims(
         orbit=m * (p.sun_teeth + p.planet_teeth) / 2,
@@ -77,7 +77,7 @@ def derive(p: Params) -> Dims:
         arm=pin + 2 * ARM_MARGIN,
         collar=shaft + 2 * COLLAR_MARGIN,
         shaft=shaft,
-        shaft_bore=shaft + 2 * FIT_CLEARANCE,
+        shaft_bore=shaft + 2 * PRESS_FIT_CLEARANCE,
         cover_boss=cover_boss,
         cover_hub=cover_boss + 2 * p.carrier_wall,
         bolt_circle=bolt_circle,
