@@ -1,6 +1,6 @@
 """Escapement input validation.
 
-Own copy of decad-gallery models/escapement params.go Validate at 0067d30.
+Own copy of decad-gallery models/escapement params.go Validate at 3a4f9d8.
 
 Deviation: messages are the gallery's without the `escapement: ` prefix, because the dialog shows them on its own
 (docs/escapement/deviations.md).

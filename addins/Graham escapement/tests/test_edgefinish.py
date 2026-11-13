@@ -5,8 +5,10 @@ import _support  # noqa: F401
 from gen import bodies, edgefinish
 from gen.edgefinish import (
     CHAMFER,
-    INNER_MULTI,
+    INNER_MULTI_OR_RIM,
+    INNER_RIM,
     OUTER,
+    OUTER_OR_LONG_INNER,
     PLATE,
     RIM,
     chamfer_volume,
@@ -28,16 +30,18 @@ class FinishPlanesTest(unittest.TestCase):
         self.assertEqual(edgefinish.CIRCLE_TOL, 0.01)
 
     def test_table(self):
+        plate = (7.05, 5.0)
         table = {
-            "back_plate": [(-6.0, PLATE, 6), (0.0, PLATE, 6)],
-            "front_plate": [(28.0, PLATE, 6), (34.0, PLATE, 6)],
-            "escape_wheel": [(22.0, INNER_MULTI, 6), (25.0, INNER_MULTI, 6)],
-            "anchor": [(21.0, OUTER, 1), (26.0, OUTER, 1)],
-            "pendulum": [(37.75, RIM, 2), (43.75, RIM, 2)],
-            "mainspring": [(0.0, OUTER, 1), (6.0, OUTER, 1)],
+            "back_plate": [(-6.0, PLATE, 6, plate), (0.0, PLATE, 6, plate)],
+            "front_plate": [(28.0, PLATE, 6, plate), (34.0, PLATE, 6, plate)],
+            "escape_wheel": [(22.0, INNER_MULTI_OR_RIM, 6, (3.75,)), (25.0, INNER_MULTI_OR_RIM, 7, (3.75,))],
+            "anchor": [(21.0, RIM, 1, (3.75,)), (26.0, RIM, 2, (3.75,))],
+            "pendulum": [(38.80, RIM, 2, plate), (44.80, RIM, 2, plate)],
+            "great_wheel": [(1.5, INNER_RIM, 1, (4.10,))],
+            "mainspring": [(0.0, OUTER_OR_LONG_INNER, 2, ()), (6.0, OUTER_OR_LONG_INNER, 2, ())],
         }
         for part, want in table.items():
-            got = [(f.z, f.rule, f.loops) for f in finish_planes(part)]
+            got = [(f.z, f.rule, f.loops, f.radii) for f in finish_planes(part)]
             self.assertEqual(got, want, part)
         for part in bodies.PARTS:
             if part not in table:
@@ -49,13 +53,31 @@ class KeepLoopTest(unittest.TestCase):
         self.assertTrue(keep_loop(OUTER, True, 9, None, None, []))
         self.assertFalse(keep_loop(OUTER, False, 4, None, None, []))
 
-    def test_inner_multi(self):
-        self.assertTrue(keep_loop(INNER_MULTI, False, 4, None, None, []))
-        self.assertFalse(keep_loop(INNER_MULTI, False, 1, (0.0, 0.0, 2.55), None, []))
-        self.assertFalse(keep_loop(INNER_MULTI, True, 4, None, None, []))
+    def test_inner_multi_or_rim(self):
+        keep = lambda *a: keep_loop(INNER_MULTI_OR_RIM, *a, [(0.0, 0.0)], (3.75,))  # noqa: E731
+        self.assertTrue(keep(False, 4, None, None))
+        self.assertFalse(keep(False, 1, (0.0, 0.0, 2.55), (2.55, 0.0)))  # a D bore arc: not on the rim radius
+        self.assertTrue(keep(False, 1, None, (3.75, 0.0)))
+        self.assertTrue(keep(False, 1, None, (0.0, -3.76)))
+        self.assertFalse(keep(False, 1, None, (3.77, 0.0)))  # misses the rim by 0.02
+        self.assertFalse(keep(True, 4, None, None))
+
+    def test_inner_rim(self):
+        keep = lambda *a: keep_loop(INNER_RIM, *a, [(0.0, 0.0)], (4.10,))  # noqa: E731
+        self.assertTrue(keep(False, 1, None, (4.10, 0.0)))
+        self.assertFalse(keep(False, 1, None, (4.12, 0.0)))
+        self.assertFalse(keep(False, 3, None, (4.10, 0.0)))
+        self.assertFalse(keep(True, 1, None, (4.10, 0.0)))  # the outer loop is rejected
+
+    def test_outer_or_long_inner(self):
+        keep = lambda outer, length: keep_loop(OUTER_OR_LONG_INNER, outer, 5, None, None, [], (), length)  # noqa: E731
+        self.assertTrue(keep(True, 1000.0))
+        self.assertTrue(keep(False, 20.86))
+        self.assertFalse(keep(False, 11.94))
+        self.assertTrue(keep(False, 20.0))
 
     def test_plate(self):
-        keep = lambda *a: keep_loop(PLATE, *a, CENTRES)  # noqa: E731
+        keep = lambda *a: keep_loop(PLATE, *a, CENTRES, (7.05, 5.0))  # noqa: E731
         self.assertTrue(keep(True, 12, None, None))
         self.assertTrue(keep(False, 6, None, None))
         self.assertFalse(keep(False, 4, None, None))  # a 2-edge D socket or a 4-edge slot
@@ -69,7 +91,7 @@ class KeepLoopTest(unittest.TestCase):
         self.assertFalse(keep(False, 1, None, (0.0, 5.0)))
 
     def test_rim(self):
-        keep = lambda *a: keep_loop(RIM, *a, [(0.0, 0.0)])  # noqa: E731
+        keep = lambda *a: keep_loop(RIM, *a, [(0.0, 0.0)], (7.05, 5.0))  # noqa: E731
         self.assertTrue(keep(True, 8, None, None))
         self.assertTrue(keep(False, 1, None, (7.05, 0.0)))
         self.assertTrue(keep(False, 1, None, (0.0, -5.004)))
@@ -84,8 +106,19 @@ class KeepLoopTest(unittest.TestCase):
 
 class ChamferVolumeTest(unittest.TestCase):
     def test_parts_without_planes(self):
-        for part in ("crutch", "great_wheel", "bearing", "bolt"):
+        for part in ("crutch", "bearing", "bolt"):
             self.assertEqual(chamfer_volume(G, part), 0.0)
+
+    def test_values(self):
+        want = {"escape_wheel": 97.8142, "anchor": 57.4097, "great_wheel": 3.3510, "mainspring": 595.2211}
+        for part, v in want.items():
+            self.assertAlmostEqual(chamfer_volume(G, part), v, delta=1e-3, msg=part)
+
+    def test_counterbore_rims(self):
+        rim = lambda r: 0.25 / 2 * 2 * math.pi * (r + 0.5 / 3)  # noqa: E731
+        self.assertAlmostEqual(rim(3.75), 3.0762, delta=1e-3)
+        self.assertAlmostEqual(rim(4.10), 3.3510, delta=1e-3)
+        self.assertAlmostEqual(chamfer_volume(G, "great_wheel"), rim(4.10), places=9)
 
     def test_pendulum(self):
         c = CHAMFER
@@ -101,7 +134,7 @@ class ChamferVolumeTest(unittest.TestCase):
         self.assertLess(v, 3 * outline)
 
     def test_positive(self):
-        for part in ("front_plate", "escape_wheel", "anchor", "mainspring"):
+        for part in ("front_plate", "escape_wheel", "anchor", "mainspring", "great_wheel"):
             self.assertGreater(chamfer_volume(G, part), 0.0, part)
 
 

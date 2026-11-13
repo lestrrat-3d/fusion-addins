@@ -44,7 +44,7 @@ class PoseTest(unittest.TestCase):
         self.assertTrue(POSES[bodies.BACK_PLATE].is_identity())
         self.assertEqual(POSES[bodies.BACK_PALLET_BEARING].z, -5.0)
         self.assertEqual(POSES[bodies.FRONT_PALLET_BEARING].z, 28.0)
-        self.assertEqual(POSES[bodies.PENDULUM_BEARING].z, 39.0)
+        self.assertEqual(POSES[bodies.PENDULUM_BEARING].z, 40.05)
 
     def test_angles(self):
         wheel = S.wheel_angle - BUILD_BACKOFF
@@ -58,6 +58,24 @@ class PoseTest(unittest.TestCase):
         for name in (bodies.GREAT_WHEEL_ARBOR, bodies.PAWL_CARRIER, bodies.SPRING_SPACER, bodies.WINDING_KNOB):
             self.assertAlmostEqual(POSES[name].angle, arbor)
         self.assertEqual(POSES[bodies.MAINSPRING].z, 11.25)
+
+    def test_collars(self):
+        wheel = S.wheel_angle - BUILD_BACKOFF
+        great = G.great_phase + wheel * 13 / 48
+        arbor = great + 20.8 * DEG + G.carrier_offset
+        cases = {
+            bodies.ESCAPE_REAR_COLLAR: (-wheel, 0.0, 0.0, 0.25),
+            bodies.PALLET_FRONT_COLLAR: (-S.anchor_angle, G.axis_p[0], G.axis_p[1], 24.75),
+            bodies.CRUTCH_COLLAR: (-S.anchor_angle, G.axis_p[0], G.axis_p[1], 34.25),
+            bodies.KNOB_COLLAR: (arbor, G.axis_g[0], G.axis_g[1], 34.25),
+        }
+        for name, want in cases.items():
+            got = POSES[name]
+            for have, exp in zip((got.angle, got.x, got.y, got.z), want):
+                self.assertAlmostEqual(have, exp, places=12, msg=name)
+            self.assertFalse(got.flip)
+        self.assertEqual(POSES[bodies.KNOB_COLLAR].angle, POSES[bodies.WINDING_KNOB].angle)
+        self.assertEqual(POSES[bodies.CRUTCH_COLLAR].angle, POSES[bodies.CRUTCH].angle)
 
     def test_fasteners(self):
         self.assertEqual((POSES["Bolt 1"].x, POSES["Bolt 1"].y, POSES["Bolt 1"].z), (-50.0, 74.0, 32.0))

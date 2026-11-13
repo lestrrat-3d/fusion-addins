@@ -1,8 +1,9 @@
 """Every 2D loop of the escapement parts, in part-local coordinates (origin on the part's axis).
 
 Own copy of the section geometry of decad-gallery models/escapement (plates.go, escapewheel.go, anchor.go, pendulum.go,
-drive.go, arbors.go) at 0067d30. Arcs are counterclockwise (curves.Arc); a clockwise piece of the gallery is the
-counterclockwise arc from its other end. Pieces that meet share one point tuple, so loops close exactly.
+drive.go, arbors.go, collars.go, builder.go dTool) at 3a4f9d8. Arcs are counterclockwise (curves.Arc); a clockwise
+piece of the gallery is the counterclockwise arc from its other end. Pieces that meet share one point tuple, so loops
+close exactly.
 """
 
 from __future__ import annotations
@@ -10,7 +11,8 @@ from __future__ import annotations
 import math
 
 from .constants import (
-    FLAT_REACH, FLAT_X, HUB_RING, PLATE_BOTTOM, PLATE_CORNER, PLATE_LEFT, PLATE_RIGHT,
+    BODY_PRESS_FLAT, BODY_PRESS_RADIUS, COLLAR_RADIUS, DRIVE_PRESS_RADIUS, FLAT_REACH, HUB_RING, KEYED_COUNTER_FLAT,
+    KEYED_COUNTER_RADIUS, KEYED_RING_FLAT, PLATE_BOTTOM, PLATE_CORNER, PLATE_LEFT, PLATE_RIGHT,
     PRESS_FLAT, PRESS_RADIUS, RATCHET_DISC, RATCHET_INNER, RATCHET_OUTER, RATCHET_TEETH, SLOT_HIGH,
     SLOT_LOW, SLOT_RADIUS, SPINE_HALF, SPOKE_HALF, WINDOW_BOTTOM, WINDOW_CORNER, WINDOW_INNER, WINDOW_OUTER,
     WINDOW_SIDE, WINDOW_TOP,
@@ -167,17 +169,35 @@ def _segment_area(r: float, floor: float) -> float:
     return r * r * math.acos(floor / r) - floor * math.sqrt(r * r - floor * floor)
 
 
-def press_d() -> Loop:
-    """D section about the axis: arc radius 2.55, chord at x = 2.05, flat on +X [dTool]."""
-    r = PRESS_RADIUS
-    f = PRESS_FLAT
+DFamily = tuple[float, float]  # (arc radius, chord x)
+
+END_D: DFamily = (PRESS_RADIUS, PRESS_FLAT)
+BODY_D: DFamily = (BODY_PRESS_RADIUS, BODY_PRESS_FLAT)
+DRIVE_D: DFamily = (DRIVE_PRESS_RADIUS, BODY_PRESS_FLAT)
+KEYED_COUNTER_D: DFamily = (KEYED_COUNTER_RADIUS, KEYED_COUNTER_FLAT)
+KEYED_RING_D: DFamily = (COLLAR_RADIUS, KEYED_RING_FLAT)
+
+
+def d_section(d: DFamily) -> Loop:
+    """D section about the axis: arc of radius r about the origin, chord at x, flat on +X [dTool, dLoop]."""
+    r, f = d
     h = math.sqrt(r * r - f * f)
     upper, lower = (f, h), (f, -h)
     return [Arc(_ORIGIN, upper, lower), Line(lower, upper)]
 
 
+def d_area(d: DFamily) -> float:
+    r, f = d
+    return math.pi * r * r - _segment_area(r, f)
+
+
+def press_d() -> Loop:
+    """D section of the end press fit: arc radius 2.55, chord at x = 2.05."""
+    return d_section(END_D)
+
+
 def press_d_area() -> float:
-    return math.pi * PRESS_RADIUS**2 - _segment_area(PRESS_RADIUS, PRESS_FLAT)
+    return d_area(END_D)
 
 
 def ratchet_triangle() -> Loop:
@@ -236,24 +256,25 @@ def pawl_loop(gang: float) -> Loop:
     ]
 
 
-# (radius, z) polygons with a point on the axis at each end [arbors.go].
+# (radius, z) polygons with a point on the axis at each end [arbors.go *ArborPoints, pinPoints].
 _MERIDIANS: dict[str, tuple[Pt, ...]] = {
-    "escape_arbor": ((0, -5), (2.5, -5), (2.5, 25.05), (3.7, 25.05), (3.7, 27.75), (2.5, 27.75), (2.5, 33), (0, 33)),
-    "pallet_arbor": ((0, -5), (2.5, -5), (2.5, 19.95), (3.7, 19.95), (3.7, 20.95), (2.5, 20.95), (2.5, 37.2),
-                     (0, 37.2)),
-    "great_wheel_arbor": ((0, -5), (2.5, -5), (2.5, 0.25), (3.7, 0.25), (3.7, 1.25), (2.5, 1.25), (2.5, 37.2),
-                          (0, 37.2)),
-    "suspension_pin": ((0, 31.05), (2.5, 31.05), (2.5, 34), (3.7, 34), (3.7, 38.75), (2.5, 38.75), (2.5, 45.70),
-                       (0, 45.70)),
+    "escape_arbor": ((0, -5), (2.5, -5), (2.5, 0.25), (2.8, 0.25), (2.8, 24.0), (3.7, 24.0), (3.7, 27.75),
+                     (2.5, 27.75), (2.5, 33), (0, 33)),
+    "pallet_arbor": ((0, -5), (2.5, -5), (2.5, 0.25), (3.7, 0.25), (3.7, 20.95), (2.8, 20.95), (2.8, 27.75),
+                     (2.5, 27.75), (2.5, 38.25), (0, 38.25)),
+    "great_wheel_arbor": ((0, -5), (2.5, -5), (2.5, 0.25), (3.7, 0.25), (3.7, 3.25), (3.05, 3.25), (3.05, 17.45),
+                          (2.8, 17.45), (2.8, 27.75), (2.5, 27.75), (2.5, 38.25), (0, 38.25)),
+    "suspension_pin": ((0, 31.05), (2.5, 31.05), (2.5, 34), (3.7, 34), (3.7, 39.80), (2.5, 39.80), (2.5, 46.75),
+                       (0, 46.75)),
 }
 _MERIDIANS = {k: tuple((float(r), float(z)) for r, z in v) for k, v in _MERIDIANS.items()}
 
-# z spans of the flat boxes cut from each arbor.
-ARBOR_FLATS: dict[str, tuple[Pt, ...]] = {
-    "escape_arbor": ((0.5, 25.0),),
-    "pallet_arbor": ((21.0, 27.75), (34.25, 38.2)),
-    "great_wheel_arbor": ((5.25, 27.75), (34.25, 38.2)),
-    "suspension_pin": ((30.05, 33.95), (44.25, 46.70)),
+# Flat boxes cut from each arbor: (flat x, z0, z1) [arbors.go *Flats].
+ARBOR_FLATS: dict[str, tuple[tuple[float, float, float], ...]] = {
+    "escape_arbor": ((2.55, 0.20, 23.95),),
+    "pallet_arbor": ((2.55, 21.0, 27.80), (2.0, 34.25, 39.25)),
+    "great_wheel_arbor": ((2.55, 5.25, 27.80), (2.0, 34.25, 39.25)),
+    "suspension_pin": ((2.0, 30.05, 33.95), (2.0, 45.30, 47.75)),
 }
 
 
@@ -263,6 +284,6 @@ def arbor_meridian(part: str) -> Loop:
     return [Line(pts[i - 1], pts[i]) for i in range(1, len(pts))] + [Line(pts[-1], pts[0])]
 
 
-def flat_box() -> tuple[Pt, Pt]:
-    """Corners of the flat box about the axis: x in [2.0, 3.5], y in [-3.5, 3.5]."""
-    return ((FLAT_X, -FLAT_REACH), (FLAT_REACH, FLAT_REACH))
+def flat_box(flat_x: float) -> tuple[Pt, Pt]:
+    """Corners of the flat box about the axis: x in [flat_x, 3.5], y in [-3.5, 3.5] [flatBox]."""
+    return ((flat_x, -FLAT_REACH), (FLAT_REACH, FLAT_REACH))

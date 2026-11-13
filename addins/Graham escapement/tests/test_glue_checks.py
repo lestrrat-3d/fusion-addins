@@ -72,6 +72,28 @@ class PointChecksTest(unittest.TestCase):
                     checks._point_checks(ctx, {"A": a}, points, "fit")
                 self.assertTrue(str(cm.exception).startswith("fit check: no body named"))
 
+    def test_collar_point_inside_target_logs_lines(self):
+        adsk, fakes = load()
+        with mock.patch.dict(sys.modules, fakes), mock.patch.object(sys, "path", [_ADDINS] + sys.path):
+            checks = importlib.import_module(f"{_PKG}.checks")
+            probes_mod = importlib.import_module("Graham escapement.lib.gen.probes")
+            inside = adsk.fusion.PointContainment.PointInsidePointContainment
+            body = mock.MagicMock()
+            body.pointContainment.return_value = inside
+            points = [probes_mod.MeshPoint("collar crutch #0", "Crutch", (1.0, 0.0, 0.0))]
+            ctx = mock.MagicMock()
+            ctx.log = FakeLog()
+            with mock.patch.dict(checks._CONTAINMENT, {inside: probes_mod.INSIDE}):
+                self.assertEqual(checks._point_checks(ctx, {"Crutch": body}, points, "collar"), (0, 1))
+            self.assertEqual(
+                ctx.log.records,
+                [
+                    ("collar summary", {"points": 1, "inside": 1, "result": "FAIL"}),
+                    ("collar", {"detail": "Crutch: collar crutch #0", "result": "FAIL"}),
+                ],
+            )
+            self.assertEqual(checks._EVENTS[-2:], ("collar", "bore"))
+
     def test_fail_lines_are_capped(self):
         adsk, fakes = load()
         with mock.patch.dict(sys.modules, fakes), mock.patch.object(sys, "path", [_ADDINS] + sys.path):
@@ -127,10 +149,10 @@ class RunAllTest(unittest.TestCase):
                 records = _run_all(adsk)
             summary = [f for e, f in records if e == "summary"]
             self.assertEqual(len(summary), 1)
-            self.assertEqual(summary[0]["bodies"], 32)
-            self.assertEqual(summary[0]["expected"], 32)
-            # 3 checks per body, 4 interaction events, 1 top and 19 container results.
-            self.assertEqual(summary[0]["pass"] + summary[0]["fail"], 3 * 32 + 4 + 20)
+            self.assertEqual(summary[0]["bodies"], 36)
+            self.assertEqual(summary[0]["expected"], 36)
+            # 3 checks per body, 6 point events, 1 top and 20 container results.
+            self.assertEqual(summary[0]["pass"] + summary[0]["fail"], 3 * 36 + 6 + 21)
             self.assertEqual(records[-1][0], "summary")
             self.assertFalse([e for e, f in records if f.get("result") == "PASS"])
 
@@ -158,7 +180,7 @@ class ContainerChecksTest(unittest.TestCase):
             ctx.log = FakeLog()
             ctx.top.name = "Graham Escapement"
             with mock.patch.object(checks.fusion, "component_tree", return_value=tree):
-                self.assertEqual(checks._container_checks(ctx), (18, 2))
+                self.assertEqual(checks._container_checks(ctx), (19, 2))
             self.assertIn(
                 ("container", {"path": "Drive/Mainspring", "bodies": 2, "expected": 1, "detail": "extra Nut 4",
                                "result": "FAIL"}),
@@ -182,7 +204,7 @@ class ContainerChecksTest(unittest.TestCase):
             ctx.log = FakeLog()
             ctx.top.name = "Graham Escapement"
             with mock.patch.object(checks.fusion, "component_tree", return_value=tree):
-                self.assertEqual(checks._container_checks(ctx), (19, 1))
+                self.assertEqual(checks._container_checks(ctx), (20, 1))
             self.assertEqual(ctx.log.records[0][0], "containers")
             self.assertIn("2 bodies outside containers", ctx.log.records[0][1]["detail"])
 

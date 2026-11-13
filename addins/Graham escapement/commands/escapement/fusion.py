@@ -389,7 +389,7 @@ def circular_edges_at(
     return found
 
 
-FaceLoop = tuple[bool, list[adsk.fusion.BRepEdge], tuple[float, float, float] | None, Point | None]
+FaceLoop = tuple[bool, list[adsk.fusion.BRepEdge], tuple[float, float, float] | None, Point | None, float]
 
 
 def flat_face_loops(
@@ -397,10 +397,11 @@ def flat_face_loops(
 ) -> list[FaceLoop]:
     """Loops of the planar faces of body that face along Z at height z (mm) with at least min_area (mm^2).
 
-    Each loop is (is_outer, edges, circle, start). `circle` is (cx, cy, r) in mm when the loop has one edge whose
-    geometry is a Circle3D or an Arc3D, else None. `start` is the (x, y) in mm of the first edge's start vertex, None
-    when the loop has no edge or no start vertex [edgefinish.go finishFaceEdges]. An edge without curve geometry (a
-    degenerate edge) is skipped (knowledge/revolve-and-edges.md)."""
+    Each loop is (is_outer, edges, circle, start, length). `length` is the loop length in mm, the sum of
+    `BRepEdge.length` (cm) over the loop's edges, 0.0 with no edge. `circle` is (cx, cy, r) in mm when the loop has
+    one edge whose geometry is a Circle3D or an Arc3D, else None. `start` is the (x, y) in mm of the first edge's
+    start vertex, None when the loop has no edge or no start vertex [edgefinish.go finishFaceEdges]. An edge without
+    curve geometry (a degenerate edge) is skipped (knowledge/revolve-and-edges.md)."""
     out: list[FaceLoop] = []
     with _step(f"{what} faces"):
         for i in range(body.faces.count):
@@ -432,7 +433,8 @@ def flat_face_loops(
                 if edges and edges[0].startVertex is not None:
                     q = edges[0].startVertex.geometry
                     start = (mm_from_cm(q.x), mm_from_cm(q.y))
-                out.append((loop.isOuter, edges, circle, start))
+                length = sum((mm_from_cm(e.length) for e in edges), 0.0)
+                out.append((loop.isOuter, edges, circle, start, length))
     return out
 
 

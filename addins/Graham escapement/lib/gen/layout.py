@@ -1,6 +1,6 @@
 """Escapement layout: every derived value and point of the design.
 
-Own copy of decad-gallery models/escapement layout.go (Layout, layoutEscapement) at 0067d30. Anchor and crutch points
+Own copy of decad-gallery models/escapement layout.go (Layout, layoutEscapement) at 3a4f9d8. Anchor and crutch points
 are relative to the pallet arbor, pendulum points relative to the suspension, the others in the model frame.
 """
 

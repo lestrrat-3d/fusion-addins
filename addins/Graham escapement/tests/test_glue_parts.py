@@ -23,19 +23,34 @@ class Body:
 
 
 def _loops_for(part, z, extra_loop=0):
-    """Face loops that pass the part's rule with exactly the gallery's kept-loop count (plus extra_loop)."""
+    """Face loops (is_outer, edges, circle, start, length) that the part's rule keeps at exactly the gallery's
+    count (plus extra_loop), together with loops it rejects."""
     fp = [f for f in edgefinish.finish_planes(part) if abs(f.z - z) < 1e-9][0]
     e = object()
     n = fp.loops + extra_loop
-    if fp.rule == edgefinish.OUTER:
-        return [(True, [e] * 8, None, (1.0, 1.0))] * n if n else []
-    if fp.rule == edgefinish.INNER_MULTI:
-        return [(True, [e] * 90, None, None)] + [(False, [e] * 4, None, (1.0, 1.0))] * n
+    rim = (fp.radii[0], 0.0) if fp.radii else None
     if fp.rule == edgefinish.PLATE:
-        return [(True, [e] * 8, None, None), (False, [e] * 11, None, None), (False, [e] * 11, None, None)] + [
-            (False, [e], (0.0, 0.0, 5.0), None)
-        ] * (n - 3)
-    return [(True, [e] * 8, None, None), (False, [e], None, (5.0, 0.0))]
+        return [(True, [e] * 8, None, None, 0.0), (False, [e] * 11, None, None, 0.0),
+                (False, [e] * 11, None, None, 0.0)] + [(False, [e], (0.0, 0.0, 5.0), None, 0.0)] * (n - 3)
+    if fp.rule == edgefinish.RIM:
+        # The outline, rim circles for the other kept loops, and a multi-edge inner loop the rule rejects.
+        return [(True, [e] * 8, None, None, 0.0)] * min(n, 1) + [(False, [e], None, rim, 0.0)] * (n - 1) + [
+            (False, [e] * 4, None, (1.0, 1.0), 0.0)
+        ]
+    if fp.rule == edgefinish.INNER_MULTI_OR_RIM:
+        windows = min(n, 6)
+        return ([(True, [e] * 90, None, None, 0.0)] + [(False, [e] * 4, None, (1.0, 1.0), 0.0)] * windows
+                + [(False, [e], None, rim, 0.0)] * (n - windows) + [(False, [e], (0.0, 0.0, 2.55), (2.55, 0.0), 0.0)])
+    if fp.rule == edgefinish.INNER_RIM:
+        return [(True, [e] * 90, None, None, 0.0), (False, [e] * 2, None, (3.45, 0.0), 0.0)] + [
+            (False, [e], None, rim, 0.0)
+        ] * n
+    if fp.rule == edgefinish.OUTER_OR_LONG_INNER:
+        # Outer loop, then n - 1 inner loops of length 20.86 (the bore), and the eye hole of length 11.94.
+        return [(True, [e] * 40, None, None, 900.0)] * min(n, 1) + [(False, [e] * 2, None, None, 20.86)] * (n - 1) + [
+            (False, [e], None, None, 11.94)
+        ]
+    raise AssertionError(fp.rule)
 
 
 class GluePartsTest(unittest.TestCase):
@@ -139,6 +154,58 @@ class GluePartsTest(unittest.TestCase):
         self.assertEqual(spans["great_wheel ratchet_tooth_extrude"], (5.0, 9.5))
         self.assertIn(("join", "great_wheel ratchet_join"), calls)
         self.assertIn(("cut", "great_wheel ratchet_cut"), calls)
+
+    def test_great_wheel_order(self):
+        calls = self.run_parts(only=["great_wheel"])
+        steps = [c[1] for c in calls if c[0] in ("cut", "chamfer", "pattern")]
+        self.assertEqual(
+            steps,
+            [
+                "great_wheel pattern", "great_wheel bore_cut", "great_wheel counterbore_cut",
+                "great_wheel edge_chamfer z=1.5", "great_wheel ratchet_pattern", "great_wheel ratchet_cut",
+            ],
+        )
+
+    def test_extrude_spans(self):
+        want = {
+            "escape_wheel": {
+                "escape_wheel front_counterbore_extrude": (23.95, 26.0),
+                "escape_wheel bore_extrude": (-0.75, 26.75),
+                "escape_wheel rear_counterbore_extrude": (0.5, 3.3),
+            },
+            "anchor": {"anchor counterbore_extrude": (24.7, 27.0), "anchor bore_extrude": (20.0, 28.75)},
+            "crutch": {
+                "crutch outline_extrude": (35.3, 38.3), "crutch pin_extrude": (37.8, 44.3),
+                "crutch counterbore_extrude": (34.3, 37.3), "crutch bore_extrude": (34.3, 39.3),
+            },
+            "great_wheel": {"great_wheel counterbore_extrude": (0.5, 3.5)},
+            "pawl_carrier": {"pawl_carrier boss_extrude": (8.75, 11.0), "pawl_carrier bore_extrude": (4.25, 12.0)},
+            "spring_spacer": {"spring_spacer disc_extrude": (17.5, 27.75), "spring_spacer bore_extrude": (16.5, 28.75)},
+            "winding_knob": {
+                "winding_knob disc_extrude": (35.3, 38.3), "winding_knob counterbore_extrude": (34.3, 37.3),
+                "winding_knob bore_extrude": (34.3, 39.3),
+            },
+            "arbor_collar": {"arbor_collar ring_extrude": (0.0, 3.0), "arbor_collar bore_extrude": (-1.0, 4.0)},
+            "end_collar": {"end_collar ring_extrude": (0.0, 3.0), "end_collar bore_extrude": (-1.0, 4.0)},
+        }
+        for part, spans in want.items():
+            calls = self.run_parts(only=[part])
+            got = {c[1]: (c[2], c[3]) for c in calls if c[0] == "extrude"}
+            for what, span in spans.items():
+                self.assertEqual(got[what], span, what)
+        flats = {
+            "escape_arbor": [(0.2, 23.95)], "pallet_arbor": [(21.0, 27.8), (34.25, 39.25)],
+            "great_wheel_arbor": [(5.25, 27.8), (34.25, 39.25)], "suspension_pin": [(30.05, 33.95), (45.3, 47.75)],
+        }
+        for part, spans in flats.items():
+            calls = self.run_parts(only=[part])
+            got = [(c[2], c[3]) for c in calls if c[0] == "extrude" and c[1] == f"{part} flat_box_extrude"]
+            self.assertEqual(got, spans, part)
+
+    def test_no_boss_builders(self):
+        for part in ("escape_wheel", "anchor"):
+            calls = self.run_parts(only=[part])
+            self.assertFalse([c for c in calls if "boss" in c[1]], part)
 
 
 if __name__ == "__main__":

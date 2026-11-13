@@ -1,7 +1,9 @@
 """Surface edge finishing of the plates, escape wheel, anchor, pendulum and mainspring.
 
 Own copy of decad-gallery internal/edgefinish (MinChamfer, LargeFaceArea, LongEdgeRun, the Outer and Inner filters),
-models/escapement plates.go plateKeep, pendulum.go rimKeep and the finish calls of the part builders at 0067d30. The
+models/escapement plates.go plateKeep, pendulum.go rimKeep, the escapewheel.go finish filter, the drive.go
+buildGreatWheel filter, internal/edgefinish Long, models/spiralspring spiralspring.go `Outer || Long(Inner)` and the
+finish calls of the part builders at 3a4f9d8. The
 gallery chamfers both planes of a part in one call because decad cannot chamfer a body twice; Fusion chamfers each
 plane in its own feature (docs/escapement/deviations.md). The removed volumes are the add-in's own; the gallery tests
 none.
@@ -12,7 +14,9 @@ from __future__ import annotations
 import dataclasses
 import math
 
-from .constants import LIP_RADIUS, SEAT_RADIUS
+from .constants import (
+    ANCHOR_COUNTER_RADIUS, GREAT_COUNTER_RADIUS, LIP_RADIUS, PENDULUM_HIGH, SEAT_RADIUS, WHEEL_COUNTER_RADIUS,
+)
 from .curves import Circle, Loop
 from .layout import Geometry
 from .sections import anchor_outline, escape_windows, lip_centres, pendulum_outline, plate_outline, window_loop
@@ -26,27 +30,40 @@ LONG_EDGE_RUN = 20.0  # mm [edgefinish.go LongEdgeRun]
 CIRCLE_TOL = 0.01  # mm [plateKeep, rimKeep]
 
 OUTER = "outer"  # [edgefinish.Outer]
-INNER_MULTI = "inner_multi"  # [escapewheel.go: !IsOuter && len(e) > 1]
 PLATE = "plate"  # [plateKeep]
 RIM = "rim"  # [rimKeep]
+INNER_MULTI_OR_RIM = "inner_multi_or_rim"  # [escapewheel.go finish filter: inner with several edges, or a rim]
+INNER_RIM = "inner_rim"  # [drive.go buildGreatWheel filter: inner rim only]
+OUTER_OR_LONG_INNER = "outer_or_long_inner"  # [spiralspring.go: Outer || Long(Inner)]
 
-_RIM_RADII = (SEAT_RADIUS, LIP_RADIUS)
+_PLATE_RADII = (SEAT_RADIUS, LIP_RADIUS)
 
 
 @dataclasses.dataclass(frozen=True)
 class FinishPlane:
     z: float  # part-local height of the large flat face (mm)
-    rule: str  # OUTER | INNER_MULTI | PLATE | RIM
+    rule: str  # one of the rule names above
     loops: int  # loops the rule keeps at the gallery's topology
+    radii: tuple[float, ...] = ()  # rim radii a one-edge circular loop is matched against
 
 
 _PLANES: dict[str, tuple[FinishPlane, ...]] = {
-    "back_plate": (FinishPlane(-6.0, PLATE, 6), FinishPlane(0.0, PLATE, 6)),
-    "front_plate": (FinishPlane(28.0, PLATE, 6), FinishPlane(34.0, PLATE, 6)),
-    "escape_wheel": (FinishPlane(22.0, INNER_MULTI, 6), FinishPlane(25.0, INNER_MULTI, 6)),
-    "anchor": (FinishPlane(21.0, OUTER, 1), FinishPlane(26.0, OUTER, 1)),
-    "pendulum": (FinishPlane(37.75, RIM, 2), FinishPlane(43.75, RIM, 2)),
-    "mainspring": (FinishPlane(0.0, OUTER, 1), FinishPlane(6.0, OUTER, 1)),
+    "back_plate": (FinishPlane(-6.0, PLATE, 6, _PLATE_RADII), FinishPlane(0.0, PLATE, 6, _PLATE_RADII)),
+    "front_plate": (FinishPlane(28.0, PLATE, 6, _PLATE_RADII), FinishPlane(34.0, PLATE, 6, _PLATE_RADII)),
+    "escape_wheel": (
+        FinishPlane(22.0, INNER_MULTI_OR_RIM, 6, (WHEEL_COUNTER_RADIUS,)),
+        FinishPlane(25.0, INNER_MULTI_OR_RIM, 7, (WHEEL_COUNTER_RADIUS,)),
+    ),
+    "anchor": (
+        FinishPlane(21.0, RIM, 1, (ANCHOR_COUNTER_RADIUS,)),
+        FinishPlane(26.0, RIM, 2, (ANCHOR_COUNTER_RADIUS,)),
+    ),
+    "pendulum": (
+        FinishPlane(38.80, RIM, 2, _PLATE_RADII),
+        FinishPlane(PENDULUM_HIGH, RIM, 2, _PLATE_RADII),
+    ),
+    "great_wheel": (FinishPlane(1.5, INNER_RIM, 1, (GREAT_COUNTER_RADIUS,)),),
+    "mainspring": (FinishPlane(0.0, OUTER_OR_LONG_INNER, 2), FinishPlane(6.0, OUTER_OR_LONG_INNER, 2)),
 }
 
 
@@ -62,32 +79,38 @@ def keep_loop(
     circle: tuple[float, float, float] | None,
     start: Pt | None,
     centres: list[Pt],
+    radii: tuple[float, ...] = (),
+    length: float = 0.0,
 ) -> bool:
     """True when the rule keeps a loop.
 
     `circle` is (cx, cy, r) for a one-edge circular loop, else None. `start` is the first edge's start point.
-    `centres` are the axes a circular loop must sit on (PLATE) or be measured about (RIM)."""
+    `centres` are the axes a circular loop must sit on (PLATE) or be measured about (rim rules). `radii` are the
+    rim radii. `length` is the loop length in mm (OUTER_OR_LONG_INNER)."""
+    on_rim = (
+        edge_count == 1
+        and start is not None
+        and any(abs(math.hypot(start[0] - c[0], start[1] - c[1]) - r) < CIRCLE_TOL for c in centres for r in radii)
+    )
     if rule == OUTER:
         return is_outer
-    if rule == INNER_MULTI:
-        return not is_outer and edge_count > 1
     if rule == PLATE:
         if is_outer or edge_count > 4:
             return True
         if edge_count != 1 or circle is None:
             return False
         cx, cy, r = circle
-        if not any(abs(r - want) <= CIRCLE_TOL for want in _RIM_RADII):
+        if not any(abs(r - want) <= CIRCLE_TOL for want in radii):
             return False
         return any(math.hypot(cx - c[0], cy - c[1]) < CIRCLE_TOL for c in centres)
     if rule == RIM:
-        if is_outer:
-            return True
-        if edge_count != 1 or start is None:
-            return False
-        return any(
-            abs(math.hypot(start[0] - c[0], start[1] - c[1]) - r) < CIRCLE_TOL for c in centres for r in _RIM_RADII
-        )
+        return is_outer or on_rim
+    if rule == INNER_MULTI_OR_RIM:
+        return not is_outer and (edge_count > 1 or on_rim)
+    if rule == INNER_RIM:
+        return not is_outer and on_rim
+    if rule == OUTER_OR_LONG_INNER:
+        return is_outer or length >= LONG_EDGE_RUN
     raise ValueError(f"unknown edge finishing rule {rule}")
 
 
@@ -111,16 +134,24 @@ def _kept(g: Geometry, part: str, z: float) -> list[tuple[Loop | Circle, bool]]:
         out += [(Circle(c, r), False) for c in lip_centres(g)]
         return out
     if part == "escape_wheel":
-        return [(w, False) for w in escape_windows()]
+        out = [(w, False) for w in escape_windows()]
+        if z == 25.0:
+            out.append((Circle((0.0, 0.0), WHEEL_COUNTER_RADIUS), False))
+        return out
     if part == "anchor":
-        return [(anchor_outline(g), True)]
+        out = [(anchor_outline(g), True)]
+        if z == 26.0:
+            out.append((Circle((0.0, 0.0), ANCHOR_COUNTER_RADIUS), False))
+        return out
+    if part == "great_wheel":
+        return [(Circle((0.0, 0.0), GREAT_COUNTER_RADIUS), False)]
     if part == "pendulum":
-        r = SEAT_RADIUS if z == 43.75 else LIP_RADIUS
+        r = SEAT_RADIUS if z == PENDULUM_HIGH else LIP_RADIUS
         return [(pendulum_outline(g), True), (Circle((0.0, 0.0), r), False)]
     if part == "mainspring":
         sp = spring_params()
-        outer, _, _ = profile(sp, g.spring)
-        return [(outer, True)]
+        outer, bore, _ = profile(sp, g.spring)
+        return [(outer, True), (bore, False)]
     return []
 
 

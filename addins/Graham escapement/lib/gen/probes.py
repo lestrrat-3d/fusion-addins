@@ -17,6 +17,7 @@ from .layout import Geometry, angle_of
 from .motion import State
 from .params import Vec3
 from .pose import body_poses
+from .sections import KEYED_RING_D, DFamily
 
 INSIDE = "inside"
 OUTSIDE = "outside"
@@ -34,7 +35,7 @@ class Probe:
 
 @dataclasses.dataclass(frozen=True)
 class MeshPoint:
-    label: str  # starts with its event: mesh, escapement, coupling or fit
+    label: str  # starts with its event: mesh, escapement, coupling, fit, collar or bore
     target: str  # name of the body that must not contain the point
     point: Vec3  # component-frame coordinates
 
@@ -83,60 +84,91 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
     ]
     probes["escape_arbor"] = [
         _in("axis", 0, 0, 10), _in("under bearing", 2.25, 0, -2.5), _in("collar", 3.5, 0, 26),
-        _out("flat", 2.25, 0, 10),
+        _in("body round", -2.7, 0, 10), _in("kept by flat", 2.45, 0, 10),
+        _out("flat", 2.65, 0, 10), _out("beyond body", -2.9, 0, 10), _out("seat", -2.6, 0, -2.5),
     ]
     probes["pallet_arbor"] = [
-        _in("under bearing", 2.25, 0, -2.5), _in("collar", 3.5, 0, 20.45), _in("between flats", 2.25, 0, 30),
-        _out("flat 1", 2.25, 0, 24), _out("flat 2", 2.25, 0, 36),
+        _in("under bearing", 2.25, 0, -2.5), _in("shoulder", 3.5, 0, 10), _in("body round", -2.7, 0, 24),
+        _in("end unflattened", 2.25, 0, 30),
+        _out("body flat", 2.65, 0, 24), _out("end flat", 2.25, 0, 36), _out("seat", -2.6, 0, -2.5),
+        _out("past end", 0, 0, 38.5),
     ]
     probes["great_wheel_arbor"] = [
-        _in("collar", 3.5, 0, 0.75), _in("between flats", 2.25, 0, 30.5),
-        _out("flat 1", 2.25, 0, 15), _out("flat 2", 2.25, 0, 36),
+        _in("collar", 3.5, 0, 1.75), _in("drive before flat", 2.95, 0, 4.25), _in("drive kept by flat", 2.45, 0, 10),
+        _in("body round", -2.7, 0, 22), _in("end", 2.25, 0, 30.5),
+        _out("drive flat", 2.75, 0, 10), _out("body flat", 2.65, 0, 22), _out("end flat", 2.25, 0, 36),
+        _out("beyond drive", -3.15, 0, 10),
     ]
     probes["suspension_pin"] = [
-        _in("shank", 2.25, 0, 40), _in("shoulder", 3.5, 0, 36), _in("round side", -2.25, 0, 32.5),
-        _out("rear flat", 2.25, 0, 32.5), _out("front flat", 2.25, 0, 45),
+        _in("shank", 2.25, 0, 42), _in("shoulder", 3.5, 0, 37), _in("round side", -2.25, 0, 32.5),
+        _out("rear flat", 2.25, 0, 32.5), _out("front flat", 2.25, 0, 46), _out("beyond shank", 2.6, 0, 42),
     ]
     probes["escape_wheel"] = [
-        _in("tooth 0", -1.1, 37.0, 23.5), _in("spoke", 0, 20.5, 23.5), _in("D flat", 2.25, 0, 10),
-        _in("pinion tooth 0", 0, -11.0, 10), _in("boss", 0, 3.5, 1.0),
-        Probe("window", _polar(20.5, 120 * _DEG, 23.5), OUTSIDE), _out("bore", -2.3, 0, 10),
-        _out("beside boss", 0, 5, 1.0),
+        _in("tooth 0", -1.1, 37.0, 23.5), _in("spoke", 0, 20.5, 23.5), _in("D flat side", 2.75, 0, 10),
+        _in("pinion tooth 0", 0, -11.0, 10), _in("under front counterbore", 3.5, 0, 23.5),
+        _in("front wall", 3.9, 0, 24.2), _in("rear floor", 3.5, 0, 3.5), _in("rear wall", 3.9, 0, 2.4),
+        Probe("window", _polar(20.5, 120 * _DEG, 23.5), OUTSIDE), _out("bore", -2.75, 0, 10),
+        _out("bore at flat", 2.5, 0, 10), _out("front counterbore", 3.5, 0, 24.2),
+        _out("rear counterbore", 3.5, 0, 2.4), _out("rim chamfer", 3.9, 0, 24.9), _out("no boss", 0, 3.5, 1.0),
     ]
     probes["anchor"] = [
         Probe("entry pallet", _polar(40.0, (ce_a + g.top_e) / 2, 23.5), INSIDE),
         Probe("exit pallet", _polar(40.0, (cx_a + g.top_x) / 2, 23.5), INSIDE),
-        _in("hub", 0, 5, 23.5), _in("boss", 0, 3.2, 27),
-        _out("bore", -2, 0, 23.5), _out("between arms", 0, -20, 23.5), _out("beside boss", 0, 5, 27),
+        _in("hub", 0, 5, 23.5), _in("D flat side", 2.75, 0, 22.5), _in("under counterbore", 3.5, 0, 24.2),
+        _in("counterbore wall", 3.9, 0, 25.0),
+        _out("bore", -2.75, 0, 23.5), _out("between arms", 0, -20, 23.5), _out("counterbore", 3.5, 0, 25.0),
+        _out("rim chamfer", 3.9, 0, 25.9), _out("no boss", 0, 3.2, 27),
     ]
     probes["crutch"] = [
-        _in("arm", 0, -20, 35.75), _in("pin", 0, -45, 40), _in("D flat", 2.25, 0, 35.75),
-        _out("beside arm", 4, -20, 35.75), _out("bore", -2, 0, 35.75),
+        _in("arm", 0, -20, 36.8), _in("pin", 0, -45, 41.55), _in("floor", -3.5, 0, 37.8),
+        _in("beyond counterbore flat", 3.5, 0, 36.5), _in("counterbore wall", -3.9, 0, 36.5),
+        _in("socket flat side", 2.25, 0, 37.8),
+        _out("beside arm", 4, -20, 36.8), _out("keyed counterbore", -3.5, 0, 36.5),
+        _out("counterbore at its flat", 3.2, 0, 36.5), _out("socket", -2, 0, 37.8),
     ]
     lp = g.params.pendulum_length
     probes["pendulum"] = [
-        _in("rod", 0, -100, 40.75), _in("bob", 0, -lp, 40.75), _in("below pocket", 6, 0, 38.25),
-        _out("slot", 0, -59, 40.75), _out("lip", 0, 0, 38.25), _out("pocket", 6, 0, 41),
+        _in("rod", 0, -100, 41.8), _in("bob", 0, -lp, 41.8), _in("below pocket", 6, 0, 39.30),
+        _out("slot", 0, -59, 41.8), _out("lip", 0, 0, 39.30), _out("pocket", 6, 0, 42.05),
     ]
-    probes["suspension_cap"] = [_in("wall", 3.0, 0, 45), _in("flat side", 2.25, 0, 45), _out("bore", -2.0, 0, 45)]
+    probes["suspension_cap"] = [_in("wall", 3.0, 0, 46.05), _in("flat side", 2.25, 0, 46.05), _out("bore", -2.0, 0, 46.05)]
     probes["great_wheel"] = [
         _in("tooth 0", 37.0, 0, 3), Probe("land", _polar(12.5, 5 * _DEG, 7), INSIDE),
-        Probe("under pocket", _polar(12.5, 27 * _DEG, 3), INSIDE),
-        Probe("ratchet gap", _polar(12.5, 27 * _DEG, 7), OUTSIDE), _out("bore", 2.6, 0, 3),
+        Probe("under pocket", _polar(12.5, 27 * _DEG, 3), INSIDE), _in("bore wall", 3.6, 0, 4.25),
+        _in("counterbore wall", 4.4, 0, 3.0),
+        Probe("ratchet gap", _polar(12.5, 27 * _DEG, 7), OUTSIDE), _out("bore", 3.3, 0, 4.25),
+        _out("counterbore", 3.9, 0, 2.5), _out("rim chamfer", 4.3, 0, 1.6),
     ]
     probes["pawl_carrier"] = [
         _in("core", 6, 0, 7), Probe("pawl tooth", _polar(11.5, pawl_g - 114 * _DEG, 7), INSIDE),
-        Probe("arm", _polar(9.75, pawl_g - 60 * _DEG, 7), INSIDE), _in("boss", 0, 3.2, 10),
-        Probe("slot", _polar(8.0, pawl_g - 60 * _DEG, 7), OUTSIDE), _out("bore", -2, 0, 7),
-        _out("beside boss", 0, 5, 10.5),
+        Probe("arm", _polar(9.75, pawl_g - 60 * _DEG, 7), INSIDE), _in("boss", 0, 3.5, 10),
+        _in("D flat side", 2.75, 0, 7),
+        Probe("slot", _polar(8.0, pawl_g - 60 * _DEG, 7), OUTSIDE), _out("bore", -3.0, 0, 7),
+        _out("beside boss", 0, 4.5, 10.5),
     ]
     probes["mainspring"] = [
         _in("strip", 0, r1 + t / 2, 3), _in("hub", 0, -4.5, 3),
+        _in("flat side", 0, 3.0, 3),
         _out("gap", 0, r1 - gap / 2, 3), _out("bore", 0, 0, 3), _out("eye hole", dm.eye_center_x, dm.eye_center_y, 3),
+        _out("bore arc", 0, -3.2, 3), _out("bore rim chamfer", 0, -3.5, 0.1),
     ]
-    probes["spring_spacer"] = [_in("wall", 3.0, 0, 20), _out("bore", -2, 0, 20)]
+    probes["spring_spacer"] = [
+        _in("wall", 3.0, 0, 20), _in("D flat side", 2.75, 0, 20), _out("bore", -2.75, 0, 20),
+        _out("bore at flat", 2.5, 0, 20),
+    ]
     probes["spring_anchor_pin"] = [_in("pin", 0, 0, 20), _out("beside pin", 1.6, 0, 20)]
-    probes["winding_knob"] = [_in("knob", 6, 0, 35.75), _out("bore", -2, 0, 35.75)]
+    probes["winding_knob"] = [
+        _in("knob", 6, 0, 36.8), _in("floor", -3.5, 0, 37.8), _in("counterbore wall", -3.9, 0, 36.5),
+        _out("keyed counterbore", -3.5, 0, 36.5), _out("socket", -2, 0, 37.8),
+    ]
+    probes["arbor_collar"] = [
+        _in("wall", 3.2, 0, 1.5), _in("D flat side", 2.75, 0, 1.5), _out("bore", -2.75, 0, 1.5),
+        _out("beyond", 3.8, 0, 1.5),
+    ]
+    probes["end_collar"] = [
+        _in("arc side", -3.5, 0, 1.5), _in("between flats", 3.0, 0, 1.5), _in("bore flat side", 2.25, 0, 1.5),
+        _out("bore", -2.0, 0, 1.5), _out("beyond chord", 3.4, 0, 1.5),
+    ]
     probes["bearing"] = [_in("race", 4.75, 0, 2.5), _out("bore", 0, 0, 2.5)]
     probes["bolt"] = [
         _in("head", 1.4, 0, 0.5), _out("socket", 0, 0, 1.5), _in("shank", 0, 0, -3.0),
@@ -202,7 +234,7 @@ def interaction_points(g: Geometry, s: State, dense: int = 20) -> list[MeshPoint
     crutch = poses[b.CRUTCH]
     for k in range(16):
         a = 2 * math.pi * k / 16
-        x, y, z = crutch.apply((1.5 * math.cos(a), -45.0 + 1.5 * math.sin(a), 40.5))
+        x, y, z = crutch.apply((1.5 * math.cos(a), -45.0 + 1.5 * math.sin(a), 41.55))
         out.append(MeshPoint(f"coupling pin #{k}", b.PENDULUM, (x, y, z)))
     return out
 
@@ -223,3 +255,67 @@ def fastener_points(g: Geometry) -> list[MeshPoint]:
                 MeshPoint(f"fit nut {i} corner #{k}", b.BACK_PLATE, (px + 2.3 * math.cos(a), py + 2.3 * math.sin(a), 25.0))
             )
     return out
+
+
+def _ring(r: float, n: int = 16) -> list[tuple[float, float]]:
+    return [(r * math.cos(2 * math.pi * k / n), r * math.sin(2 * math.pi * k / n)) for k in range(n)]
+
+
+def _d_outline(d: DFamily) -> list[tuple[float, float]]:
+    """12 points on the arc of the D family, end to end, and 3 on its chord (flat on +X)."""
+    r, x = d
+    a0 = math.acos(x / r)
+    h = math.sqrt(r * r - x * x)
+    arc = [(r * math.cos(a0 + (2 * math.pi - 2 * a0) * i / 11), r * math.sin(a0 + (2 * math.pi - 2 * a0) * i / 11))
+           for i in range(12)]
+    return arc + [(x, -h / 2), (x, 0.0), (x, h / 2)]
+
+
+# (label, source body, outline, z in the source's own frame, target body) [collars.go, install and fit tests].
+_COLLAR_ROWS: tuple[tuple[str, str, list[tuple[float, float]], float, str], ...] = (
+    ("collar escape front", b.ESCAPE_ARBOR, _ring(3.7), 24.5, b.ESCAPE_WHEEL),
+    ("collar escape rear", b.ESCAPE_REAR_COLLAR, _ring(3.7), 2.15, b.ESCAPE_WHEEL),
+    ("collar pallet front", b.PALLET_FRONT_COLLAR, _ring(3.7), 0.75, b.ANCHOR),
+    ("collar great wheel", b.GREAT_WHEEL_ARBOR, _ring(3.7), 2.5, b.GREAT_WHEEL),
+    ("collar crutch", b.CRUTCH_COLLAR, _d_outline(KEYED_RING_D), 2.25, b.CRUTCH),
+    ("collar knob", b.KNOB_COLLAR, _d_outline(KEYED_RING_D), 2.25, b.WINDING_KNOB),
+)
+
+_ARBOR_BODY = (2.8, 2.55)
+_ARBOR_END = (2.5, 2.0)
+_ARBOR_DRIVE = (3.05, 2.55)
+
+_BORE_ROWS: tuple[tuple[str, str, list[tuple[float, float]], float, str], ...] = (
+    ("bore escape wheel", b.ESCAPE_ARBOR, _d_outline(_ARBOR_BODY), 10.0, b.ESCAPE_WHEEL),
+    ("bore escape rear collar", b.ESCAPE_ARBOR, _d_outline(_ARBOR_BODY), 1.75, b.ESCAPE_REAR_COLLAR),
+    ("bore anchor", b.PALLET_ARBOR, _d_outline(_ARBOR_BODY), 24.0, b.ANCHOR),
+    ("bore pallet front collar", b.PALLET_ARBOR, _d_outline(_ARBOR_BODY), 26.25, b.PALLET_FRONT_COLLAR),
+    ("bore crutch collar", b.PALLET_ARBOR, _d_outline(_ARBOR_END), 36.0, b.CRUTCH_COLLAR),
+    ("bore crutch", b.PALLET_ARBOR, _d_outline(_ARBOR_END), 37.8, b.CRUTCH),
+    ("bore great wheel", b.GREAT_WHEEL_ARBOR, _ring(3.05), 4.25, b.GREAT_WHEEL),
+    ("bore pawl carrier", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_DRIVE), 7.0, b.PAWL_CARRIER),
+    ("bore mainspring", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_DRIVE), 14.25, b.MAINSPRING),
+    ("bore spring spacer", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_BODY), 22.0, b.SPRING_SPACER),
+    ("bore knob collar", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_END), 36.0, b.KNOB_COLLAR),
+    ("bore knob", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_END), 37.8, b.WINDING_KNOB),
+    ("bore suspension cap", b.SUSPENSION_PIN, _d_outline(_ARBOR_END), 46.05, b.SUSPENSION_CAP),
+)
+
+
+def _posed_rows(g: Geometry, s: State, rows) -> list[MeshPoint]:
+    poses = body_poses(g, s)
+    out: list[MeshPoint] = []
+    for label, source, outline, z, target in rows:
+        for k, (px, py) in enumerate(outline):
+            out.append(MeshPoint(f"{label} #{k}", target, poses[source].apply((px, py, z))))
+    return out
+
+
+def collar_points(g: Geometry, s: State) -> list[MeshPoint]:
+    """Collar and arbor surface points that must lie outside the part counterbored for them (event `collar`)."""
+    return _posed_rows(g, s, _COLLAR_ROWS)
+
+
+def bore_points(g: Geometry, s: State) -> list[MeshPoint]:
+    """Arbor section points that must lie outside every part bored for them (event `bore`)."""
+    return _posed_rows(g, s, _BORE_ROWS)

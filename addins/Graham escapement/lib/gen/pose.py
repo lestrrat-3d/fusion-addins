@@ -1,7 +1,7 @@
 """Part poses of the escapement.
 
 Own copy of the gearbox add-in's Pose, and of decad-gallery models/escapement build.go (poses, poseAll),
-drive.go buildMainspring (spring pose) and internal/m2fastener PlaceBolt, PlaceNut at 0067d30.
+drive.go buildMainspring (spring pose) and internal/m2fastener PlaceBolt, PlaceNut at 3a4f9d8.
 
 Every part is built about its own axis at the component origin, then moved once by its Pose: a turn about local +Z
 by `angle` (after a flip about local X when `flip`), then a move by (x, y, z). The result equals the gallery's
@@ -14,8 +14,8 @@ import dataclasses
 import math
 
 from . import bodies as b
-from .constants import BACK_BEARING_Z, BUILD_BACKOFF, DRUM_OFFSET, FRONT_BEARING_Z, GREAT_TEETH, PENDULUM_BEARING_Z
-from .constants import PINION_TEETH, SPRING_Z
+from .constants import BACK_BEARING_Z, BUILD_BACKOFF, DRUM_OFFSET, ESCAPE_REAR_COLLAR_LOW, FRONT_BEARING_Z, GREAT_TEETH
+from .constants import OUTSIDE_COLLAR_LOW, PALLET_FRONT_COLLAR_LOW, PENDULUM_BEARING_Z, PINION_TEETH, SPRING_Z
 from .fasteners import PILLARS
 from .layout import Geometry
 from .motion import State
@@ -101,6 +101,10 @@ def body_poses(g: Geometry, s: State) -> dict[str, Pose]:
         b.WINDING_KNOB: Pose(angle=arbor, x=gg[0], y=gg[1]),
         b.MAINSPRING: Pose(angle=g.spring_turn, x=gg[0], y=gg[1], z=SPRING_Z),
         b.SPRING_ANCHOR_PIN: Pose(x=q[0], y=q[1]),
+        b.ESCAPE_REAR_COLLAR: Pose(angle=-wheel, z=ESCAPE_REAR_COLLAR_LOW),
+        b.PALLET_FRONT_COLLAR: Pose(angle=-psi, x=p[0], y=p[1], z=PALLET_FRONT_COLLAR_LOW),
+        b.CRUTCH_COLLAR: Pose(angle=-psi, x=p[0], y=p[1], z=OUTSIDE_COLLAR_LOW),
+        b.KNOB_COLLAR: Pose(angle=arbor, x=gg[0], y=gg[1], z=OUTSIDE_COLLAR_LOW),
     }
     for name, (px, py) in zip(b.BOLT_NAMES, PILLARS):
         out[name] = Pose(x=px, y=py, z=BOLT_Z)

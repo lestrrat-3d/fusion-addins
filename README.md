@@ -12,7 +12,7 @@ come from Autodesk's add-in template and keep Autodesk's copyright notice.
 
 | Image | Add-in | Description |
 |-------|--------|-------------|
-| <a href="addins/Graham%20escapement"><img src="https://raw.githubusercontent.com/lestrrat-3d/decad-gallery/0067d30583ac04cf259150adc3578793030ec2c3/models/escapement/images/hero.png" alt="A Graham deadbeat escapement movement: a spring-driven great wheel and a 30-tooth escape wheel, an anchor, a crutch and a 180 mm pendulum in an open two-plate frame, seen from the front with the pendulum at rest and the mainspring in view" width="240"></a> | [Graham escapement](addins/Graham%20escapement) | A desk-clock-size Graham escapement. |
+| <a href="addins/Graham%20escapement"><img src="https://raw.githubusercontent.com/lestrrat-3d/decad-gallery/3a4f9d8dc3d5ea6ed7ca003efec7be0467525492/models/escapement/images/hero.png" alt="A Graham deadbeat escapement movement: a spring-driven great wheel and a 30-tooth escape wheel, an anchor, a crutch and a 180 mm pendulum in an open two-plate frame, seen from the front with the pendulum at rest and the mainspring in view" width="240"></a> | [Graham escapement](addins/Graham%20escapement) | A desk-clock-size Graham escapement. |
 | <a href="addins/Planetary%20gearbox"><img src="https://raw.githubusercontent.com/lestrrat-3d/decad-gallery/7302e55e86987d27568c9634a00b4efc51d6b02b/models/planetarygearbox/images/hero.png" alt="The default two-stage planetary gearbox, fully assembled, with the ring gear and both end covers cut open to show the planets, carriers, shafts and bearings inside" width="240"></a> | [Planetary gearbox](addins/Planetary%20gearbox) | A compact planetary speed reducer. |
 
 <!-- addins:end -->
