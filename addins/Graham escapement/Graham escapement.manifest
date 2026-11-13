@@ -1,0 +1,13 @@
+{
+    "autodeskProduct": "Fusion",
+    "type": "addin",
+    "id": "e8f5de25-fe05-48c4-8ce0-e3f6a6a22efd",
+    "author": "lestrrat-3d",
+    "description": {
+        "": "Graham escapement from decad-gallery models/escapement"
+    },
+    "version": "",
+    "runOnStartup": false,
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
