@@ -1,0 +1,198 @@
+import math
+import unittest
+
+import _support  # noqa: F401
+from gen import sections
+from gen.curves import Arc, Line, loop_is_closed, loop_polygon
+from gen.layout import layout
+from gen.params import default_params
+from gen.polygon import polygon_area, point_in_polygon
+
+G = layout(default_params())
+
+
+def arcs(loop):
+    return [c for c in loop if isinstance(c, Arc)]
+
+
+def lines(loop):
+    return [c for c in loop if isinstance(c, Line)]
+
+
+def radius(a):
+    return math.hypot(a.start[0] - a.center[0], a.start[1] - a.center[1])
+
+
+def points(loop):
+    out = set()
+    for c in loop:
+        out.add(c.start)
+        out.add(c.end)
+    return out
+
+
+class SectionsTest(unittest.TestCase):
+    def assertArcsConsistent(self, loop, radii=None, tol=1e-9):
+        for a in arcs(loop):
+            r_end = math.hypot(a.end[0] - a.center[0], a.end[1] - a.center[1])
+            self.assertAlmostEqual(radius(a), r_end, delta=tol)
+            if radii is not None:
+                self.assertTrue(any(abs(radius(a) - r) < 1e-6 for r in radii), radius(a))
+
+    def assertHas(self, loop, pt, tol=1e-3):
+        best = min(math.hypot(q[0] - pt[0], q[1] - pt[1]) for q in points(loop))
+        self.assertLess(best, tol, f"{pt} not on loop")
+
+    def test_every_loop_is_closed(self):
+        loops = [sections.plate_outline(98.0), sections.plate_outline(82.0), sections.window_loop(G, 1),
+                 sections.window_loop(G, -1), sections.escape_tooth(G), sections.anchor_outline(G),
+                 sections.crutch_outline(G), sections.pendulum_outline(G), sections.crutch_slot(),
+                 sections.press_d(), sections.ratchet_triangle(), sections.ratchet_tool_outline(),
+                 sections.pawl_loop(1.0), sections.pawl_loop(-2.0)]
+        loops += sections.escape_windows()
+        loops += [sections.arbor_meridian(p) for p in sections.ARBOR_FLATS]
+        for i, loop in enumerate(loops):
+            self.assertTrue(loop_is_closed(loop), i)
+            self.assertArcsConsistent(loop)
+            self.assertGreater(abs(polygon_area(loop_polygon(loop))), 1.0, i)
+
+    def test_plate_outline(self):
+        loop = sections.plate_outline(98.0)
+        self.assertEqual((len(arcs(loop)), len(lines(loop))), (4, 4))
+        self.assertArcsConsistent(loop, [10.0])
+        self.assertAlmostEqual(polygon_area(loop_polygon(loop)), 116 * 194 - (4 - math.pi) * 100, delta=0.05)
+        self.assertAlmostEqual(polygon_area(loop_polygon(sections.plate_outline(82.0))),
+                               116 * 178 - (4 - math.pi) * 100, delta=0.05)
+
+    def test_window_points(self):
+        py = G.axis_p[1]
+        h = math.sqrt(100 - 16)
+        for sx in (1.0, -1.0):
+            loop = sections.window_loop(G, sx)
+            self.assertEqual((len(lines(loop)), len(arcs(loop))), (6, 5))
+            self.assertArcsConsistent(loop, [6.0, 10.0])
+            self.assertHas(loop, (sx * 8.3958, 62.0), 1e-3)  # F (instructions print 8.3958)
+            self.assertHas(loop, (sx * 4.0, 47.4033), 1e-4)  # H
+            self.assertHas(loop, (sx * 4.0, 9.1652), 1e-4)  # I
+            self.assertHas(loop, (sx * 4.0, -9.1652), 1e-4)  # J
+            self.assertHas(loop, (sx * 4.0, -36.5848), 1e-4)  # K
+            self.assertHas(loop, (sx * 4.0, -54.9152), 1e-4)  # L
+            self.assertHas(loop, (sx * 4.0, py - h), 1e-9)
+            poly = loop_polygon(loop)
+            self.assertTrue(point_in_polygon(poly, (sx * 20.0, 0.0)))
+            self.assertFalse(point_in_polygon(poly, (sx * 2.0, 0.0)))
+            self.assertFalse(point_in_polygon(poly, (0.0, py)))  # inside the hub ring bulge
+            self.assertFalse(point_in_polygon(poly, (sx * 8.0, py)))
+            self.assertTrue(point_in_polygon(poly, (sx * 20.0, py)))
+
+    def test_lip_centres(self):
+        c = sections.lip_centres(G)
+        self.assertEqual(c[0], (0.0, 0.0))
+        self.assertAlmostEqual(c[1][1], 56.5685, delta=1e-4)
+        self.assertEqual(c[2][0], 0.0)
+        self.assertAlmostEqual(c[2][1], -45.75, delta=1e-9)
+        self.assertEqual(sections.MOUNT_HOLES, ((-40.0, 90.0), (40.0, 90.0)))
+
+    def test_escape_windows(self):
+        wins = sections.escape_windows()
+        self.assertEqual(len(wins), 6)
+        for w in wins:
+            self.assertEqual((len(arcs(w)), len(lines(w))), (2, 2))
+            self.assertArcsConsistent(w, [13.0, 28.0])
+        # Window 0 spans 90 to 150 degrees; its centroid direction is 120 degrees.
+        poly = loop_polygon(wins[0])
+        self.assertTrue(point_in_polygon(poly, (20.5 * math.cos(math.radians(120)), 20.5 * math.sin(math.radians(120)))))
+        self.assertFalse(point_in_polygon(poly, (20.5, 0.0)))
+
+    def test_tooth(self):
+        loop = sections.escape_tooth(G)
+        self.assertEqual(len(lines(loop)), 3)
+        self.assertHas(loop, (0.0, 40.0))
+        self.assertHas(loop, (-1.3272, 32.4729), 1e-4)
+        self.assertHas(loop, (-4.5118, 32.1853), 1e-4)
+
+    def test_anchor_outline(self):
+        loop = sections.anchor_outline(G)
+        self.assertEqual((len(lines(loop)), len(arcs(loop))), (8, 6))
+        self.assertArcsConsistent(loop, [G.r_in, G.r_out, 8.0], tol=1e-9)
+        for q in (G.ce, G.fe, G.cx, G.fx, G.me, G.mx):
+            self.assertHas(loop, q, 1e-12)
+        self.assertGreater(abs(polygon_area(loop_polygon(loop))), 100.0)
+
+    def test_crutch_and_pendulum(self):
+        crutch = sections.crutch_outline(G)
+        self.assertArcsConsistent(crutch, [6.0, 4.0])
+        self.assertEqual(sections.CRUTCH_PIN, ((0.0, -45.0), 1.5))
+        self.assertTrue(point_in_polygon(loop_polygon(crutch), (0.0, -20.0)))
+        self.assertTrue(point_in_polygon(loop_polygon(crutch), (0.0, -45.0)))
+        self.assertFalse(point_in_polygon(loop_polygon(crutch), (4.0, -20.0)))
+        pend = sections.pendulum_outline(G)
+        self.assertArcsConsistent(pend, [10.0, 25.0])
+        self.assertTrue(point_in_polygon(loop_polygon(pend), (0.0, -G.params.pendulum_length)))
+        slot = sections.crutch_slot()
+        self.assertArcsConsistent(slot, [1.75])
+        self.assertAlmostEqual(abs(polygon_area(loop_polygon(slot, math.radians(0.1)))),
+                               4.5 * 3.5 + math.pi * 1.75**2, delta=1e-3)
+
+    def test_press_d(self):
+        d = sections.press_d()
+        self.assertArcsConsistent(d, [2.55])
+        self.assertAlmostEqual(abs(polygon_area(loop_polygon(d, math.radians(0.05)))), sections.press_d_area(),
+                               delta=1e-3)
+        self.assertLess(sections.press_d_area(), math.pi * 2.55**2)
+        self.assertEqual(lines(d)[0].start[0], 2.05)
+
+    def test_ratchet(self):
+        tri = sections.ratchet_triangle()
+        self.assertEqual(len(lines(tri)), 3)
+        self.assertHas(tri, (11.0, 0.0), 1e-12)
+        self.assertAlmostEqual(math.degrees(sections.ratchet_alpha()), 12.07, delta=0.01)
+        tool = sections.ratchet_tool_outline()
+        self.assertEqual((len(arcs(tool)), len(lines(tool))), (12, 24))
+        self.assertArcsConsistent(tool, [11.5])
+        poly = loop_polygon(tool, math.radians(0.1))
+        area = abs(polygon_area(poly))
+        self.assertGreater(area, math.pi * 11.5**2)
+        # The point at r 12.5, 25 deg is inside the tool outline; r 12.5, 5 deg is outside it.
+        self.assertTrue(point_in_polygon(poly, (12.5 * math.cos(math.radians(25)), 12.5 * math.sin(math.radians(25)))))
+        self.assertFalse(point_in_polygon(poly, (12.5 * math.cos(math.radians(5)), 12.5 * math.sin(math.radians(5)))))
+
+    def test_pawl_loop(self):
+        g = 90 * math.pi / 180
+        loop = sections.pawl_loop(g)
+        self.assertEqual((len(lines(loop)), len(arcs(loop))), (5, 4))
+        self.assertArcsConsistent(loop, [7.0, 9.0, 10.5, 12.5])
+        poly = loop_polygon(loop, math.radians(0.1))
+        self.assertGreater(polygon_area(poly), 0.0)
+        def at(r, a):
+            return (r * math.cos(a), r * math.sin(a))
+        self.assertTrue(point_in_polygon(poly, at(11.5, g - math.radians(114))))
+        self.assertFalse(point_in_polygon(poly, at(8.0, g - math.radians(60))))
+        self.assertTrue(point_in_polygon(poly, at(9.75, g - math.radians(60))))
+
+    def test_meridians(self):
+        expect = {
+            "escape_arbor": [(0, -5), (2.5, -5), (2.5, 25.05), (3.7, 25.05), (3.7, 27.75), (2.5, 27.75), (2.5, 33),
+                             (0, 33)],
+            "pallet_arbor": [(0, -5), (2.5, -5), (2.5, 19.95), (3.7, 19.95), (3.7, 20.95), (2.5, 20.95), (2.5, 37.2),
+                             (0, 37.2)],
+            "great_wheel_arbor": [(0, -5), (2.5, -5), (2.5, 0.25), (3.7, 0.25), (3.7, 1.25), (2.5, 1.25),
+                                  (2.5, 37.2), (0, 37.2)],
+            "suspension_pin": [(0, 31.05), (2.5, 31.05), (2.5, 34), (3.7, 34), (3.7, 38.75), (2.5, 38.75),
+                               (2.5, 45.70), (0, 45.70)],
+        }
+        for part, pts in expect.items():
+            loop = sections.arbor_meridian(part)
+            self.assertEqual(len(loop), 8)
+            self.assertEqual([c.start for c in loop], [tuple(map(float, p)) for p in pts])
+        self.assertEqual(sections.ARBOR_FLATS["escape_arbor"], ((0.5, 25.0),))
+        self.assertEqual(sections.ARBOR_FLATS["pallet_arbor"], ((21.0, 27.75), (34.25, 38.2)))
+        self.assertEqual(sections.ARBOR_FLATS["great_wheel_arbor"], ((5.25, 27.75), (34.25, 38.2)))
+        self.assertEqual(sections.ARBOR_FLATS["suspension_pin"], ((30.05, 33.95), (44.25, 46.70)))
+        with self.assertRaises(KeyError):
+            sections.arbor_meridian("anchor")
+        self.assertEqual(sections.flat_box(), ((2.0, -3.5), (3.5, 3.5)))
+
+
+if __name__ == "__main__":
+    unittest.main()
