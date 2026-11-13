@@ -12,7 +12,7 @@ from gen.gears import great_dims, pinion_dims
 from gen.involute import gear_outline_polygon
 from gen.polygon import point_in_polygon
 from gen.pose import body_poses
-from gen.probes import INSIDE, OUTSIDE, fastener_points, interaction_points, part_probes
+from gen.probes import INSIDE, OUTSIDE, bore_points, collar_points, fastener_points, interaction_points, part_probes
 from gen.spring import profile, spring_params
 
 P = default_params()
@@ -32,8 +32,13 @@ def near(c, r, x, y):
     return math.hypot(x - c[0], y - c[1]) < r
 
 
+def d_void(d, x, y):
+    """True inside the D family d = (arc radius, chord x)."""
+    return math.hypot(x, y) < d[0] and x < d[1]
+
+
 def d_bore(x, y):
-    return math.hypot(x, y) < 2.55 and x < 2.05
+    return d_void(sections.END_D, x, y)
 
 
 def material(part, x, y, z):
@@ -54,13 +59,20 @@ def material(part, x, y, z):
         return not any(near(c, 7.05, x, y) for c in sections.lip_centres(G))
     if part == "escape_wheel" and z == 23.5:
         if math.hypot(x, y) <= 33.0:
-            return not any(inside(w, x, y) for w in sections.escape_windows()) and not d_bore(x, y)
+            return not any(inside(w, x, y) for w in sections.escape_windows()) and not d_void(sections.BODY_D, x, y)
         return inside(sections.escape_tooth(G), x, y)
-    if part == "anchor" and z == 23.5:
-        return inside(sections.anchor_outline(G), x, y) and not d_bore(x, y)
-    if part == "crutch" and z == 35.75:
-        return inside(sections.crutch_outline(G), x, y) and not d_bore(x, y)
-    if part == "pendulum" and z == 40.75:
+    if part == "anchor" and z in (22.5, 23.5, 24.2):
+        return inside(sections.anchor_outline(G), x, y) and not d_void(sections.BODY_D, x, y)
+    if part == "anchor" and z == 25.0:
+        return inside(sections.anchor_outline(G), x, y) and not near((0.0, 0.0), 3.75, x, y)
+    if part in ("crutch", "winding_knob") and z == 36.5:
+        base = inside(sections.crutch_outline(G), x, y) if part == "crutch" else math.hypot(x, y) < 9.0
+        return base and not d_void(sections.KEYED_COUNTER_D, x, y)
+    if part == "crutch" and z == 36.8:
+        return inside(sections.crutch_outline(G), x, y) and not d_void(sections.KEYED_COUNTER_D, x, y)
+    if part == "crutch" and z == 37.8:
+        return inside(sections.crutch_outline(G), x, y) and not d_void(sections.END_D, x, y)
+    if part == "pendulum" and z == 41.8:
         return (
             inside(sections.pendulum_outline(G), x, y)
             and not near((0.0, 0.0), 5.0, x, y)
@@ -72,15 +84,23 @@ def material(part, x, y, z):
         gang = 90 * DEG - G.carrier_offset
         core = math.hypot(x, y) < 7.5
         pawls = inside(sections.pawl_loop(gang), x, y) or inside(sections.pawl_loop(gang + math.pi), x, y)
-        return (core or pawls) and not d_bore(x, y)
+        return (core or pawls) and not d_void(sections.DRIVE_D, x, y)
     if part == "mainspring" and z == 3:
         outer, bore, eye = profile(spring_params(), G.spring)
         hole = near(eye.center, eye.radius, x, y)
         return inside(outer, x, y) and not inside(bore, x, y) and not hole
-    if part == "suspension_cap" and z == 45:
+    if part == "suspension_cap" and z == 46.05:
         return math.hypot(x, y) < 3.7 and not d_bore(x, y)
-    if part in ("spring_spacer", "winding_knob") and z in (20, 35.75):
-        return math.hypot(x, y) < (3.7 if part == "spring_spacer" else 9.0) and not d_bore(x, y)
+    if part == "spring_spacer" and z == 20:
+        return math.hypot(x, y) < 3.7 and not d_void(sections.BODY_D, x, y)
+    if part == "winding_knob" and z == 36.8:
+        return math.hypot(x, y) < 9.0 and not d_void(sections.KEYED_COUNTER_D, x, y)
+    if part == "winding_knob" and z == 37.8:
+        return math.hypot(x, y) < 9.0 and not d_bore(x, y)
+    if part == "arbor_collar" and z == 1.5:
+        return math.hypot(x, y) < 3.7 and not d_void(sections.BODY_D, x, y)
+    if part == "end_collar" and z == 1.5:
+        return d_void(sections.KEYED_RING_D, x, y) and not d_bore(x, y)
     return None
 
 
@@ -104,7 +124,7 @@ class PartProbesTest(unittest.TestCase):
                     continue
                 checked += 1
                 self.assertEqual(got, pr.expect == INSIDE, f"{part} {pr.label} {pr.point}")
-        self.assertGreater(checked, 50)
+        self.assertGreater(checked, 60)
 
     def test_spring_strip_and_gap_are_one_pitch_apart(self):
         by = {pr.label: pr for pr in part_probes(G)["mainspring"]}
@@ -131,6 +151,7 @@ class InteractionTest(unittest.TestCase):
         self.assertEqual(len([p for p in pts if p.label.startswith("escapement")]), 30 * 2 * 5)
         self.assertEqual(len([p for p in pts if p.label.startswith("coupling")]), 16)
         self.assertEqual({p.target for p in pts if p.label.startswith("coupling")}, {"Pendulum"})
+        self.assertEqual({round(p.point[2], 9) for p in pts if p.label.startswith("coupling")}, {41.55})
         self.assertEqual({p.target for p in pts if p.label.startswith("escapement")}, {"Anchor"})
 
     def test_escapement_and_coupling_points_outside_target_outline(self):
@@ -161,6 +182,52 @@ class InteractionTest(unittest.TestCase):
                         and not near((0.0, 0.0), 5.0, x, y),
                         f"phase {phase} {pt.label}",
                     )
+
+    def test_collar_and_bore_counts(self):
+        s = state_at(G, P.phase)
+        col, bor = collar_points(G, s), bore_points(G, s)
+        self.assertEqual((len(col), len(bor)), (94, 196))
+        self.assertTrue(all(p.label.startswith("collar") and " #" in p.label for p in col))
+        self.assertTrue(all(p.label.startswith("bore") and " #" in p.label for p in bor))
+        self.assertEqual(
+            {p.target for p in col},
+            {"Escape Wheel", "Anchor", "Great Wheel", "Crutch", "Winding Knob"},
+        )
+        self.assertEqual(len([p for p in col if p.label.startswith("collar crutch")]), 15)
+        self.assertEqual(len([p for p in bor if p.label.startswith("bore great wheel")]), 16)
+        self.assertEqual(len({p.target for p in bor}), 13)
+
+    def test_collar_and_bore_points_lie_in_the_target_hole(self):
+        _, bore_loop, _ = profile(spring_params(), G.spring)
+        bore_poly = poly(bore_loop)
+
+        def hole(label, x, y):
+            """True when (x, y), in the target's frame at the label's z, lies in the hole the label names."""
+            r = math.hypot(x, y)
+            rows = {
+                "collar escape front": r < 3.75, "collar escape rear": r < 3.75, "collar pallet front": r < 3.75,
+                "collar great wheel": r < 4.10, "collar crutch": d_void(sections.KEYED_COUNTER_D, x, y),
+                "collar knob": d_void(sections.KEYED_COUNTER_D, x, y),
+                "bore escape wheel": d_void(sections.BODY_D, x, y),
+                "bore escape rear collar": d_void(sections.BODY_D, x, y),
+                "bore anchor": d_void(sections.BODY_D, x, y),
+                "bore pallet front collar": d_void(sections.BODY_D, x, y),
+                "bore crutch collar": d_void(sections.END_D, x, y), "bore crutch": d_void(sections.END_D, x, y),
+                "bore great wheel": r < 3.45, "bore pawl carrier": d_void(sections.DRIVE_D, x, y),
+                "bore mainspring": point_in_polygon(bore_poly, (x, y)),
+                "bore spring spacer": d_void(sections.BODY_D, x, y),
+                "bore knob collar": d_void(sections.END_D, x, y), "bore knob": d_void(sections.END_D, x, y),
+                "bore suspension cap": d_void(sections.END_D, x, y),
+            }
+            key = label.rsplit(" #", 1)[0]
+            return rows[key]
+
+        for phase in (0.0, 0.25, 0.6):
+            s = state_at(G, phase)
+            poses = body_poses(G, s)
+            for pt in collar_points(G, s) + bore_points(G, s):
+                x, y, _ = poses[pt.target].unapply(pt.point)
+                self.assertTrue(hole(pt.label, x, y), f"phase {phase} {pt.label}")
 
     def test_fit_points(self):
         pts = fastener_points(G)

@@ -1,8 +1,9 @@
 """Build checks: compare each built body with the pure expectations and log a few lines to Text Commands.
 
 # Deviation: the gallery's geometry tests (action simulation, meshgap fits, section clearances, TestSketches,
-TestExploded) have no Fusion counterpart. These checks use volume, z range, point probes and interaction points
-(docs/escapement/deviations.md).
+TestExploded, TestArborCollars, TestInstallability) have no Fusion counterpart. These checks use volume, z range,
+point probes and interaction points; the `collar` and `bore` points stand in for TestArborCollars and
+TestInstallability (docs/escapement/deviations.md).
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ if typing.TYPE_CHECKING:
 
 _Z_TOL = 1e-3  # mm
 _MAX_FAIL_LINES = 10
-_EVENTS = ("mesh", "escapement", "coupling", "fit")
+_EVENTS = ("mesh", "escapement", "coupling", "fit", "collar", "bore")
 
 _CONTAINMENT = {
     adsk.fusion.PointContainment.PointInsidePointContainment: probes.INSIDE,
@@ -73,7 +74,10 @@ def run_all(ctx: BuildContext, bodies: list[tuple[str, str, adsk.fusion.BRepBody
         failed += results.count(False)
 
     by_name = {name: body for _, name, body in bodies}
-    points = probes.interaction_points(g, ctx.s) + probes.fastener_points(g)
+    points = (
+        probes.interaction_points(g, ctx.s) + probes.fastener_points(g) + probes.collar_points(g, ctx.s)
+        + probes.bore_points(g, ctx.s)
+    )
     for event in _EVENTS:
         ok, bad = _point_checks(ctx, by_name, [mp for mp in points if mp.label.split()[0] == event], event)
         passed += ok
@@ -93,7 +97,7 @@ def _container_checks(ctx: BuildContext) -> tuple[int, int]:
     """Read the component tree back from Fusion; one `containers` line for the top and one `container` line per path.
 
     # Deviation: stands in for the gallery's VerifyContainers + requireContainers (docs/escapement/deviations.md).
-    Returns (passed, failed) over the 20 results. Only failures log a line."""
+    Returns (passed, failed) over the 21 results. Only failures log a line."""
     top_bodies, found = fusion.component_tree(ctx.top)
     top, results = containers.check_tree(found, top_bodies)
     fields: list[tuple[str, object]] = [("component", ctx.top.name), ("bodies", top.bodies)]

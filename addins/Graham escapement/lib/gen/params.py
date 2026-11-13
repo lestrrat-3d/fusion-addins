@@ -1,6 +1,6 @@
 """Escapement inputs, defaults and placement frame.
 
-Own copy of decad-gallery models/escapement params.go (Params, DefaultParams) at 0067d30, and of the gearbox add-in's
+Own copy of decad-gallery models/escapement params.go (Params, DefaultParams) at 3a4f9d8, and of the gearbox add-in's
 validity and axes rules of r3 NewFrame and its two-selection placement.
 """
 

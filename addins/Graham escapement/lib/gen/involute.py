@@ -1,7 +1,8 @@
 """Own copy of decad-gallery models/spurgear involute math (involute.go, spurgear.go, variant.go) and the root
-clearance variant of internal/gearroot, at 0067d30, and the planetarygearbox ring tool radii (gears.go ringTool).
-The spurgear refactor since the gearbox port (7302e55) did not change the radii, flank or root fillet math. The
-closing-radius bisection now tests `half(mid) > limit` where it tested `>=`; the two differ only on an exact tie."""
+clearance variant of internal/gearroot, at 3a4f9d8, and the planetarygearbox ring tool radii (gears.go ringTool).
+The spurgear refactor since the gearbox port (7302e55), including the re-emit 9037e391d, did not change the radii,
+flank or root fillet math. The closing-radius bisection now tests `half(mid) > limit` where it tested `>=`; the two
+differ only on an exact tie."""
 
 from __future__ import annotations
 

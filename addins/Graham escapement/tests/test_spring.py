@@ -4,6 +4,7 @@ import unittest
 
 import _support  # noqa: F401
 from gen.curves import Arc, Circle, Line, loop_is_closed, loop_polygon
+from gen.edgefinish import LONG_EDGE_RUN
 from gen.polygon import polygon_area
 from gen.spring import derive, fillet_corners, loop_length, profile, spring_params
 
@@ -24,8 +25,8 @@ class SpringTest(unittest.TestCase):
         self.assertAlmostEqual(dm.eye_center_y, -13.399, places=3)
         self.assertAlmostEqual(dm.eye_radius, 3.4, places=9)
         self.assertAlmostEqual(dm.eye_hole_diameter, 3.8, places=9)
-        self.assertAlmostEqual(dm.bore_radius, 2.78, places=9)
-        self.assertAlmostEqual(dm.bore_flat_distance, 2.28, places=9)
+        self.assertAlmostEqual(dm.bore_radius, 3.35, places=9)
+        self.assertAlmostEqual(dm.bore_flat_distance, 2.85, places=9)
         self.assertAlmostEqual(dm.fillet_radius, 0.275, places=9)
         self.assertAlmostEqual(dm.center_offset, 1.3, places=9)
 
@@ -65,13 +66,13 @@ class SpringTest(unittest.TestCase):
                 r1 = math.hypot(c.end[0] - c.center[0], c.end[1] - c.center[1])
                 self.assertAlmostEqual(r0, r1, places=9)
 
-    def test_cap_loops_under_long_edge_run(self):
+    def test_cap_loop_lengths(self):
         outer, bore, eye = profile(self.sp, self.dm)
-        self.assertAlmostEqual(loop_length(bore), 17.26, delta=0.05)
-        self.assertAlmostEqual(loop_length(eye), 11.94, delta=0.05)
-        self.assertLess(loop_length(bore), 20.0)
-        self.assertLess(loop_length(eye), 20.0)
-        self.assertGreater(loop_length(outer), 20.0)
+        self.assertAlmostEqual(loop_length(bore), 20.862, delta=0.005)
+        self.assertAlmostEqual(loop_length(eye), 11.938, delta=0.005)
+        self.assertGreaterEqual(loop_length(bore), LONG_EDGE_RUN)
+        self.assertLess(loop_length(eye), LONG_EDGE_RUN)
+        self.assertGreater(loop_length(outer), LONG_EDGE_RUN)
 
     def test_profile_area(self):
         outer, bore, eye = profile(self.sp, self.dm)

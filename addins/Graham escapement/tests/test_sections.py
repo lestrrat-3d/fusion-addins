@@ -170,28 +170,47 @@ class SectionsTest(unittest.TestCase):
         self.assertFalse(point_in_polygon(poly, at(8.0, g - math.radians(60))))
         self.assertTrue(point_in_polygon(poly, at(9.75, g - math.radians(60))))
 
+    def test_d_families(self):
+        fams = {
+            "end": (sections.END_D, 19.395506), "body": (sections.BODY_D, 25.124953),
+            "drive": (sections.DRIVE_D, 29.045738), "keyed counter": (sections.KEYED_COUNTER_D, 43.269810),
+            "keyed ring": (sections.KEYED_RING_D, 42.105848),
+        }
+        for name, (d, area) in fams.items():
+            loop = sections.d_section(d)
+            self.assertTrue(loop_is_closed(loop), name)
+            self.assertArcsConsistent(loop, [d[0]])
+            self.assertAlmostEqual(sections.d_area(d), area, places=6, msg=name)
+            poly_area = abs(polygon_area(loop_polygon(loop, math.radians(0.05))))
+            self.assertAlmostEqual(poly_area, sections.d_area(d), delta=1e-3, msg=name)
+        for d in (sections.BODY_D, sections.DRIVE_D):
+            self.assertEqual(d[1], 2.60)
+            self.assertGreater(d[1], 2.5)
+
     def test_meridians(self):
         expect = {
-            "escape_arbor": [(0, -5), (2.5, -5), (2.5, 25.05), (3.7, 25.05), (3.7, 27.75), (2.5, 27.75), (2.5, 33),
-                             (0, 33)],
-            "pallet_arbor": [(0, -5), (2.5, -5), (2.5, 19.95), (3.7, 19.95), (3.7, 20.95), (2.5, 20.95), (2.5, 37.2),
-                             (0, 37.2)],
-            "great_wheel_arbor": [(0, -5), (2.5, -5), (2.5, 0.25), (3.7, 0.25), (3.7, 1.25), (2.5, 1.25),
-                                  (2.5, 37.2), (0, 37.2)],
-            "suspension_pin": [(0, 31.05), (2.5, 31.05), (2.5, 34), (3.7, 34), (3.7, 38.75), (2.5, 38.75),
-                               (2.5, 45.70), (0, 45.70)],
+            "escape_arbor": [(0, -5), (2.5, -5), (2.5, 0.25), (2.8, 0.25), (2.8, 24.0), (3.7, 24.0), (3.7, 27.75),
+                             (2.5, 27.75), (2.5, 33), (0, 33)],
+            "pallet_arbor": [(0, -5), (2.5, -5), (2.5, 0.25), (3.7, 0.25), (3.7, 20.95), (2.8, 20.95), (2.8, 27.75),
+                             (2.5, 27.75), (2.5, 38.25), (0, 38.25)],
+            "great_wheel_arbor": [(0, -5), (2.5, -5), (2.5, 0.25), (3.7, 0.25), (3.7, 3.25), (3.05, 3.25),
+                                  (3.05, 17.45), (2.8, 17.45), (2.8, 27.75), (2.5, 27.75), (2.5, 38.25),
+                                  (0, 38.25)],
+            "suspension_pin": [(0, 31.05), (2.5, 31.05), (2.5, 34), (3.7, 34), (3.7, 39.80), (2.5, 39.80),
+                               (2.5, 46.75), (0, 46.75)],
         }
         for part, pts in expect.items():
             loop = sections.arbor_meridian(part)
-            self.assertEqual(len(loop), 8)
+            self.assertEqual(len(loop), len(pts))
             self.assertEqual([c.start for c in loop], [tuple(map(float, p)) for p in pts])
-        self.assertEqual(sections.ARBOR_FLATS["escape_arbor"], ((0.5, 25.0),))
-        self.assertEqual(sections.ARBOR_FLATS["pallet_arbor"], ((21.0, 27.75), (34.25, 38.2)))
-        self.assertEqual(sections.ARBOR_FLATS["great_wheel_arbor"], ((5.25, 27.75), (34.25, 38.2)))
-        self.assertEqual(sections.ARBOR_FLATS["suspension_pin"], ((30.05, 33.95), (44.25, 46.70)))
+        self.assertEqual(sections.ARBOR_FLATS["escape_arbor"], ((2.55, 0.20, 23.95),))
+        self.assertEqual(sections.ARBOR_FLATS["pallet_arbor"], ((2.55, 21.0, 27.80), (2.0, 34.25, 39.25)))
+        self.assertEqual(sections.ARBOR_FLATS["great_wheel_arbor"], ((2.55, 5.25, 27.80), (2.0, 34.25, 39.25)))
+        self.assertEqual(sections.ARBOR_FLATS["suspension_pin"], ((2.0, 30.05, 33.95), (2.0, 45.30, 47.75)))
         with self.assertRaises(KeyError):
             sections.arbor_meridian("anchor")
-        self.assertEqual(sections.flat_box(), ((2.0, -3.5), (3.5, 3.5)))
+        self.assertEqual(sections.flat_box(2.55), ((2.55, -3.5), (3.5, 3.5)))
+        self.assertEqual(sections.flat_box(2.0), ((2.0, -3.5), (3.5, 3.5)))
 
 
 if __name__ == "__main__":

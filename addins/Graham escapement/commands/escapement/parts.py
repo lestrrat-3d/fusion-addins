@@ -16,19 +16,20 @@ from ...lib.gen import bearing, edgefinish, fasteners, gears, sections, spring
 from ...lib.gen.constants import (
     ANCHOR_BORE_AT,
     ANCHOR_BORE_H,
-    ANCHOR_BOSS,
-    ANCHOR_BOSS_H,
+    ANCHOR_COUNTER_FLOOR,
+    ANCHOR_COUNTER_RADIUS,
+    ANCHOR_COUNTER_TOP,
     ANCHOR_HIGH,
     ANCHOR_LOW,
     BACK_LOW,
     BACK_TOP,
-    BOSS_LENGTH,
-    BOSS_REAR,
     CAP_HIGH,
     CAP_LOW,
     CARRIER_BOSS_LENGTH,
     CARRIER_BOSS_LOW,
+    CARRIER_BOSS_RADIUS,
     CARRIER_CORE_RADIUS,
+    COLLAR_LENGTH,
     COLLAR_RADIUS,
     CRUTCH_HIGH,
     CRUTCH_LOW,
@@ -37,8 +38,13 @@ from ...lib.gen.constants import (
     FRONT_LOW,
     FRONT_TOP,
     GREAT_BORE,
+    GREAT_COUNTER_FLOOR,
+    GREAT_COUNTER_LOW,
+    GREAT_COUNTER_RADIUS,
     GREAT_LENGTH,
     GREAT_REAR,
+    KEYED_COUNTER_LENGTH,
+    KEYED_COUNTER_LOW,
     KNOB_HIGH,
     KNOB_LOW,
     KNOB_RADIUS,
@@ -49,6 +55,8 @@ from ...lib.gen.constants import (
     PILLAR_HIGH,
     PILLAR_LOW,
     PILLAR_RADIUS,
+    PINION_COUNTER_FLOOR,
+    PINION_COUNTER_LOW,
     PINION_LENGTH,
     PINION_REAR,
     PLATE_THICK,
@@ -71,6 +79,9 @@ from ...lib.gen.constants import (
     SPRING_SOCKET_HIGH,
     SPRING_SOCKET_LOW,
     SPRING_SOCKET_R,
+    WHEEL_COUNTER_FLOOR,
+    WHEEL_COUNTER_RADIUS,
+    WHEEL_COUNTER_TOP,
     WHEEL_HIGH,
     WHEEL_LOW,
     BORE_TOOL_REACH,
@@ -122,9 +133,12 @@ def _shift(loop: Loop, dx: float, dy: float) -> Loop:
     return out
 
 
-def d_tool(ctx: BuildContext, what: str, z0: float, z1: float, at: Pt = _ORIGIN) -> adsk.fusion.BRepBody:
-    """The press-fit D section (arc r2.55 about `at`, chord at x = 2.05) extruded over z0 to z1 [dTool]."""
-    loop = sections.press_d()
+def d_tool(
+    ctx: BuildContext, what: str, z0: float, z1: float, at: Pt = _ORIGIN, d: sections.DFamily = sections.END_D
+) -> adsk.fusion.BRepBody:
+    """The D section of family d (arc radius, chord x; default the end press fit r2.55, x 2.05) about `at`, extruded
+    over z0 to z1, flat on +X [dTool]."""
+    loop = sections.d_section(d)
     if at != _ORIGIN:
         loop = _shift(loop, at[0], at[1])
     sk = fusion.new_sketch(ctx.comp, what)
@@ -133,9 +147,20 @@ def d_tool(ctx: BuildContext, what: str, z0: float, z1: float, at: Pt = _ORIGIN)
     return fusion.extrude(ctx, profile, z0, z1 - z0, f"{what}_extrude")
 
 
-def _bore_with_d(ctx: BuildContext, body: adsk.fusion.BRepBody, what: str, z0: float, z1: float, at: Pt = _ORIGIN):
-    """Cut the press D bore over z0 to z1 out of body."""
-    return fusion.cut(ctx, body, [d_tool(ctx, f"{what} bore", z0, z1, at)], f"{what} bore_cut")
+def _bore_with_d(
+    ctx: BuildContext, body: adsk.fusion.BRepBody, what: str, z0: float, z1: float, at: Pt = _ORIGIN,
+    d: sections.DFamily = sections.END_D,
+):
+    """Cut the D bore of family d over z0 to z1 out of body."""
+    return fusion.cut(ctx, body, [d_tool(ctx, f"{what} bore", z0, z1, at, d)], f"{what} bore_cut")
+
+
+def _keyed_counterbore(ctx: BuildContext, body: adsk.fusion.BRepBody, what: str, at: Pt = _ORIGIN):
+    """Cut the keyed D counterbore of a crutch or knob [keyedCounterbore]."""
+    tool = d_tool(
+        ctx, what, KEYED_COUNTER_LOW, KEYED_COUNTER_LOW + KEYED_COUNTER_LENGTH, at, sections.KEYED_COUNTER_D
+    )
+    return fusion.cut(ctx, body, [tool], f"{what}_cut")
 
 
 def finish_face_edges(ctx: BuildContext, body: adsk.fusion.BRepBody) -> None:
@@ -148,8 +173,8 @@ def finish_face_edges(ctx: BuildContext, body: adsk.fusion.BRepBody) -> None:
         rim_centres = centres if fp.rule == edgefinish.PLATE else [_ORIGIN]
         kept = [
             edges
-            for outer, edges, circle, start in loops
-            if edgefinish.keep_loop(fp.rule, outer, len(edges), circle, start, rim_centres)
+            for outer, edges, circle, start, length in loops
+            if edgefinish.keep_loop(fp.rule, outer, len(edges), circle, start, rim_centres, fp.radii, length)
         ]
         if not kept:
             raise fusion.BuildError(f"{step}: no loop to chamfer")
@@ -276,9 +301,9 @@ def _arbor(ctx: BuildContext) -> adsk.fusion.BRepBody:
     fusion.draw_loop_xz(sk, sections.arbor_meridian(part))
     profile = fusion.profile_with_loops(sk, 1, f"{part} meridian_sketch", only=True)
     body = fusion.revolve(ctx, profile, f"{part} revolve")
-    a, b = sections.flat_box()
     boxes = []
-    for i, (lo, hi) in enumerate(sections.ARBOR_FLATS[part]):
+    for i, (flat_x, lo, hi) in enumerate(sections.ARBOR_FLATS[part]):
+        a, b = sections.flat_box(flat_x)
         sk = fusion.new_sketch(ctx.comp, f"{part} flat box {i + 1}")
         fusion.draw_rectangle(sk, a, b)
         profile = fusion.profile_with_loops(sk, 1, f"{part} flat_box_sketch", only=True)
@@ -304,8 +329,8 @@ def build_suspension_pin(ctx: BuildContext) -> adsk.fusion.BRepBody:
 
 
 def build_escape_wheel(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildEscapeWheel] Root disc with six windows, tooth 0 patterned 30 times, window chamfers, then the pinion
-    (turned to its phase), the rear boss, and the D bore."""
+    """[buildEscapeWheel] Root disc with six windows, tooth 0 patterned 30 times, the front counterbore, window and
+    counterbore rim chamfers, then the pinion (turned to its phase), and the D bore joined with the rear counterbore."""
     g, comp = ctx.g, ctx.comp
     sk = fusion.new_sketch(comp, "escape_wheel disc")
     fusion.draw_circle(sk, _ORIGIN, ROOT_RADIUS)
@@ -320,32 +345,39 @@ def build_escape_wheel(ctx: BuildContext) -> adsk.fusion.BRepBody:
     tooth = fusion.extrude(ctx, profile, WHEEL_LOW, WHEEL_HIGH - WHEEL_LOW, "escape_wheel tooth_extrude")
     teeth = fusion.pattern(ctx, tooth, 30, "escape_wheel tooth_pattern")
     wheel = fusion.join(ctx, wheel, teeth, "escape_wheel teeth_join")
+    front = disc(ctx, "escape_wheel front_counterbore", WHEEL_COUNTER_RADIUS, WHEEL_COUNTER_FLOOR, WHEEL_COUNTER_TOP)
+    wheel = fusion.cut(ctx, wheel, [front], "escape_wheel front_counterbore_cut")
     finish_face_edges(ctx, wheel)
 
     pinion = build_spur(ctx, "escape_wheel pinion", gears.pinion_dims(ctx.p), PINION_REAR, PINION_LENGTH, 0.0)
     # The pinion is built with tooth 0 on +X, then turned to the gallery's phase.
     fusion.move(ctx, pinion, Pose(angle=g.pinion_phase), "escape_wheel pinion_turn")
-    boss = disc(ctx, "escape_wheel boss", COLLAR_RADIUS, BOSS_REAR, BOSS_REAR + BOSS_LENGTH)
-    part = fusion.join(ctx, wheel, [pinion, boss], "escape_wheel part_join")
-    part = _bore_with_d(ctx, part, "escape_wheel", -BORE_TOOL_REACH, WHEEL_HIGH + BORE_TOOL_REACH + 1)
+    part = fusion.join(ctx, wheel, [pinion], "escape_wheel part_join")
+    bore = d_tool(
+        ctx, "escape_wheel bore", -BORE_TOOL_REACH, WHEEL_HIGH + BORE_TOOL_REACH + 1, d=sections.BODY_D
+    )
+    rear = disc(ctx, "escape_wheel rear_counterbore", WHEEL_COUNTER_RADIUS, PINION_COUNTER_LOW, PINION_COUNTER_FLOOR)
+    tool = fusion.join(ctx, bore, [rear], "escape_wheel bore_tool_join")
+    part = fusion.cut(ctx, part, [tool], "escape_wheel bore_cut")
     return _require_solid(ctx, part)
 
 
 def build_anchor(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildAnchor] The 14-piece outline, its front boss, the D bore, then the outer-loop chamfers."""
+    """[buildAnchor] The 14-piece outline, the front counterbore, the D bore, then the outline and counterbore rim
+    chamfers."""
     sk = fusion.new_sketch(ctx.comp, "anchor outline")
     fusion.draw_loop(sk, sections.anchor_outline(ctx.g))
     profile = fusion.profile_with_loops(sk, 1, "anchor outline_sketch", only=True)
     body = fusion.extrude(ctx, profile, ANCHOR_LOW, ANCHOR_HIGH - ANCHOR_LOW, "anchor outline_extrude")
-    boss = disc(ctx, "anchor boss", COLLAR_RADIUS, ANCHOR_BOSS, ANCHOR_BOSS + ANCHOR_BOSS_H)
-    body = fusion.join(ctx, body, [boss], "anchor boss_join")
-    body = _bore_with_d(ctx, body, "anchor", ANCHOR_BORE_AT, ANCHOR_BORE_AT + ANCHOR_BORE_H)
+    counter = disc(ctx, "anchor counterbore", ANCHOR_COUNTER_RADIUS, ANCHOR_COUNTER_FLOOR, ANCHOR_COUNTER_TOP)
+    body = fusion.cut(ctx, body, [counter], "anchor counterbore_cut")
+    body = _bore_with_d(ctx, body, "anchor", ANCHOR_BORE_AT, ANCHOR_BORE_AT + ANCHOR_BORE_H, d=sections.BODY_D)
     finish_face_edges(ctx, body)
     return _require_solid(ctx, body)
 
 
 def build_crutch(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildCrutch] Hub, arm and round end, the pin on its end, and the D socket."""
+    """[buildCrutch] Hub, arm and round end, the pin on its end, the keyed D counterbore and the D socket."""
     sk = fusion.new_sketch(ctx.comp, "crutch outline")
     fusion.draw_loop(sk, sections.crutch_outline(ctx.g))
     profile = fusion.profile_with_loops(sk, 1, "crutch outline_sketch", only=True)
@@ -353,6 +385,7 @@ def build_crutch(ctx: BuildContext) -> adsk.fusion.BRepBody:
     centre, radius = sections.CRUTCH_PIN
     pin = disc(ctx, "crutch pin", radius, CRUTCH_PIN_LOW, CRUTCH_PIN_HIGH, centre)
     body = fusion.join(ctx, body, [pin], "crutch pin_join")
+    body = _keyed_counterbore(ctx, body, "crutch counterbore")
     body = _bore_with_d(ctx, body, "crutch", CRUTCH_LOW - PRESS_TOOL_LOW, CRUTCH_HIGH + PRESS_TOOL_LOW)
     return _require_solid(ctx, body)
 
@@ -379,8 +412,12 @@ def build_suspension_cap(ctx: BuildContext) -> adsk.fusion.BRepBody:
 
 
 def build_great_wheel(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildGreatWheel] The 48-tooth gear with its round bore, then the internal ratchet cut."""
+    """[buildGreatWheel] The 48-tooth gear with its round bore, the rear counterbore with its rim chamfer, then the
+    internal ratchet cut."""
     wheel = build_spur(ctx, "great_wheel", gears.great_dims(ctx.p), GREAT_REAR, GREAT_LENGTH, GREAT_BORE)
+    counter = disc(ctx, "great_wheel counterbore", GREAT_COUNTER_RADIUS, GREAT_COUNTER_LOW, GREAT_COUNTER_FLOOR)
+    wheel = fusion.cut(ctx, wheel, [counter], "great_wheel counterbore_cut")
+    finish_face_edges(ctx, wheel)
     disc_tool = disc(ctx, "great_wheel ratchet disc", RATCHET_DISC, RATCHET_FLOOR, RATCHET_FLOOR + RATCHET_TOOL)
     sk = fusion.new_sketch(ctx.comp, "great_wheel ratchet tooth")
     fusion.draw_loop(sk, sections.ratchet_triangle())
@@ -401,9 +438,11 @@ def build_pawl_carrier(ctx: BuildContext) -> adsk.fusion.BRepBody:
         fusion.draw_loop(sk, sections.pawl_loop(gang))
         profile = fusion.profile_with_loops(sk, 1, f"pawl_carrier pawl_{j + 1}_sketch", only=True)
         rest.append(fusion.extrude(ctx, profile, LAYER_LOW, LAYER_LENGTH, f"pawl_carrier pawl_{j + 1}_extrude"))
-    rest.append(disc(ctx, "pawl_carrier boss", COLLAR_RADIUS, CARRIER_BOSS_LOW, CARRIER_BOSS_LOW + CARRIER_BOSS_LENGTH))
+    rest.append(
+        disc(ctx, "pawl_carrier boss", CARRIER_BOSS_RADIUS, CARRIER_BOSS_LOW, CARRIER_BOSS_LOW + CARRIER_BOSS_LENGTH)
+    )
     body = fusion.join(ctx, core, rest, "pawl_carrier parts_join")
-    body = _bore_with_d(ctx, body, "pawl_carrier", LAYER_LOW - 1.0, LAYER_LOW - 1.0 + 7.75)
+    body = _bore_with_d(ctx, body, "pawl_carrier", LAYER_LOW - 1.0, LAYER_LOW - 1.0 + 7.75, d=sections.DRIVE_D)
     return _require_solid(ctx, body)
 
 
@@ -430,7 +469,7 @@ def build_mainspring(ctx: BuildContext) -> adsk.fusion.BRepBody:
 def build_spring_spacer(ctx: BuildContext) -> adsk.fusion.BRepBody:
     """[buildSpringSpacer] A pressed tube from the spring hub's front face to the front bearing."""
     body = disc(ctx, "spring_spacer disc", COLLAR_RADIUS, SPACER_LOW, SPACER_HIGH)
-    body = _bore_with_d(ctx, body, "spring_spacer", SPACER_LOW - 1.0, SPACER_HIGH + 1.0)
+    body = _bore_with_d(ctx, body, "spring_spacer", SPACER_LOW - 1.0, SPACER_HIGH + 1.0, d=sections.BODY_D)
     return _require_solid(ctx, body)
 
 
@@ -441,9 +480,24 @@ def build_spring_anchor_pin(ctx: BuildContext) -> adsk.fusion.BRepBody:
 
 
 def build_winding_knob(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildKnob] A disc with a D socket."""
+    """[buildKnob] A disc with a keyed D counterbore and a D socket."""
     body = disc(ctx, "winding_knob disc", KNOB_RADIUS, KNOB_LOW, KNOB_HIGH)
+    body = _keyed_counterbore(ctx, body, "winding_knob counterbore")
     body = _bore_with_d(ctx, body, "winding_knob", KNOB_LOW - PRESS_TOOL_LOW, KNOB_HIGH + PRESS_TOOL_LOW)
+    return _require_solid(ctx, body)
+
+
+def build_arbor_collar(ctx: BuildContext) -> adsk.fusion.BRepBody:
+    """[buildCollarRing] A ring of the collar radius with the body-family D bore, local z 0 to 3."""
+    body = disc(ctx, "arbor_collar ring", COLLAR_RADIUS, 0.0, COLLAR_LENGTH)
+    body = _bore_with_d(ctx, body, "arbor_collar", -PRESS_TOOL_LOW, COLLAR_LENGTH + PRESS_TOOL_LOW, d=sections.BODY_D)
+    return _require_solid(ctx, body)
+
+
+def build_end_collar(ctx: BuildContext) -> adsk.fusion.BRepBody:
+    """[buildKeyedRing] A keyed D ring (arc r 3.7, chord x 3.3) with the end-family D bore, local z 0 to 3."""
+    body = d_tool(ctx, "end_collar ring", 0.0, COLLAR_LENGTH, d=sections.KEYED_RING_D)
+    body = _bore_with_d(ctx, body, "end_collar", -PRESS_TOOL_LOW, COLLAR_LENGTH + PRESS_TOOL_LOW)
     return _require_solid(ctx, body)
 
 

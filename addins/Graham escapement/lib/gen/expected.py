@@ -10,8 +10,8 @@ import math
 
 from . import bodies, edgefinish, gears
 from .constants import (
-    ARBOR_RADIUS, FLAT_X, GREAT_BORE, LIP_RADIUS, MOUNT_RADIUS, SEAT_RADIUS, SPRING_SOCKET_R,
-    WHEEL_HIGH, WHEEL_LOW,
+    ANCHOR_COUNTER_RADIUS, CARRIER_BOSS_RADIUS, COLLAR_LENGTH, COLLAR_RADIUS, GREAT_BORE, GREAT_COUNTER_RADIUS,
+    LIP_RADIUS, MOUNT_RADIUS, SEAT_RADIUS, SPRING_SOCKET_R, WHEEL_COUNTER_RADIUS, WHEEL_HIGH, WHEEL_LOW,
 )
 from .curves import Line, loop_polygon
 from .fasteners import (
@@ -46,6 +46,11 @@ from .report import Expect
 from .sections import (
     ARBOR_FLATS,
     arbor_meridian,
+    BODY_D,
+    DRIVE_D,
+    END_D,
+    KEYED_COUNTER_D,
+    KEYED_RING_D,
     anchor_outline,
     crutch_outline,
     crutch_slot,
@@ -53,7 +58,7 @@ from .sections import (
     pawl_loop,
     pendulum_outline,
     plate_outline,
-    press_d_area,
+    d_area,
     ratchet_tool_outline,
     window_loop,
 )
@@ -140,31 +145,18 @@ def _overlap(span: tuple[float, float], lo: float, hi: float) -> float:
     return max(0.0, min(span[1], hi) - max(span[0], lo))
 
 
-def _revolve_volume(part: str) -> float:
-    """Volume of the revolved meridian (Pappus over the stair polygon in (r, z))."""
-    pts = [seg.start for seg in arbor_meridian(part)]
-    total = 0.0
-    for k, a in enumerate(pts):
-        b = pts[(k + 1) % len(pts)]
-        total += (a[0] ** 2 + a[0] * b[0] + b[0] ** 2) * (b[1] - a[1])
-    return abs(total) * math.pi / 3
-
-
-def _runs_at_arbor_radius(part: str) -> list[tuple[float, float]]:
-    """z spans of the meridian where the radius stays at the arbor radius 2.5."""
-    out = []
-    for seg in arbor_meridian(part):
-        if isinstance(seg, Line) and seg.start[0] == ARBOR_RADIUS and seg.end[0] == ARBOR_RADIUS:
-            out.append((min(seg.start[1], seg.end[1]), max(seg.start[1], seg.end[1])))
-    return out
-
-
 def _arbor_volume(part: str) -> float:
-    value = _revolve_volume(part)
-    cut = _segment_area(ARBOR_RADIUS, FLAT_X)
-    runs = _runs_at_arbor_radius(part)
-    for lo, hi in ARBOR_FLATS[part]:
-        value -= cut * sum(_overlap(run, lo, hi) for run in runs)
+    """Every constant-radius run of the meridian as a cylinder, less the flat boxes over it [arbors_internal_test.go]."""
+    value = 0.0
+    for seg in arbor_meridian(part):
+        if not (isinstance(seg, Line) and seg.start[0] == seg.end[0] and seg.start[0] > 0.0):
+            continue
+        r = seg.start[0]
+        z_a, z_b = min(seg.start[1], seg.end[1]), max(seg.start[1], seg.end[1])
+        value += math.pi * r * r * (z_b - z_a)
+        for flat_x, z0, z1 in ARBOR_FLATS[part]:
+            if r > flat_x:
+                value -= _segment_area(r, flat_x) * _overlap((z_a, z_b), z0, z1)
     return value
 
 
@@ -192,7 +184,8 @@ def _tooth_outside_area(g: Geometry) -> float:
 def part_volume(g: Geometry, part: str) -> Expect:
     """Expected volume (mm^3) and tolerance of the master body of part, before its pose."""
     p = g.params
-    d = press_d_area()
+    d_end, d_body, d_drive = d_area(END_D), d_area(BODY_D), d_area(DRIVE_D)
+    d_kc, d_kr = d_area(KEYED_COUNTER_D), d_area(KEYED_RING_D)
     c = edgefinish.chamfer_volume(g, part)
     pi = math.pi
     if part == "back_plate":
@@ -210,7 +203,7 @@ def part_volume(g: Geometry, part: str) -> Expect:
         value = (plate - win - 3 * pi * LIP_RADIUS**2) * 6
         value -= 3 * pi * (SEAT_RADIUS**2 - LIP_RADIUS**2) * 5
         value -= 4 * (pi * HOLE_RADIUS**2 * 4 + pi * HEAD_POCKET_RADIUS**2 * 2)
-        value -= d * 3 + pi * SPRING_SOCKET_R**2 * 3
+        value -= d_end * 3 + pi * SPRING_SOCKET_R**2 * 3
         value -= c
         return Expect(value, 0.002 * value)
     if part in ("escape_arbor", "pallet_arbor", "great_wheel_arbor", "suspension_pin"):
@@ -221,47 +214,54 @@ def part_volume(g: Geometry, part: str) -> Expect:
         windows = sum(_loop_area(w) for w in escape_windows())
         value = (pi * 33.0**2 - windows) * (WHEEL_HIGH - WHEEL_LOW)
         value += 30 * _tooth_outside_area(g) * (WHEEL_HIGH - WHEEL_LOW)
-        value += _gear_area(pinion) * 20.5 + pi * 3.7**2 * 1.25
-        value -= d * 24.75 + c
+        value += _gear_area(pinion) * 20.5
+        value -= pi * WHEEL_COUNTER_RADIUS**2 * (1.80 + 1.05) + d_body * 20.65 + c
         f = _fillet_allowance(pinion, 21.0)
         value += f
         return Expect(value, 0.5 * f + 0.002 * value)
     if part == "anchor":
-        value = _loop_area(anchor_outline(g)) * 5 + pi * 3.7**2 * 1.75 - d * 6.75 - c
+        value = _loop_area(anchor_outline(g)) * 5 - pi * ANCHOR_COUNTER_RADIUS**2 * 1.30 - d_body * 3.70 - c
         return Expect(value, 0.002 * value)
     if part == "crutch":
-        value = _loop_area(crutch_outline(g)) * 3 + pi * 1.5**2 * 6.0 - d * 3
+        value = _loop_area(crutch_outline(g)) * 3 + pi * 1.5**2 * 6.0 - d_kc * 2.0 - d_end * 1.0
         return Expect(value, 0.002 * value)
     if part == "pendulum":
         value = (_loop_area(pendulum_outline(g)) - pi * LIP_RADIUS**2 - _loop_area(crutch_slot())) * 6
         value -= pi * (SEAT_RADIUS**2 - LIP_RADIUS**2) * 5 + c
         return Expect(value, 0.002 * value)
     if part == "suspension_cap":
-        value = (pi * 3.7**2 - d) * 1.5
+        value = (pi * 3.7**2 - d_end) * 1.5
         return Expect(value, 0.002 * value)
     if part == "great_wheel":
         great = gears.great_dims(p)
         bore = pi * (GREAT_BORE / 2) ** 2
         f = _fillet_allowance(great, 7.0)
         value = (_gear_area(great) - bore) * 7 - (_loop_area(ratchet_tool_outline()) - bore) * 3.5 + f
+        value -= pi * (GREAT_COUNTER_RADIUS**2 - (GREAT_BORE / 2) ** 2) * 2.0 + c
         return Expect(value, 0.5 * f + 0.002 * value)
     if part == "pawl_carrier":
         gang = math.pi / 2 - g.carrier_offset
         pawl = _loop_area(pawl_loop(gang)) - (7.5**2 - 7.0**2) / 2 * _PAWL_OVERLAP
-        value = pi * 7.5**2 * 4 + 2 * pawl * 4 + pi * 3.7**2 * 1.75 - d * 5.75
+        value = pi * 7.5**2 * 4 + 2 * pawl * 4 + pi * CARRIER_BOSS_RADIUS**2 * 1.75 - d_drive * 5.75
         return Expect(value, 0.002 * value)
     if part == "mainspring":
         outer, bore, eye = profile(spring_params(), g.spring)
         value = (_loop_area(outer) - _loop_area(bore) - pi * eye.radius**2) * 6 - c
         return Expect(value, 0.002 * value + 1.0)
     if part == "spring_spacer":
-        value = (pi * 3.7**2 - d) * 10.25
+        value = (pi * 3.7**2 - d_body) * 10.25
         return Expect(value, 0.002 * value)
     if part == "spring_anchor_pin":
         value = pi * 1.5**2 * 20.7
         return Expect(value, 0.002 * value)
     if part == "winding_knob":
-        value = (pi * 9.0**2 - d) * 3
+        value = pi * 9.0**2 * 3 - d_kc * 2.0 - d_end * 1.0
+        return Expect(value, 0.002 * value)
+    if part == "arbor_collar":
+        value = (pi * COLLAR_RADIUS**2 - d_body) * COLLAR_LENGTH
+        return Expect(value, 0.002 * value)
+    if part == "end_collar":
+        value = (d_kr - d_end) * COLLAR_LENGTH
         return Expect(value, 0.002 * value)
     if part == "bearing":
         value = pi * (7.0**2 - 2.5**2) * 5
@@ -280,20 +280,22 @@ _PART_Z: dict[str, tuple[float, float]] = {
     "back_plate": (-6.0, 28.0),
     "front_plate": (28.0, 34.0),
     "escape_arbor": (-5.0, 33.0),
-    "pallet_arbor": (-5.0, 37.2),
-    "great_wheel_arbor": (-5.0, 37.2),
-    "suspension_pin": (31.05, 45.70),
-    "escape_wheel": (0.25, 25.0),
-    "anchor": (21.0, 27.75),
-    "crutch": (34.25, 43.25),
-    "pendulum": (37.75, 43.75),
-    "suspension_cap": (44.25, 45.75),
+    "pallet_arbor": (-5.0, 38.25),
+    "great_wheel_arbor": (-5.0, 38.25),
+    "suspension_pin": (31.05, 46.75),
+    "escape_wheel": (1.5, 25.0),
+    "anchor": (21.0, 26.0),
+    "crutch": (35.30, 44.30),
+    "pendulum": (38.80, 44.80),
+    "suspension_cap": (45.30, 46.80),
     "great_wheel": (1.5, 8.5),
     "pawl_carrier": (5.25, 11.0),
     "mainspring": (0.0, 6.0),
     "spring_spacer": (17.5, 27.75),
     "spring_anchor_pin": (10.25, 30.95),
-    "winding_knob": (34.25, 37.25),
+    "winding_knob": (35.30, 38.30),
+    "arbor_collar": (0.0, 3.0),
+    "end_collar": (0.0, 3.0),
     "bearing": (0.0, 5.0),
     "bolt": (-10.0, 2.0),
     "nut": (0.0, 1.6),

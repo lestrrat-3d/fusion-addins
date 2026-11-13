@@ -1,7 +1,7 @@
 """Spiral spring dimensions and profile for the escapement's mainspring.
 
 Own copy of decad-gallery models/spiralspring params.go (Derive, Validate) and profile.go (the sketch geometry) at
-0067d30, and of models/escapement layout.go SpringParams. No sketch constraints: the profile is plain curves
+3a4f9d8, and of models/escapement layout.go SpringParams. No sketch constraints: the profile is plain curves
 (docs/escapement/deviations.md).
 """
 
@@ -37,7 +37,7 @@ class SpringParams:
 
 def spring_params() -> SpringParams:
     """The escapement's mainspring: layout.go SpringParams."""
-    return SpringParams(64.0, 12.0, 1.5, 6.0, 1.0, 5.0, 0.5, 0.28, 3.0, 0.4, 0)
+    return SpringParams(64.0, 12.0, 1.5, 6.0, 1.0, 6.1, 0.5, 0.30, 3.0, 0.4, 0)
 
 
 @dataclasses.dataclass(frozen=True)

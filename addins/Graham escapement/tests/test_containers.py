@@ -5,6 +5,7 @@ from gen import bodies
 from gen.containers import (
     BODY_CONTAINER,
     CONTAINER_PATHS,
+    TOP_LEVEL,
     TOP_NAME,
     ContainerResult,
     Found,
@@ -25,15 +26,20 @@ def tree(expected):
 
 class BodiesTest(unittest.TestCase):
     def test_body_names(self):
-        self.assertEqual(len(bodies.BODY_NAMES), 32)
-        self.assertEqual(len(set(bodies.BODY_NAMES)), 32)
-        self.assertEqual(bodies.EXPECTED_BODY_COUNT, 32)
+        self.assertEqual(len(bodies.BODY_NAMES), 36)
+        self.assertEqual(len(set(bodies.BODY_NAMES)), 36)
+        self.assertEqual(bodies.EXPECTED_BODY_COUNT, 36)
         self.assertEqual(bodies.BODY_NAMES[:3], ("Back Plate", "Front Plate", "Back Escape Bearing"))
         self.assertEqual(bodies.BODY_NAMES[8], "Pendulum Bearing")
         self.assertEqual(bodies.BODY_NAMES[-1], "Nut 4")
-        self.assertEqual(len(bodies.PARTS), 20)
+        self.assertEqual(len(bodies.PARTS), 22)
         self.assertEqual(set(bodies.PARTS), set(bodies.PART_BODIES))
-        self.assertEqual(sum(len(v) for v in bodies.PART_BODIES.values()), 32)
+        self.assertEqual(sum(len(v) for v in bodies.PART_BODIES.values()), 36)
+        self.assertEqual(bodies.COLLAR_NAMES, ("Escape Rear Collar", "Pallet Front Collar", "Crutch Collar", "Knob Collar"))
+        self.assertEqual(bodies.BODY_NAMES[24:28], bodies.COLLAR_NAMES)
+        self.assertEqual(bodies.PARTS[17:19], ("arbor_collar", "end_collar"))
+        self.assertEqual(bodies.part_of("Knob Collar"), "end_collar")
+        self.assertEqual(bodies.part_of("Escape Rear Collar"), "arbor_collar")
         self.assertEqual(bodies.part_of("Bolt 3"), "bolt")
         self.assertEqual(bodies.part_of("Pendulum Bearing"), "bearing")
         with self.assertRaises(KeyError):
@@ -43,7 +49,7 @@ class BodiesTest(unittest.TestCase):
 class ContainersTest(unittest.TestCase):
     def test_paths_and_membership(self):
         self.assertEqual(TOP_NAME, "Graham Escapement")
-        self.assertEqual(len(CONTAINER_PATHS), 19)
+        self.assertEqual(len(CONTAINER_PATHS), 20)
         self.assertEqual(CONTAINER_PATHS[0], ("Frame",))
         self.assertEqual(CONTAINER_PATHS[4], ("Escapement", "Escape Wheel"))
         self.assertEqual(CONTAINER_PATHS[-1], ("Nuts",))
@@ -58,15 +64,21 @@ class ContainersTest(unittest.TestCase):
         self.assertEqual(list(got), list(CONTAINER_PATHS))
         self.assertEqual(got[("Frame",)], ["Back Plate", "Front Plate"])
         self.assertEqual(got[("Escapement",)], [])
+        self.assertEqual(got[("Collars",)], list(bodies.COLLAR_NAMES))
+        self.assertEqual(CONTAINER_PATHS[-3], ("Collars",))
+        self.assertEqual(TOP_LEVEL[-3:], ("Collars", "Bolts", "Nuts"))
+        self.assertEqual(len(TOP_LEVEL), 9)
+        self.assertEqual(container_of_part("arbor_collar"), ("Collars",))
+        self.assertEqual(container_of_part("end_collar"), ("Collars",))
         self.assertEqual(len(got[("Bearings",)]), 7)
-        self.assertEqual(sum(len(v) for v in got.values()), 32)
+        self.assertEqual(sum(len(v) for v in got.values()), 36)
         self.assertEqual(expected_children(("Drive",)).__len__(), 6)
-        self.assertEqual(expected_children(()).__len__(), 8)
+        self.assertEqual(expected_children(()).__len__(), 9)
 
     def test_pass(self):
         top, results = check_tree(tree(expected_bodies()), 0)
         self.assertTrue(top.ok, top.detail)
-        self.assertEqual(len(results), 19)
+        self.assertEqual(len(results), 20)
         self.assertTrue(all(r.ok for r in results), [r.detail for r in results if not r.ok])
         self.assertIsInstance(results[0], ContainerResult)
 

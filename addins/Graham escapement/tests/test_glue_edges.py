@@ -54,9 +54,11 @@ class EdgeHelpersTest(unittest.TestCase):
 
         line = types.SimpleNamespace(curveType=adsk.core.Curve3DTypes.Line3DCurveType)
 
-        def edge(x, y, geometry=line):
+        def edge(x, y, geometry=line, length=1.0):
             point = types.SimpleNamespace(x=x, y=y, z=0.0)
-            return types.SimpleNamespace(startVertex=types.SimpleNamespace(geometry=point), geometry=geometry)
+            return types.SimpleNamespace(
+                startVertex=types.SimpleNamespace(geometry=point), geometry=geometry, length=length
+            )
 
         def loop(outer, edges):
             return types.SimpleNamespace(isOuter=outer, edges=listing(edges))
@@ -71,10 +73,11 @@ class EdgeHelpersTest(unittest.TestCase):
         # A circle of radius 0.9 cm centred at (0.1, 0.2) cm, and a line edge.
         round_geometry = _circle(adsk, 0.9, 0.0)
         round_geometry.center.x, round_geometry.center.y = 0.1, 0.2
-        a1, a2, c1 = edge(4.4, 0.0), edge(0.0, 0.9, round_geometry), edge(4.4, 0.0)
+        a1, a2, c1 = edge(4.4, 0.0), edge(0.0, 0.9, round_geometry, 5.65), edge(4.4, 0.0)
+        a3 = edge(4.4, 0.5, length=0.5)
         degenerate = edge(1.0, 1.0, None)
         faces = [
-            plane_face(-1, 0.0, 20.0, [loop(True, [a1]), loop(False, [a2])]),
+            plane_face(-1, 0.0, 20.0, [loop(True, [a1, a3]), loop(False, [a2])]),
             plane_face(1, 0.0, 1.431, [loop(True, [edge(1.1, 0.0)])]),
             plane_face(1, 0.3, 20.0, [loop(True, [c1]), loop(False, [degenerate])]),
             types.SimpleNamespace(geometry=types.SimpleNamespace(surfaceType=1)),
@@ -85,10 +88,12 @@ class EdgeHelpersTest(unittest.TestCase):
             fusion = importlib.import_module("Graham escapement.commands.escapement.fusion")
             got = fusion.flat_face_loops(body, 0.0, 400.0, "w")
             self.assertEqual(len(got), 2)
-            self.assertEqual((got[0][0], got[0][1], got[0][2]), (True, [a1], None))
+            self.assertEqual((got[0][0], got[0][1], got[0][2]), (True, [a1, a3], None))
+            self.assertAlmostEqual(got[0][4], 15.0, places=9)  # 1.0 + 0.5 cm
             self.assertAlmostEqual(got[0][3][0], 44.0, places=9)
             self.assertAlmostEqual(got[0][3][1], 0.0, places=9)
             self.assertEqual((got[1][0], got[1][1]), (False, [a2]))
+            self.assertAlmostEqual(got[1][4], 56.5, places=9)
             circle = got[1][2]
             self.assertEqual([round(v, 9) for v in circle], [1.0, 2.0, 9.0])
             self.assertAlmostEqual(got[1][3][1], 9.0, places=9)
@@ -96,7 +101,7 @@ class EdgeHelpersTest(unittest.TestCase):
             self.assertEqual(len(got), 2)
             self.assertEqual((got[0][0], got[0][1]), (True, [c1]))
             # The degenerate edge is skipped, so the loop has no edge, no circle and no start.
-            self.assertEqual(got[1], (False, [], None, None))
+            self.assertEqual(got[1], (False, [], None, None, 0.0))
 
     def test_chamfer_tangent_chain_and_none(self):
         adsk = mock.MagicMock()

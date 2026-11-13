@@ -153,11 +153,23 @@ class GlueBuildTest(unittest.TestCase):
     def test_default_build_names_and_count(self):
         world, built = self.run_build()
         self.assertEqual([name for _, name, _ in built], list(bodies.BODY_NAMES))
-        self.assertEqual(world.alive.__len__(), 32)
+        self.assertEqual(world.alive.__len__(), 36)
         self.assertEqual(sorted(b.name for b in world.alive), sorted(bodies.BODY_NAMES))
         self.assertTrue(all(b.isSolid for b in world.alive))
         copies = [c for c in world.calls if c[0] == "copy"]
-        self.assertEqual(len(copies), 6 + 3 + 3)
+        self.assertEqual(len(copies), 6 + 3 + 3 + 1 + 1)
+
+    def test_collar_kinds_are_copied_once(self):
+        world, built = self.run_build()
+        by_name = {name: body for _, name, body in built}
+        for part in ("arbor_collar", "end_collar"):
+            first, last = bodies.PART_BODIES[part]
+            self.assertEqual(world.calls.count(("copy", f"{part} copy")), 1, part)
+            self.assertEqual((by_name[first].part, by_name[last].part), (part, part))
+            self.assertEqual(by_name[first].moved, 1)
+            self.assertEqual(by_name[last].moved, 1)
+        collars = self.ctx.container_comps[("Collars",)]
+        self.assertEqual(sorted(b.name for b in world.alive if b.comp is collars), sorted(bodies.COLLAR_NAMES))
 
     def test_parts_built_in_order_in_their_container(self):
         world, _ = self.run_build()
@@ -174,7 +186,7 @@ class GlueBuildTest(unittest.TestCase):
         self.assertEqual(
             [top.occurrences.item(i).component.name for i in range(top.occurrences.count)], list(containers.TOP_LEVEL)
         )
-        self.assertEqual(len(self.ctx.container_comps), 19)
+        self.assertEqual(len(self.ctx.container_comps), 20)
         for path, comp in self.ctx.container_comps.items():
             self.assertEqual(comp.name, path[-1])
         want = containers.expected_bodies()
@@ -187,7 +199,7 @@ class GlueBuildTest(unittest.TestCase):
         got_top, results = containers.check_tree(found, count)
         self.assertTrue(got_top.ok, got_top.detail)
         self.assertTrue(all(r.ok for r in results), [(r.path, r.detail) for r in results if not r.ok])
-        self.assertEqual(len(found), 19)
+        self.assertEqual(len(found), 20)
 
     def test_placement_transform(self):
         self.run_build()
@@ -222,7 +234,7 @@ class GlueBuildTest(unittest.TestCase):
     def test_stray_body_fails_count(self):
         with self.assertRaises(Exception) as cm:
             self.run_build(stray_part="front_plate")
-        self.assertEqual(str(cm.exception), "expected 32 bodies, found 33")
+        self.assertEqual(str(cm.exception), "expected 36 bodies, found 37")
 
 
 if __name__ == "__main__":
