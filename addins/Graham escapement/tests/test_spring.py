@@ -25,8 +25,8 @@ class SpringTest(unittest.TestCase):
         self.assertAlmostEqual(dm.eye_center_y, -13.399, places=3)
         self.assertAlmostEqual(dm.eye_radius, 3.4, places=9)
         self.assertAlmostEqual(dm.eye_hole_diameter, 3.8, places=9)
-        self.assertAlmostEqual(dm.bore_radius, 3.35, places=9)
-        self.assertAlmostEqual(dm.bore_flat_distance, 2.85, places=9)
+        self.assertAlmostEqual(dm.bore_radius, 3.6, places=9)
+        self.assertAlmostEqual(dm.bore_flat_distance, 3.10, places=9)
         self.assertAlmostEqual(dm.fillet_radius, 0.55, places=9)
         self.assertAlmostEqual(dm.taper_offset, 0.0692042, delta=1e-6)
         self.assertAlmostEqual(dm.center_offset, 1.3, places=9)
@@ -69,7 +69,7 @@ class SpringTest(unittest.TestCase):
 
     def test_cap_loop_lengths(self):
         outer, bore, eye = profile(self.sp, self.dm)
-        self.assertAlmostEqual(loop_length(bore), 20.862, delta=0.005)
+        self.assertAlmostEqual(loop_length(bore), 22.44, delta=0.005)
         self.assertAlmostEqual(loop_length(eye), 11.938, delta=0.005)
         self.assertGreaterEqual(loop_length(bore), LONG_EDGE_RUN)
         self.assertLess(loop_length(eye), LONG_EDGE_RUN)

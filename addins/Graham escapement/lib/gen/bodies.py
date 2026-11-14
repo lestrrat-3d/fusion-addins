@@ -1,6 +1,6 @@
 """Body names, part keys and build order.
 
-Own copy of decad-gallery models/escapement build.go (body name constants, slots, buildAll order) at e11a188.
+Own copy of decad-gallery models/escapement build.go (body name constants, slots, buildAll order) at 45b5875.
 """
 
 from __future__ import annotations
@@ -26,11 +26,9 @@ SUSPENSION_CAP = "Suspension Cap"
 GREAT_WHEEL = "Great Wheel"
 PAWL_CARRIER = "Pawl Carrier"
 MAINSPRING = "Mainspring"
-SPRING_SPACER = "Spring Spacer"
+SPRING_RETAINER = "Spring Retainer"
 SPRING_ANCHOR_PIN = "Spring Anchor Pin"
 WINDING_KNOB = "Winding Knob"
-ESCAPE_REAR_COLLAR = "Escape Rear Collar"
-PALLET_FRONT_COLLAR = "Pallet Front Collar"
 CRUTCH_COLLAR = "Crutch Collar"
 KNOB_COLLAR = "Knob Collar"
 
@@ -43,7 +41,7 @@ BEARING_NAMES: tuple[str, ...] = (
     FRONT_GREAT_WHEEL_BEARING,
     PENDULUM_BEARING,
 )
-COLLAR_NAMES: tuple[str, ...] = (ESCAPE_REAR_COLLAR, PALLET_FRONT_COLLAR, CRUTCH_COLLAR, KNOB_COLLAR)
+COLLAR_NAMES: tuple[str, ...] = (CRUTCH_COLLAR, KNOB_COLLAR)
 BOLT_NAMES: tuple[str, ...] = tuple(f"Bolt {i}" for i in range(1, 5))
 NUT_NAMES: tuple[str, ...] = tuple(f"Nut {i}" for i in range(1, 5))
 
@@ -52,13 +50,13 @@ BODY_NAMES: tuple[str, ...] = (
     (BACK_PLATE, FRONT_PLATE)
     + BEARING_NAMES
     + (ESCAPE_ARBOR, PALLET_ARBOR, GREAT_WHEEL_ARBOR, ESCAPE_WHEEL, ANCHOR, CRUTCH, PENDULUM)
-    + (SUSPENSION_PIN, SUSPENSION_CAP, GREAT_WHEEL, PAWL_CARRIER, MAINSPRING, SPRING_SPACER)
+    + (SUSPENSION_PIN, SUSPENSION_CAP, GREAT_WHEEL, PAWL_CARRIER, MAINSPRING, SPRING_RETAINER)
     + (SPRING_ANCHOR_PIN, WINDING_KNOB)
     + COLLAR_NAMES
     + BOLT_NAMES
     + NUT_NAMES
 )
-EXPECTED_BODY_COUNT = 36
+EXPECTED_BODY_COUNT = 34
 
 # Build order of buildAll: one entry per part key.
 PARTS: tuple[str, ...] = (
@@ -76,10 +74,9 @@ PARTS: tuple[str, ...] = (
     "great_wheel",
     "pawl_carrier",
     "mainspring",
-    "spring_spacer",
+    "spring_retainer",
     "spring_anchor_pin",
     "winding_knob",
-    "arbor_collar",
     "end_collar",
     "bearing",
     "bolt",
@@ -101,10 +98,9 @@ PART_BODIES: dict[str, tuple[str, ...]] = {
     "great_wheel": (GREAT_WHEEL,),
     "pawl_carrier": (PAWL_CARRIER,),
     "mainspring": (MAINSPRING,),
-    "spring_spacer": (SPRING_SPACER,),
+    "spring_retainer": (SPRING_RETAINER,),
     "spring_anchor_pin": (SPRING_ANCHOR_PIN,),
     "winding_knob": (WINDING_KNOB,),
-    "arbor_collar": (ESCAPE_REAR_COLLAR, PALLET_FRONT_COLLAR),
     "end_collar": (CRUTCH_COLLAR, KNOB_COLLAR),
     "bearing": BEARING_NAMES,
     "bolt": BOLT_NAMES,

@@ -1,10 +1,9 @@
 """Own copy of decad-gallery models/spurgear involute math (involute.go, spurgear.go, variant.go) and the root
-clearance variant of internal/gearroot, at e11a188, and the planetarygearbox ring tool radii (gears.go ringTool).
-The spurgear refactor since the gearbox port (7302e55), including the re-emits 9037e391d, ef0539a3b (#242) and
-e11a188db (#249), did not change the radii, flank, closing-radius or root fillet math. The closing-radius bisection
-now tests `half(mid) > limit` where it tested `>=`; the two differ
-only on an exact tie. `validate_spur` and the closing-radius error text are not the gallery's, and the build
-does not call them."""
+clearance variant of internal/gearroot, at 45b5875, and the planetarygearbox ring tool radii (gears.go ringTool).
+The spurgear refactor since the gearbox port (7302e55), including the re-emits through a01e7a845 (#253),
+changed no radii, flank, closing-radius or root fillet math. The closing-radius bisection tests
+`half(mid) >= limit`, as the gallery does. `validate_spur` and the closing-radius error text are not the gallery's,
+and the build does not call them."""
 
 from __future__ import annotations
 
@@ -150,7 +149,7 @@ def closing_radius(gd: GearDims) -> float:
     lo, hi = gd.base, gd.root
     for _ in range(200):
         mid = (lo + hi) / 2
-        if half(mid) > limit:
+        if half(mid) >= limit:
             lo = mid
         else:
             hi = mid

@@ -1,6 +1,6 @@
 """Closed-form pose of the escapement at a phase of the pendulum period.
 
-Own copy of decad-gallery models/escapement motion.go at e11a188. The wheel, anchor and pendulum angles are
+Own copy of decad-gallery models/escapement motion.go at 45b5875. The wheel, anchor and pendulum angles are
 clockwise-positive seen from +Z; the great wheel angle is counterclockwise.
 """
 

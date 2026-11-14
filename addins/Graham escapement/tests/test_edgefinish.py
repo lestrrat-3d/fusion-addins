@@ -35,7 +35,7 @@ class FinishPlanesTest(unittest.TestCase):
             "back_plate": [(-6.0, PLATE, 6, plate), (0.0, PLATE, 6, plate)],
             "front_plate": [(28.0, PLATE, 6, plate), (34.0, PLATE, 6, plate)],
             "escape_wheel": [(22.0, INNER_MULTI_OR_RIM, 6, (3.75,)), (25.0, INNER_MULTI_OR_RIM, 7, (3.75,))],
-            "anchor": [(21.0, RIM, 1, (3.75,)), (26.0, RIM, 2, (3.75,))],
+            "anchor": [(21.0, RIM, 1, ()), (26.0, RIM, 1, ())],
             "pendulum": [(38.80, RIM, 2, plate), (44.80, RIM, 2, plate)],
             "great_wheel": [(1.5, INNER_RIM, 1, (4.10,))],
             "mainspring": [(0.0, OUTER_OR_LONG_INNER, 2, ()), (6.0, OUTER_OR_LONG_INNER, 2, ())],
@@ -72,7 +72,7 @@ class KeepLoopTest(unittest.TestCase):
     def test_outer_or_long_inner(self):
         keep = lambda outer, length: keep_loop(OUTER_OR_LONG_INNER, outer, 5, None, None, [], (), length)  # noqa: E731
         self.assertTrue(keep(True, 1000.0))
-        self.assertTrue(keep(False, 20.86))
+        self.assertTrue(keep(False, 22.44))
         self.assertFalse(keep(False, 11.94))
         self.assertTrue(keep(False, 20.0))
 
@@ -110,7 +110,7 @@ class ChamferVolumeTest(unittest.TestCase):
             self.assertEqual(chamfer_volume(G, part), 0.0)
 
     def test_values(self):
-        want = {"escape_wheel": 95.4116, "anchor": 56.7339, "great_wheel": 3.3510, "mainspring": 595.1306,
+        want = {"escape_wheel": 95.4116, "anchor": 53.6577, "great_wheel": 3.3510, "mainspring": 595.5250,
                 "back_plate": 364.1377, "front_plate": 356.1377, "pendulum": 132.9947}
         for part, v in want.items():
             self.assertAlmostEqual(chamfer_volume(G, part), v, delta=1e-3, msg=part)

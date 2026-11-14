@@ -1,9 +1,10 @@
 """Build checks: compare each built body with the pure expectations and log a few lines to Text Commands.
 
 # Deviation: the gallery's geometry tests (action simulation, meshgap fits, section clearances, TestSketches,
-TestExploded, TestArborCollars, TestInstallability, TestCorners, TestSpringRoot) have no Fusion counterpart. These
-checks use volume, z range, point probes and interaction points; the `collar` and `bore` points stand in for
-TestArborCollars and TestInstallability, and the `round` probes for the corner check
+TestExploded, TestArborCollars, TestInstallability, TestCorners, TestSpringRoot, TestPressFitWalls) have no Fusion
+counterpart. These checks use volume, z range, point probes and interaction points; the `collar` and `bore` points
+stand in for TestArborCollars and TestInstallability, the `body step` probes for the body-step checks of
+TestArborCollars, and the `round` probes for the corner check. A unit test checks the press-fit wall arithmetic
 (docs/escapement/deviations.md).
 """
 

@@ -26,20 +26,21 @@ def tree(expected):
 
 class BodiesTest(unittest.TestCase):
     def test_body_names(self):
-        self.assertEqual(len(bodies.BODY_NAMES), 36)
-        self.assertEqual(len(set(bodies.BODY_NAMES)), 36)
-        self.assertEqual(bodies.EXPECTED_BODY_COUNT, 36)
+        self.assertEqual(len(bodies.BODY_NAMES), 34)
+        self.assertEqual(len(set(bodies.BODY_NAMES)), 34)
+        self.assertEqual(bodies.EXPECTED_BODY_COUNT, 34)
         self.assertEqual(bodies.BODY_NAMES[:3], ("Back Plate", "Front Plate", "Back Escape Bearing"))
         self.assertEqual(bodies.BODY_NAMES[8], "Pendulum Bearing")
         self.assertEqual(bodies.BODY_NAMES[-1], "Nut 4")
-        self.assertEqual(len(bodies.PARTS), 22)
+        self.assertEqual(len(bodies.PARTS), 21)
         self.assertEqual(set(bodies.PARTS), set(bodies.PART_BODIES))
-        self.assertEqual(sum(len(v) for v in bodies.PART_BODIES.values()), 36)
-        self.assertEqual(bodies.COLLAR_NAMES, ("Escape Rear Collar", "Pallet Front Collar", "Crutch Collar", "Knob Collar"))
-        self.assertEqual(bodies.BODY_NAMES[24:28], bodies.COLLAR_NAMES)
-        self.assertEqual(bodies.PARTS[17:19], ("arbor_collar", "end_collar"))
+        self.assertEqual(sum(len(v) for v in bodies.PART_BODIES.values()), 34)
+        self.assertEqual(bodies.COLLAR_NAMES, ("Crutch Collar", "Knob Collar"))
+        self.assertEqual(bodies.BODY_NAMES[24:26], bodies.COLLAR_NAMES)
+        self.assertEqual(bodies.PARTS[17], "end_collar")
         self.assertEqual(bodies.part_of("Knob Collar"), "end_collar")
-        self.assertEqual(bodies.part_of("Escape Rear Collar"), "arbor_collar")
+        with self.assertRaises(KeyError):
+            bodies.part_of("Escape Rear Collar")
         self.assertEqual(bodies.part_of("Bolt 3"), "bolt")
         self.assertEqual(bodies.part_of("Pendulum Bearing"), "bearing")
         with self.assertRaises(KeyError):
@@ -68,10 +69,10 @@ class ContainersTest(unittest.TestCase):
         self.assertEqual(CONTAINER_PATHS[-3], ("Collars",))
         self.assertEqual(TOP_LEVEL[-3:], ("Collars", "Bolts", "Nuts"))
         self.assertEqual(len(TOP_LEVEL), 9)
-        self.assertEqual(container_of_part("arbor_collar"), ("Collars",))
+        self.assertEqual(container_of_part("spring_retainer"), ("Drive", "Spring Retainer"))
         self.assertEqual(container_of_part("end_collar"), ("Collars",))
         self.assertEqual(len(got[("Bearings",)]), 7)
-        self.assertEqual(sum(len(v) for v in got.values()), 36)
+        self.assertEqual(sum(len(v) for v in got.values()), 34)
         self.assertEqual(expected_children(("Drive",)).__len__(), 6)
         self.assertEqual(expected_children(()).__len__(), 9)
 

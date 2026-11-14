@@ -46,8 +46,8 @@ def _loops_for(part, z, extra_loop=0):
             (False, [e], None, rim, 0.0)
         ] * n
     if fp.rule == edgefinish.OUTER_OR_LONG_INNER:
-        # Outer loop, then n - 1 inner loops of length 20.86 (the bore), and the eye hole of length 11.94.
-        return [(True, [e] * 40, None, None, 900.0)] * min(n, 1) + [(False, [e] * 2, None, None, 20.86)] * (n - 1) + [
+        # Outer loop, then n - 1 inner loops of length 22.44 (the bore), and the eye hole of length 11.94.
+        return [(True, [e] * 40, None, None, 900.0)] * min(n, 1) + [(False, [e] * 2, None, None, 22.44)] * (n - 1) + [
             (False, [e], None, None, 11.94)
         ]
     raise AssertionError(fp.rule)
@@ -110,7 +110,15 @@ class GluePartsTest(unittest.TestCase):
                 container_comps={},
             )
             self.fusion = fusion
-            with mock.patch.multiple(fusion, **patches):
+            real_d_section = parts.sections.d_section
+
+            def d_section(d):
+                calls.append(("d_section", d))
+                return real_d_section(d)
+
+            with mock.patch.multiple(fusion, **patches), mock.patch.object(
+                parts.sections, "d_section", side_effect=d_section
+            ):
                 for part in only or bodies.PARTS:
                     ctx.part = part
                     cur["part"] = part
@@ -121,6 +129,27 @@ class GluePartsTest(unittest.TestCase):
     def test_every_builder_runs(self):
         calls = self.run_parts()
         self.assertEqual([c[1] for c in calls if c[0] == "PART"], list(bodies.PARTS))
+
+    def test_d_families_per_builder(self):
+        from gen import sections
+
+        want = {
+            "front_plate": [sections.REAR_PEG_D], "pawl_carrier": [sections.CARRIER_D],
+            "spring_retainer": [sections.BODY_D], "escape_wheel": [sections.BODY_D], "anchor": [sections.BODY_D],
+            "crutch": [sections.KEYED_COUNTER_D, sections.END_D],
+            "winding_knob": [sections.KEYED_COUNTER_D, sections.END_D], "suspension_cap": [sections.END_D],
+            "end_collar": [sections.KEYED_RING_D, sections.END_D],
+        }
+        calls = self.run_parts(only=list(want))
+        part, got = None, {}
+        for c in calls:
+            if c[0] == "PART":
+                part = c[1]
+            elif c[0] == "d_section":
+                got.setdefault(part, []).append(c[1])
+        self.assertEqual(set(got), set(want))
+        for key, families in want.items():
+            self.assertEqual(got[key], families, key)
 
     def test_chamfer_calls_match_finish_planes(self):
         calls = self.run_parts()
@@ -142,8 +171,8 @@ class GluePartsTest(unittest.TestCase):
 
     def test_loop_count_guard(self):
         with self.assertRaises(Exception) as cm:
-            self.run_parts(only=["anchor"], extra_loop=1)
-        self.assertIn("found 2 loops to chamfer, expected 1", str(cm.exception))
+            self.run_parts(only=["pendulum"], extra_loop=1)
+        self.assertIn("found 3 loops to chamfer, expected 2", str(cm.exception))
 
     def test_ratchet_cutter_is_disc_plus_patterned_triangle(self):
         calls = self.run_parts(only=["great_wheel"])
@@ -171,9 +200,8 @@ class GluePartsTest(unittest.TestCase):
             "escape_wheel": {
                 "escape_wheel front_counterbore_extrude": (23.95, 26.0),
                 "escape_wheel bore_extrude": (-0.75, 26.75),
-                "escape_wheel rear_counterbore_extrude": (0.5, 3.3),
             },
-            "anchor": {"anchor counterbore_extrude": (24.7, 27.0), "anchor bore_extrude": (20.0, 28.75)},
+            "anchor": {"anchor bore_extrude": (20.0, 28.75)},
             "crutch": {
                 "crutch outline_extrude": (35.3, 38.3), "crutch pin_extrude": (37.8, 44.3),
                 "crutch counterbore_extrude": (34.3, 37.3), "crutch bore_extrude": (34.3, 39.3),
@@ -183,12 +211,13 @@ class GluePartsTest(unittest.TestCase):
                 "pawl_carrier layer_extrude": (5.25, 9.25), "pawl_carrier boss_extrude": (8.75, 11.0),
                 "pawl_carrier bore_extrude": (4.25, 12.0),
             },
-            "spring_spacer": {"spring_spacer disc_extrude": (17.5, 27.75), "spring_spacer bore_extrude": (16.5, 28.75)},
+            "spring_retainer": {
+                "spring_retainer disc_extrude": (17.5, 20.5), "spring_retainer bore_extrude": (16.5, 21.5),
+            },
             "winding_knob": {
                 "winding_knob disc_extrude": (35.3, 38.3), "winding_knob counterbore_extrude": (34.3, 37.3),
                 "winding_knob bore_extrude": (34.3, 39.3),
             },
-            "arbor_collar": {"arbor_collar ring_extrude": (0.0, 3.0), "arbor_collar bore_extrude": (-1.0, 4.0)},
             "end_collar": {"end_collar ring_extrude": (0.0, 3.0), "end_collar bore_extrude": (-1.0, 4.0)},
         }
         for part, spans in want.items():
@@ -198,7 +227,8 @@ class GluePartsTest(unittest.TestCase):
                 self.assertEqual(got[what], span, what)
         flats = {
             "escape_arbor": [(0.2, 23.95)], "pallet_arbor": [(21.0, 27.8), (34.25, 39.25)],
-            "great_wheel_arbor": [(5.25, 27.8), (34.25, 39.25)], "suspension_pin": [(30.05, 33.95), (45.3, 47.75)],
+            "great_wheel_arbor": [(5.25, 17.55), (17.45, 27.8), (34.25, 39.25)],
+            "suspension_pin": [(30.05, 33.95), (45.3, 47.75)],
         }
         for part, spans in flats.items():
             calls = self.run_parts(only=[part])
@@ -212,6 +242,12 @@ class GluePartsTest(unittest.TestCase):
         self.assertEqual(len([c for c in profiles if c[1].startswith("pawl_carrier layer")]), 1)
         self.assertFalse([c for c in calls if len(c) > 1 and isinstance(c[1], str) and "pawl_1" in c[1]])
         self.assertIn(("join", "pawl_carrier parts_join"), calls)
+
+    def test_no_counterbore_steps(self):
+        wheel = [c for c in self.run_parts(only=["escape_wheel"]) if len(c) > 1 and isinstance(c[1], str)]
+        self.assertFalse([c for c in wheel if "rear_counterbore" in c[1] or "bore_tool_join" in c[1]])
+        anchor = [c for c in self.run_parts(only=["anchor"]) if len(c) > 1 and isinstance(c[1], str)]
+        self.assertFalse([c for c in anchor if "anchor counterbore" in c[1]])
 
     def test_no_boss_builders(self):
         for part in ("escape_wheel", "anchor"):

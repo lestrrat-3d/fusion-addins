@@ -62,10 +62,8 @@ def material(part, x, y, z):
         if math.hypot(x, y) <= 33.0:
             return not any(inside(w, x, y) for w in sections.escape_windows()) and not d_void(sections.BODY_D, x, y)
         return inside(sections.escape_tooth(G), x, y)
-    if part == "anchor" and z in (22.5, 23.5, 24.2):
+    if part == "anchor" and z in (22.5, 23.5, 24.2, 25.0, 25.9):
         return inside(sections.anchor_outline(G), x, y) and not d_void(sections.BODY_D, x, y)
-    if part == "anchor" and z == 25.0:
-        return inside(sections.anchor_outline(G), x, y) and not near((0.0, 0.0), 3.75, x, y)
     if part in ("crutch", "winding_knob") and z == 36.5:
         base = inside(sections.crutch_outline(G), x, y) if part == "crutch" else math.hypot(x, y) < 9.0
         return base and not d_void(sections.KEYED_COUNTER_D, x, y)
@@ -82,21 +80,19 @@ def material(part, x, y, z):
     if part == "great_wheel" and z == 7:
         return False if inside(sections.ratchet_tool_outline(), x, y) else None
     if part == "pawl_carrier" and z in (7, 7.25):
-        return inside(sections.pawl_layer(GANGS), x, y) and not d_void(sections.DRIVE_D, x, y)
+        return inside(sections.pawl_layer(GANGS), x, y) and not d_void(sections.CARRIER_D, x, y)
     if part == "mainspring" and z == 3:
         outer, bore, eye = profile(spring_params(), G.spring)
         hole = near(eye.center, eye.radius, x, y)
         return inside(outer, x, y) and not inside(bore, x, y) and not hole
     if part == "suspension_cap" and z == 46.05:
         return math.hypot(x, y) < 3.7 and not d_bore(x, y)
-    if part == "spring_spacer" and z == 20:
-        return math.hypot(x, y) < 3.7 and not d_void(sections.BODY_D, x, y)
+    if part == "spring_retainer" and z == 19:
+        return math.hypot(x, y) < 5.0 and not d_void(sections.BODY_D, x, y)
     if part == "winding_knob" and z == 36.8:
         return math.hypot(x, y) < 9.0 and not d_void(sections.KEYED_COUNTER_D, x, y)
     if part == "winding_knob" and z == 37.8:
         return math.hypot(x, y) < 9.0 and not d_bore(x, y)
-    if part == "arbor_collar" and z == 1.5:
-        return math.hypot(x, y) < 3.7 and not d_void(sections.BODY_D, x, y)
     if part == "end_collar" and z == 1.5:
         return d_void(sections.KEYED_RING_D, x, y) and not d_bore(x, y)
     return None
@@ -122,7 +118,24 @@ class PartProbesTest(unittest.TestCase):
                     continue
                 checked += 1
                 self.assertEqual(got, pr.expect == INSIDE, f"{part} {pr.label} {pr.point}")
-        self.assertGreaterEqual(checked, 106)
+        self.assertGreaterEqual(checked, 110)
+
+    def test_arbor_probes_agree_with_meridians(self):
+        """Independent oracle for the four arbor keys: the meridian's radius at z, less the flat boxes."""
+        checked = 0
+        for part in ("escape_arbor", "pallet_arbor", "great_wheel_arbor", "suspension_pin"):
+            pts = sections._MERIDIANS[part]
+            runs = [(min(a[1], b[1]), max(a[1], b[1]), a[0]) for a, b in zip(pts, pts[1:]) if a[0] == b[0] and a[0] > 0]
+            for pr in part_probes(G)[part]:
+                x, y, z = pr.point
+                radius = next((r for z0, z1, r in runs if z0 < z < z1), None)
+                got = radius is not None and math.hypot(x, y) < radius
+                for flat_x, z0, z1 in sections.ARBOR_FLATS[part]:
+                    if z0 < z < z1 and x > flat_x and abs(y) < 3.5:
+                        got = False
+                checked += 1
+                self.assertEqual(got, pr.expect == INSIDE, f"{part} {pr.label} {pr.point}")
+        self.assertEqual(checked, 49)
 
     def test_round_probes(self):
         """Each round probe is a void or tool cut in the sharp pieces and is material with the round."""
@@ -238,16 +251,16 @@ class InteractionTest(unittest.TestCase):
     def test_collar_and_bore_counts(self):
         s = state_at(G, P.phase)
         col, bor = collar_points(G, s), bore_points(G, s)
-        self.assertEqual((len(col), len(bor)), (94, 196))
+        self.assertEqual((len(col), len(bor)), (62, 166))
         self.assertTrue(all(p.label.startswith("collar") and " #" in p.label for p in col))
         self.assertTrue(all(p.label.startswith("bore") and " #" in p.label for p in bor))
         self.assertEqual(
             {p.target for p in col},
-            {"Escape Wheel", "Anchor", "Great Wheel", "Crutch", "Winding Knob"},
+            {"Escape Wheel", "Great Wheel", "Crutch", "Winding Knob"},
         )
         self.assertEqual(len([p for p in col if p.label.startswith("collar crutch")]), 15)
         self.assertEqual(len([p for p in bor if p.label.startswith("bore great wheel")]), 16)
-        self.assertEqual(len({p.target for p in bor}), 13)
+        self.assertEqual(len({p.target for p in bor}), 11)
 
     def test_collar_and_bore_points_lie_in_the_target_hole(self):
         _, bore_loop, _ = profile(spring_params(), G.spring)
@@ -257,17 +270,15 @@ class InteractionTest(unittest.TestCase):
             """True when (x, y), in the target's frame at the label's z, lies in the hole the label names."""
             r = math.hypot(x, y)
             rows = {
-                "collar escape front": r < 3.75, "collar escape rear": r < 3.75, "collar pallet front": r < 3.75,
+                "collar escape front": r < 3.75,
                 "collar great wheel": r < 4.10, "collar crutch": d_void(sections.KEYED_COUNTER_D, x, y),
                 "collar knob": d_void(sections.KEYED_COUNTER_D, x, y),
                 "bore escape wheel": d_void(sections.BODY_D, x, y),
-                "bore escape rear collar": d_void(sections.BODY_D, x, y),
                 "bore anchor": d_void(sections.BODY_D, x, y),
-                "bore pallet front collar": d_void(sections.BODY_D, x, y),
                 "bore crutch collar": d_void(sections.END_D, x, y), "bore crutch": d_void(sections.END_D, x, y),
-                "bore great wheel": r < 3.45, "bore pawl carrier": d_void(sections.DRIVE_D, x, y),
+                "bore great wheel": r < 3.45, "bore pawl carrier": d_void(sections.CARRIER_D, x, y),
                 "bore mainspring": point_in_polygon(bore_poly, (x, y)),
-                "bore spring spacer": d_void(sections.BODY_D, x, y),
+                "bore spring retainer": d_void(sections.BODY_D, x, y),
                 "bore knob collar": d_void(sections.END_D, x, y), "bore knob": d_void(sections.END_D, x, y),
                 "bore suspension cap": d_void(sections.END_D, x, y),
             }

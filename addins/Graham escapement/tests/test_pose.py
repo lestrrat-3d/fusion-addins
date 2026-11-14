@@ -55,7 +55,7 @@ class PoseTest(unittest.TestCase):
         great = G.great_phase + wheel * 13 / 48
         self.assertAlmostEqual(POSES[bodies.GREAT_WHEEL].angle, great)
         arbor = great + 20.8 * DEG + G.carrier_offset
-        for name in (bodies.GREAT_WHEEL_ARBOR, bodies.PAWL_CARRIER, bodies.SPRING_SPACER, bodies.WINDING_KNOB):
+        for name in (bodies.GREAT_WHEEL_ARBOR, bodies.PAWL_CARRIER, bodies.SPRING_RETAINER, bodies.WINDING_KNOB):
             self.assertAlmostEqual(POSES[name].angle, arbor)
         self.assertEqual(POSES[bodies.MAINSPRING].z, 11.25)
 
@@ -64,8 +64,6 @@ class PoseTest(unittest.TestCase):
         great = G.great_phase + wheel * 13 / 48
         arbor = great + 20.8 * DEG + G.carrier_offset
         cases = {
-            bodies.ESCAPE_REAR_COLLAR: (-wheel, 0.0, 0.0, 0.25),
-            bodies.PALLET_FRONT_COLLAR: (-S.anchor_angle, G.axis_p[0], G.axis_p[1], 24.75),
             bodies.CRUTCH_COLLAR: (-S.anchor_angle, G.axis_p[0], G.axis_p[1], 34.25),
             bodies.KNOB_COLLAR: (arbor, G.axis_g[0], G.axis_g[1], 34.25),
         }

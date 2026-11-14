@@ -4,7 +4,7 @@ A Fusion add-in that rebuilds the decad-gallery model `escapement`: a desk-clock
 movement. A spiral mainspring turns a great wheel, which turns a 30-tooth escape wheel through a 13-tooth pinion. An
 anchor with two pallets lets the escape wheel advance half a tooth at a time, and a crutch on the anchor's arbor pushes
 a 180 mm pendulum. The movement sits in a two-plate frame on seven 605ZZ bearings and four M2 bolts and nuts. The
-default build has 36 bodies, including four printed collar rings. The dialog takes the gallery's inputs with the
+default build has 34 bodies, including two keyed collar rings. The dialog takes the gallery's inputs with the
 gallery's defaults (`Pendulum length`, `Amplitude`, `Lock angle`, `Lift angle`, `Phase`, `Backlash`) and the gallery's
 input rules. Bodies are grouped the way the gallery groups them: the `Graham Escapement` component holds one
 sub-component per gallery container (`Frame`, `Bearings`, `Arbors`, `Escapement`, `Pendulum Assembly`, `Drive`,
@@ -14,7 +14,7 @@ movement.
 
 ## Gallery revision
 
-Gallery revision: e11a188db314f97d3bf3b56c37ca87f0d339b791 (`GALLERY_REVISION` in `config.py`)
+Gallery revision: 45b58754b323ac486003e959ba344e5685260e0f (`GALLERY_REVISION` in `config.py`)
 
 The add-in translates decad-gallery at this commit: `models/escapement` and the models it builds from,
 `models/spurgear`, `models/spiralspring`, `models/ballbearing`, `models/m2bolt` and `models/m2nut`.

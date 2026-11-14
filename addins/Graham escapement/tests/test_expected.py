@@ -30,19 +30,18 @@ class VolumeTest(unittest.TestCase):
         self.assertAlmostEqual(vol("bearing").value, math.pi * (49 - 6.25) * 5, places=6)
         self.assertAlmostEqual(vol("spring_anchor_pin").value, math.pi * 2.25 * 20.7, places=6)
         self.assertAlmostEqual(vol("winding_knob").value, 81 * math.pi * 3 - D_KC * 2.0 - D * 1.0, places=6)
-        self.assertAlmostEqual(vol("spring_spacer").value, (13.69 * math.pi - D_BODY) * 10.25, places=6)
+        self.assertAlmostEqual(vol("spring_retainer").value, (25 * math.pi - D_BODY) * 3.0, places=6)
         self.assertAlmostEqual(vol("suspension_cap").value, (13.69 * math.pi - D) * 1.5, places=6)
-        self.assertAlmostEqual(vol("arbor_collar").value, (13.69 * math.pi - D_BODY) * 3.0, places=6)
         self.assertAlmostEqual(vol("end_collar").value, (D_KR - D) * 3.0, places=6)
         self.assertAlmostEqual(vol("bearing").tol, 0.001 * vol("bearing").value, places=9)
 
     def test_value_table(self):
         want = {
-            "escape_arbor": 943.1919, "pallet_arbor": 1360.2952, "great_wheel_arbor": 1085.0111,
-            "suspension_pin": 439.3896, "escape_wheel": 11743.8579, "anchor": 3066.7512, "crutch": 960.1601,
-            "great_wheel": 26311.0696, "pawl_carrier": 942.0007, "mainspring": 10429.3078,
-            "spring_spacer": 183.3054, "winding_knob": 657.4719, "arbor_collar": 53.6504, "end_collar": 68.1310,
-            "pendulum": 19532.0434, "suspension_cap": 35.4193, "back_plate": 73722.8576, "front_plate": 53966.2783,
+            "escape_arbor": 1129.0888, "pallet_arbor": 1378.7013, "great_wheel_arbor": 1191.2211,
+            "suspension_pin": 428.9538, "escape_wheel": 11599.3005, "anchor": 3054.7633, "crutch": 967.2718,
+            "great_wheel": 26311.0696, "pawl_carrier": 953.6093, "mainspring": 10396.4366,
+            "spring_retainer": 136.3443, "winding_knob": 664.5837, "end_collar": 89.4663,
+            "pendulum": 19532.0434, "suspension_cap": 46.0870, "back_plate": 73722.8576, "front_plate": 53966.2783,
             "spring_anchor_pin": 146.3197, "bearing": 671.5154, "bolt": 51.4814, "nut": 16.1483,
         }
         self.assertEqual(set(want), set(bodies.PARTS))
@@ -50,19 +49,29 @@ class VolumeTest(unittest.TestCase):
             self.assertAlmostEqual(vol(part).value, v, delta=0.01, msg=part)
 
     def test_escape_arbor_flat(self):
-        # The flat removes seg(2.8, 2.55) over the r 2.8 run [0.25, 24.0] cut at [0.20, 23.95]: 23.70 mm, 9.2212 mm^3.
-        # It removes nothing from the r 2.5 runs (2.5 < 2.55).
-        stair = math.pi * (2.5**2 * 5.25 + 2.8**2 * 23.75 + 3.7**2 * 3.75 + 2.5**2 * 5.25)
-        flat = _segment_area(2.8, 2.55) * 23.70
-        self.assertAlmostEqual(flat, 9.2212, places=3)
+        # The flat removes seg(3.3, 2.55) over the r 3.3 run [0.25, 24.0] cut at [0.20, 23.95]: 23.70 mm.
+        # It removes nothing from the r 2.5 runs (2.5 < 2.55) and nothing from the r 3.7 collar (z 24.0 to 27.75).
+        stair = math.pi * (2.5**2 * 5.25 + 3.3**2 * 23.75 + 3.7**2 * 3.75 + 2.5**2 * 5.25)
+        flat = _segment_area(3.3, 2.55) * 23.70
+        self.assertAlmostEqual(flat, 50.8934, places=3)
+        self.assertAlmostEqual(stair - flat, 1129.0888, places=3)
         self.assertAlmostEqual(vol("escape_arbor").value, stair - flat, places=6)
 
     def test_arbor_flat_runs(self):
-        # The pin's rear flat [30.05, 33.95] meets the r 2.5 run [31.05, 34] for 2.9 mm, the front flat [45.30, 47.75]
-        # the run [39.80, 46.75] for 1.45 mm; both flats sit at x = 2.0.
-        stair = math.pi * (2.5**2 * 2.95 + 3.7**2 * 5.8 + 2.5**2 * 6.95)
-        want = stair - _segment_area(2.5, 2.0) * (2.9 + 1.45)
+        # The pin's rear flat [30.05, 33.95] meets the r 2.5 run [31.05, 34] for 2.9 mm at x = 2.0; the front flat
+        # [45.30, 47.75] meets the r 2.0 peg run [45.25, 46.75] for 1.45 mm at x = 1.5.
+        stair = math.pi * (2.5**2 * 2.95 + 3.7**2 * 5.8 + 2.5**2 * 5.45 + 2.0**2 * 1.5)
+        want = stair - _segment_area(2.5, 2.0) * 2.9 - _segment_area(2.0, 1.5) * 1.45
         self.assertAlmostEqual(vol("suspension_pin").value, want, places=6)
+
+    def test_great_wheel_arbor_flat_overlap(self):
+        # The x 2.80 box [5.25, 17.55] and the x 2.55 box [17.45, 27.80] overlap by 0.10 mm; the deeper cut counts once.
+        stair = math.pi * (2.5**2 * 5.25 + 3.7**2 * 3.0 + 3.05**2 * 1.95 + 3.3**2 * 22.55 + 2.5**2 * 5.5 + 2.0**2 * 5.0)
+        want = (
+            stair - _segment_area(3.3, 2.80) * 12.20 - _segment_area(3.3, 2.55) * 10.30
+            - _segment_area(2.0, 1.5) * 4.0
+        )
+        self.assertAlmostEqual(vol("great_wheel_arbor").value, want, places=6)
 
     def test_chamfered_parts_lose_volume(self):
         from gen.edgefinish import chamfer_volume
@@ -100,8 +109,7 @@ class ZRangeTest(unittest.TestCase):
             "Escape Wheel": (1.5, 25), "Anchor": (21, 26), "Crutch": (35.30, 44.30),
             "Pendulum": (38.80, 44.80), "Suspension Pin": (31.05, 46.75), "Suspension Cap": (45.30, 46.80),
             "Great Wheel": (1.5, 8.5), "Pawl Carrier": (5.25, 11.0), "Mainspring": (11.25, 17.25),
-            "Spring Spacer": (17.5, 27.75), "Spring Anchor Pin": (10.25, 30.95), "Winding Knob": (35.30, 38.30),
-            "Escape Rear Collar": (0.25, 3.25), "Pallet Front Collar": (24.75, 27.75),
+            "Spring Retainer": (17.5, 20.5), "Spring Anchor Pin": (10.25, 30.95), "Winding Knob": (35.30, 38.30),
             "Crutch Collar": (34.25, 37.25), "Knob Collar": (34.25, 37.25),
         }
         for i in range(1, 5):
@@ -116,7 +124,6 @@ class ZRangeTest(unittest.TestCase):
 
     def test_part_z(self):
         self.assertEqual(expected.part_z("mainspring"), (0.0, 6.0))
-        self.assertEqual(expected.part_z("arbor_collar"), (0.0, 3.0))
         self.assertEqual(expected.part_z("end_collar"), (0.0, 3.0))
         with self.assertRaises(KeyError):
             expected.part_z("nope")

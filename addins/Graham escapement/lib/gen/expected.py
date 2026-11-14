@@ -10,8 +10,9 @@ import math
 
 from . import bodies, edgefinish, gears
 from .constants import (
-    ANCHOR_COUNTER_RADIUS, CARRIER_BOSS_RADIUS, COLLAR_LENGTH, COLLAR_RADIUS, GREAT_BORE, GREAT_COUNTER_RADIUS,
-    LIP_RADIUS, MOUNT_RADIUS, SEAT_RADIUS, SPRING_SOCKET_R, WHEEL_COUNTER_RADIUS, WHEEL_HIGH, WHEEL_LOW,
+    CARRIER_BOSS_RADIUS, COLLAR_LENGTH, GREAT_BORE, GREAT_COUNTER_RADIUS, LIP_RADIUS,
+    MOUNT_RADIUS, RETAINER_HIGH, RETAINER_LOW, RETAINER_RADIUS, SEAT_RADIUS, SPRING_SOCKET_R, WHEEL_COUNTER_RADIUS,
+    WHEEL_HIGH, WHEEL_LOW,
 )
 from .curves import Line, loop_polygon
 from .fasteners import (
@@ -47,10 +48,11 @@ from .sections import (
     ARBOR_FLATS,
     arbor_meridian,
     BODY_D,
-    DRIVE_D,
+    CARRIER_D,
     END_D,
     KEYED_COUNTER_D,
     KEYED_RING_D,
+    REAR_PEG_D,
     anchor_outline,
     crutch_outline,
     crutch_slot,
@@ -140,22 +142,25 @@ def _nut_volume() -> float:
     return hex_area * NUT_THICKNESS - bore - 2 * chamfer
 
 
-def _overlap(span: tuple[float, float], lo: float, hi: float) -> float:
-    return max(0.0, min(span[1], hi) - max(span[0], lo))
-
-
 def _arbor_volume(part: str) -> float:
-    """Every constant-radius run of the meridian as a cylinder, less the flat boxes over it [arbors_internal_test.go]."""
+    """Every constant-radius run of the meridian as a cylinder, less the flat boxes over it [arbors_internal_test.go].
+
+    A run is split at every flat box edge inside it. On each piece the boxes that cover it and reach into the radius
+    cut one segment: the deepest box's. Where two boxes overlap (the great wheel arbor, 0.10 mm), the overlap is
+    subtracted once; the gallery's own test subtracts it twice, 0.118 mm^3 more, inside its 1 % tolerance."""
     value = 0.0
+    flats = ARBOR_FLATS[part]
     for seg in arbor_meridian(part):
         if not (isinstance(seg, Line) and seg.start[0] == seg.end[0] and seg.start[0] > 0.0):
             continue
         r = seg.start[0]
         z_a, z_b = min(seg.start[1], seg.end[1]), max(seg.start[1], seg.end[1])
         value += math.pi * r * r * (z_b - z_a)
-        for flat_x, z0, z1 in ARBOR_FLATS[part]:
-            if r > flat_x:
-                value -= _segment_area(r, flat_x) * _overlap((z_a, z_b), z0, z1)
+        cuts = sorted({z_a, z_b} | {z for _, z0, z1 in flats for z in (z0, z1) if z_a < z < z_b})
+        for lo, hi in zip(cuts, cuts[1:]):
+            depths = [fx for fx, z0, z1 in flats if z0 <= lo and hi <= z1 and r > fx]
+            if depths:
+                value -= _segment_area(r, min(depths)) * (hi - lo)
     return value
 
 
@@ -183,7 +188,7 @@ def _tooth_outside_area(g: Geometry) -> float:
 def part_volume(g: Geometry, part: str) -> Expect:
     """Expected volume (mm^3) and tolerance of the master body of part, before its pose."""
     p = g.params
-    d_end, d_body, d_drive = d_area(END_D), d_area(BODY_D), d_area(DRIVE_D)
+    d_end, d_rear, d_body, d_carrier = d_area(END_D), d_area(REAR_PEG_D), d_area(BODY_D), d_area(CARRIER_D)
     d_kc, d_kr = d_area(KEYED_COUNTER_D), d_area(KEYED_RING_D)
     c = edgefinish.chamfer_volume(g, part)
     pi = math.pi
@@ -202,7 +207,7 @@ def part_volume(g: Geometry, part: str) -> Expect:
         value = (plate - win - 3 * pi * LIP_RADIUS**2) * 6
         value -= 3 * pi * (SEAT_RADIUS**2 - LIP_RADIUS**2) * 5
         value -= 4 * (pi * HOLE_RADIUS**2 * 4 + pi * HEAD_POCKET_RADIUS**2 * 2)
-        value -= d_end * 3 + pi * SPRING_SOCKET_R**2 * 3
+        value -= d_rear * 3 + pi * SPRING_SOCKET_R**2 * 3
         value -= c
         return Expect(value, 0.002 * value)
     if part in ("escape_arbor", "pallet_arbor", "great_wheel_arbor", "suspension_pin"):
@@ -214,12 +219,12 @@ def part_volume(g: Geometry, part: str) -> Expect:
         value = (pi * 33.0**2 - windows) * (WHEEL_HIGH - WHEEL_LOW)
         value += 30 * _tooth_outside_area(g) * (WHEEL_HIGH - WHEEL_LOW)
         value += _gear_area(pinion) * 20.5
-        value -= pi * WHEEL_COUNTER_RADIUS**2 * (1.80 + 1.05) + d_body * 20.65 + c
+        value -= pi * WHEEL_COUNTER_RADIUS**2 * 1.05 + d_body * 22.45 + c
         f = _fillet_allowance(pinion, 21.0)
         value += f
         return Expect(value, 0.5 * f + 0.002 * value)
     if part == "anchor":
-        value = _loop_area(anchor_outline(g)) * 5 - pi * ANCHOR_COUNTER_RADIUS**2 * 1.30 - d_body * 3.70 - c
+        value = (_loop_area(anchor_outline(g)) - d_body) * 5 - c
         return Expect(value, 0.002 * value)
     if part == "crutch":
         value = _loop_area(crutch_outline(g)) * 3 + pi * 1.5**2 * 6.0 - d_kc * 2.0 - d_end * 1.0
@@ -240,23 +245,20 @@ def part_volume(g: Geometry, part: str) -> Expect:
         return Expect(value, 0.5 * f + 0.002 * value)
     if part == "pawl_carrier":
         gangs = (math.pi / 2 - g.carrier_offset, 3 * math.pi / 2 - g.carrier_offset)
-        value = _loop_area(pawl_layer(gangs)) * 4 + pi * CARRIER_BOSS_RADIUS**2 * 1.75 - d_drive * 5.75
+        value = _loop_area(pawl_layer(gangs)) * 4 + pi * CARRIER_BOSS_RADIUS**2 * 1.75 - d_carrier * 5.75
         return Expect(value, 0.002 * value)
     if part == "mainspring":
         outer, bore, eye = profile(spring_params(), g.spring)
         value = (_loop_area(outer) - _loop_area(bore) - pi * eye.radius**2) * 6 - c
         return Expect(value, 0.002 * value + 1.0)
-    if part == "spring_spacer":
-        value = (pi * 3.7**2 - d_body) * 10.25
+    if part == "spring_retainer":
+        value = (pi * RETAINER_RADIUS**2 - d_body) * (RETAINER_HIGH - RETAINER_LOW)
         return Expect(value, 0.002 * value)
     if part == "spring_anchor_pin":
         value = pi * 1.5**2 * 20.7
         return Expect(value, 0.002 * value)
     if part == "winding_knob":
         value = pi * 9.0**2 * 3 - d_kc * 2.0 - d_end * 1.0
-        return Expect(value, 0.002 * value)
-    if part == "arbor_collar":
-        value = (pi * COLLAR_RADIUS**2 - d_body) * COLLAR_LENGTH
         return Expect(value, 0.002 * value)
     if part == "end_collar":
         value = (d_kr - d_end) * COLLAR_LENGTH
@@ -289,10 +291,9 @@ _PART_Z: dict[str, tuple[float, float]] = {
     "great_wheel": (1.5, 8.5),
     "pawl_carrier": (5.25, 11.0),
     "mainspring": (0.0, 6.0),
-    "spring_spacer": (17.5, 27.75),
+    "spring_retainer": (17.5, 20.5),
     "spring_anchor_pin": (10.25, 30.95),
     "winding_knob": (35.30, 38.30),
-    "arbor_collar": (0.0, 3.0),
     "end_collar": (0.0, 3.0),
     "bearing": (0.0, 5.0),
     "bolt": (-10.0, 2.0),

@@ -1,6 +1,6 @@
 """Body containers of the escapement and the check that stands in for decad VerifyContainers.
 
-Own copy of decad-gallery models/escapement containers.go (container names, moveBodies) at e11a188, and of the
+Own copy of decad-gallery models/escapement containers.go (container names, moveBodies) at 45b5875, and of the
 gearbox add-in's container check, extended to nested containers.
 """
 
@@ -30,7 +30,7 @@ CONTAINER_PATHS: tuple[Path, ...] = (
     ("Drive", "Great Wheel"),
     ("Drive", "Pawl Carrier"),
     ("Drive", "Mainspring"),
-    ("Drive", "Spring Spacer"),
+    ("Drive", "Spring Retainer"),
     ("Drive", "Spring Anchor"),
     ("Drive", "Winding Knob"),
     ("Collars",),
@@ -58,10 +58,9 @@ PART_CONTAINERS: dict[str, Path] = {
     "great_wheel": ("Drive", "Great Wheel"),
     "pawl_carrier": ("Drive", "Pawl Carrier"),
     "mainspring": ("Drive", "Mainspring"),
-    "spring_spacer": ("Drive", "Spring Spacer"),
+    "spring_retainer": ("Drive", "Spring Retainer"),
     "spring_anchor_pin": ("Drive", "Spring Anchor"),
     "winding_knob": ("Drive", "Winding Knob"),
-    "arbor_collar": ("Collars",),
     "end_collar": ("Collars",),
     "bolt": ("Bolts",),
     "nut": ("Nuts",),
