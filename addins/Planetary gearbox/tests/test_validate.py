@@ -64,7 +64,9 @@ class ValidateTest(unittest.TestCase):
         with self.assertRaises(ValidationError) as cm:
             validate(dataclasses.replace(default_params(), gear_thickness=5.5))
         self.assertEqual(
-            str(cm.exception), "gear thickness 5.5 leaves less than 1 for the lip behind a 5 wide bearing"
+            str(cm.exception),
+            "gear thickness 5.5 leaves less than 1 for the lip behind a 5 wide bearing; "
+            "a 605ZZ planet bearing needs GearThickness >= 6",
         )
         with self.assertRaises(ValidationError) as cm:
             validate(dataclasses.replace(default_params(), gear_thickness=float("nan")))
@@ -74,7 +76,8 @@ class ValidateTest(unittest.TestCase):
         cases = [
             ({"planet_count": 6}, "neighbouring planet centers are 20.999999999999996 apart; tips need 31.46 for at "
              "least 0.5 clearance"),
-            ({"module": 0.5}, "the 5.1 mm shaft bore leaves less than one module of wall under the sun root"),
+            ({"module": 0.5}, "the 5.1 mm shaft bore leaves less than one module of wall under the sun root; "
+             "SunTeeth must be at least 17 for the 5.1 mm shaft at module 0.5"),
             ({"flat_depth": 1.3}, "flat depth 1.3 is out of range"),
             ({"carrier_thickness": 1.9}, "carrier thickness 1.9 is out of range"),
             ({"flat_depth": -0.1}, "flat depth -0.1 is out of range"),

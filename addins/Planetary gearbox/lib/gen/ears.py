@@ -1,7 +1,7 @@
 """The ring's mounting ears: dimensions, outline, areas and the input rules.
 
 Own copy of decad-gallery models/planetarygearbox ears.go (earWall, earGap, earHalfWidth, earCenterRadius, earAngle,
-addRingOutline) and Params.validateEars at 44d180a. Deviation: the outline is a list of curves at computed
+addRingOutline) and earProblems at 45b5875. Deviation: the outline is a list of curves at computed
 coordinates, not a constrained sketch (README "Deviations from decad-gallery" lives in the converter repo).
 """
 
@@ -126,17 +126,19 @@ def ring_xmax(p: Params, d: Dims) -> float:
     return loop_xmax(outline)
 
 
-def validate_ears(p: Params, d: Dims) -> str | None:
-    """Message of the first failing ear rule, or None [params.go validateEars]. Takes only the numbers it needs."""
+def ear_problems(p: Params, d: Dims) -> list[str]:
+    """Messages of every failing ear rule [params.go earProblems]: the chord rule, then at most one bolt-site message
+    per ear. Takes only the numbers it needs."""
     if p.ear_count == 0:
-        return None
+        return []
+    probs: list[str] = []
     half = ear_half_width(p.ear_bore_diameter)
     radius = ear_center_radius(d.ring_outer, p.ear_bore_diameter)
     if p.ear_count > 1:
         # Neighbouring ears are closest at their half circles, whose centers are a chord apart.
         chord = 2 * radius * math.sin(math.pi / p.ear_count)
         if chord < 2 * half + EAR_GAP:
-            return (
+            probs.append(
                 f"neighbouring ear bores are {n(chord)} apart; the ears need {n(2 * half + EAR_GAP)} "
                 f"for at least {n(EAR_GAP)} between them"
             )
@@ -147,5 +149,8 @@ def validate_ears(p: Params, d: Dims) -> str | None:
         for b in bolt_angles():
             delta = ear_angle(i, p.ear_count) - b
             if math.cos(delta) > 0 and d.bolt_circle * abs(math.sin(delta)) < half + reach:
-                return f"ear {i + 1} lies over a bolt site: turn the ears off the bolt angles by using another ear count"
-    return None
+                probs.append(
+                    f"ear {i + 1} lies over a bolt site: turn the ears off the bolt angles by using another ear count"
+                )
+                break
+    return probs
