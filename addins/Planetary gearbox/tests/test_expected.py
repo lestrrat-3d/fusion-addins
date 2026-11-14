@@ -19,8 +19,8 @@ D2 = derive(P2)
 REFERENCE = {
     "housing_bearing": (671.5154, 0.5),
     "planet_bearing": (671.5154, 0.5),
-    "input_shaft": (637.2023, 0.5),
-    "output_shaft": (620.5314, 0.5),
+    "input_shaft": (625.9616, 0.5),
+    "output_shaft": (609.2907, 0.5),
     "carrier": (3253.6953, 0.5),
     "carrier_pin": (313.0304, 0.5),
     "cover": (8885.4352, 1.0),
@@ -159,8 +159,8 @@ class ExpectedTest(unittest.TestCase):
                 self.assertLessEqual(
                     abs(part_volume(p, d, "planet_bearing").value - KIT_BEARING[planet_bearing]), 1e-3
                 )
-                self.assertLessEqual(abs(part_volume(p, d, "input_shaft").value - 1660.4859), 0.5)
-                self.assertLessEqual(abs(part_volume(p, d, "output_shaft").value - 1530.9017), 0.5)
+                self.assertLessEqual(abs(part_volume(p, d, "input_shaft").value - 1646.0974), 0.5)
+                self.assertLessEqual(abs(part_volume(p, d, "output_shaft").value - 1516.5132), 0.5)
                 self.assertLessEqual(abs(part_volume(p, d, "carrier_pin").value - pin), 0.5)
 
     def test_kit_assembled_z(self):

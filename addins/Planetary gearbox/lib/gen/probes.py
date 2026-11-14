@@ -231,6 +231,11 @@ def part_probes(p: Params, d: Dims) -> dict[str, list[Probe]]:
         shaft.append(Probe("flat", (rg, 0.0, t / 2), OUTSIDE))
         shaft.append(Probe("round side", (-rg, 0.0, t / 2), INSIDE))
     shaft.append(Probe("under front bearing", (rg, 0.0, -(g + tv + ws / 2)), INSIDE))
+    if flat:
+        # The second flat, on the end that reaches out of the cover.
+        end_z = (spec.flats[1][0] + spec.flats[1][1]) / 2
+        shaft.append(Probe("end flat", (rg, 0.0, end_z), OUTSIDE))
+        shaft.append(Probe("end round side", (-rg, 0.0, end_z), INSIDE))
     probes["input_shaft"] = shaft + _collar_probe(spec, r, d)
 
     link = layout.link_shaft_spec(p, d)
@@ -243,6 +248,10 @@ def part_probes(p: Params, d: Dims) -> dict[str, list[Probe]]:
     out = layout.output_shaft_spec(p, d)
     op = _thick_probes(p, d, out)
     op.append(Probe("round under bearing", (rg, 0.0, out.top - p.output_shaft_length - ws / 2), INSIDE))
+    if flat:
+        end_z = (out.flats[0][0] + out.top) / 2
+        op.append(Probe("end flat", (rg, 0.0, end_z), OUTSIDE))
+        op.append(Probe("end round side", (-rg, 0.0, end_z), INSIDE))
     probes["output_shaft"] = op
     return probes
 

@@ -21,6 +21,7 @@ from .fasteners import (
 )
 from .params import (
     COLLAR_BEARING_GAP,
+    END_FLAT_MARGIN,
     COLLAR_CLEARANCE,
     FIT_CLEARANCE,
     PIN_SHOULDER_CLEARANCE,
@@ -174,11 +175,14 @@ def _collar(lo: float, hi: float) -> tuple[float, float] | None:
 
 def input_shaft_spec(p: Params, d: Dims) -> ShaftSpec:
     g, tv, wb = p.stage_gap, p.cover_thickness, d.shaft_bearing.width
+    bottom = -(g + tv + wb + p.input_shaft_length)
+    # [buildInputShaft] A second flat runs along the end that reaches out of the cover, ending END_FLAT_MARGIN short of
+    # the boss.
     return ShaftSpec(
-        bottom=-(g + tv + wb + p.input_shaft_length),
+        bottom=bottom,
         top=p.gear_thickness,
         collar=_collar(-(g + tv) + COLLAR_BEARING_GAP, -COLLAR_CLEARANCE),
-        flats=((0.0, p.gear_thickness + 1),),
+        flats=((0.0, p.gear_thickness + 1), (bottom - 1, bottom + p.input_shaft_length - END_FLAT_MARGIN)),
     )
 
 
@@ -194,11 +198,13 @@ def link_shaft_spec(p: Params, d: Dims) -> ShaftSpec | None:
 
 def output_shaft_spec(p: Params, d: Dims) -> ShaftSpec:
     g, tc, tv, wb = p.stage_gap, p.carrier_thickness, p.cover_thickness, d.shaft_bearing.width
+    top = tc + g + tv + wb + p.output_shaft_length
+    # [Build] A flat on the free end, starting END_FLAT_MARGIN clear of the rear boss.
     return ShaftSpec(
         bottom=0.0,
-        top=tc + g + tv + wb + p.output_shaft_length,
+        top=top,
         collar=None,
-        flats=(),
+        flats=((top - p.output_shaft_length + END_FLAT_MARGIN, top + 1),),
         thick_top=tc + g + tv - FIT_CLEARANCE,
     )
 
