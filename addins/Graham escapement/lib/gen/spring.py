@@ -1,7 +1,7 @@
 """Spiral spring dimensions and profile for the escapement's mainspring.
 
 Own copy of decad-gallery models/spiralspring params.go (Derive, Validate) and profile.go (the sketch geometry) at
-3a4f9d8, and of models/escapement layout.go SpringParams. No sketch constraints: the profile is plain curves
+e11a188, and of models/escapement layout.go SpringParams. No sketch constraints: the profile is plain curves
 (docs/escapement/deviations.md).
 """
 
@@ -18,6 +18,8 @@ THICKNESS_FLOOR = 1.5
 GAP_FLOOR = 1.0
 CLEARANCE_FLOOR = 0.2
 MAX_TURNS = 40
+TAPER_FRACTION = 0.075
+TAPER_MARGIN = 0.05
 
 
 @dataclasses.dataclass(frozen=True)
@@ -58,6 +60,7 @@ class SpringDims:
     eye_hole_diameter: float
     tail_length: float
     fillet_radius: float
+    taper_offset: float
     active_length: float
     wind_strain: float
 
@@ -124,6 +127,15 @@ def derive(sp: SpringParams) -> SpringDims:
     g = pitch - t
     d = pitch / 2
     rho0 = hub_r + g + d
+    rf = min(t / 2, g / 2)
+    # The C4 fillet's contact on the spoke's underside lies at x4; e_room is the taper offset that leaves TAPER_MARGIN
+    # of straight underside between the C3 and C4 fillets.
+    a = 2 * t + rf
+    x4 = -math.sqrt((hub_r + rf) ** 2 - a * a)
+    q = TAPER_MARGIN + d - x4 + rho0 - rf
+    e_room = rho0 - rf - (q * q + a * a) / (2 * q)
+    if e_room <= 0:
+        raise _err("HubDiameter and Gap leave no room for the root fillets")
 
     def rk(k: int) -> float:
         return rho0 + k * d
@@ -150,7 +162,8 @@ def derive(sp: SpringParams) -> SpringDims:
         eye_radius=re,
         eye_hole_diameter=hole,
         tail_length=tail,
-        fillet_radius=min(t / 2, g / 4),
+        fillet_radius=rf,
+        taper_offset=min(TAPER_FRACTION * t, e_room),
         active_length=math.pi * (2 * nf * (rho0 + t / 2) + d * nf * (2 * nf - 1)),
         wind_strain=(t / 2) * (1 / (hub_r + t / 2) - 1 / (hub_r + g + t / 2)),
     )
@@ -169,12 +182,13 @@ class _Points:
 def _points(sp: SpringParams, dm: SpringDims) -> _Points:
     t = sp.thickness
     r, g, d, w, rho0 = dm.hub_radius, dm.gap, dm.center_offset, dm.spoke_width, dm.first_inner_radius
+    e = dm.taper_offset
     ex, ey = dm.eye_center_x, dm.eye_center_y
     yc = ey + math.sqrt(dm.eye_radius ** 2 - t * t / 4)
     return _Points(
         c1=(-r, 0.0),
         c2=(-(r + g + t), 0.0),
-        c3=(d - math.sqrt(rho0 * rho0 - w * w), -w),
+        c3=(d + e - math.sqrt((rho0 - e) ** 2 - w * w), -w),
         c4=(-math.sqrt(r * r - w * w), -w),
         pi=(ex + t / 2, yc),
         po=(ex - t / 2, yc),
@@ -196,6 +210,7 @@ def profile(sp: SpringParams, dm: SpringDims) -> tuple[Loop, Loop, Circle]:
     def rk(k: int) -> float:
         return rho0 + k * d
 
+    e = dm.taper_offset
     inner: list[Arc] = []
     outer: list[Arc] = []
     j, o = pts.c3, pts.c2
@@ -208,7 +223,9 @@ def profile(sp: SpringParams, dm: SpringDims) -> tuple[Loop, Loop, Circle]:
             center = a
             jn = (-rk(k), 0.0)
             on = (-(rk(k) + t), 0.0)
-        inner.append(Arc(center, j, jn))
+        # Half turn 0's inner edge is centred at (d + e, 0), so the strip thickens from t at J1 to t + 2e at the spoke.
+        inner_center: Point = (d + e, 0.0) if k == 0 else center
+        inner.append(Arc(inner_center, j, jn))
         outer.append(Arc(center, o, on))
         j, o = jn, on
     ex, ey = dm.eye_center_x, dm.eye_center_y
