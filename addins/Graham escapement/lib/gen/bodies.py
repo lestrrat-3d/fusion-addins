@@ -1,6 +1,6 @@
 """Body names, part keys and build order.
 
-Own copy of decad-gallery models/escapement build.go (body name constants, slots, buildAll order) at 3a4f9d8.
+Own copy of decad-gallery models/escapement build.go (body name constants, slots, buildAll order) at e11a188.
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
 """Pinion and great-wheel radii of the escapement's gear train.
 
-Own copy of decad-gallery models/escapement gears.go and internal/gearroot at 3a4f9d8. Both gears share the root
+Own copy of decad-gallery models/escapement gears.go and internal/gearroot at e11a188. Both gears share the root
 clearance variant: root deepened by the gear-train clearance, root and tip both lowered by the 0.02 mm margin.
 """
 

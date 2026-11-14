@@ -1,7 +1,7 @@
 """Fixed constants of the escapement model.
 
 Own copy of the constants of decad-gallery models/escapement (layout.go, plates.go, drive.go, escapewheel.go,
-arbors.go, anchor.go, pendulum.go, hardware.go, collars.go, spring.go) at 3a4f9d8. Names are the Go names in
+arbors.go, anchor.go, pendulum.go, hardware.go, collars.go, spring.go) at e11a188. Names are the Go names in
 UPPER_SNAKE_CASE.
 Lengths are mm, angles are radians.
 """
@@ -57,6 +57,7 @@ SPACER_LOW = 17.5
 SPACER_HIGH = 27.75
 
 # plates.go.
+WINDOW_ROUND = 1.0
 PLATE_LEFT = -58.0
 PLATE_RIGHT = 58.0
 PLATE_BOTTOM = -96.0
@@ -92,9 +93,15 @@ RATCHET_FLOOR = 5.0
 RATCHET_TOOL = 4.5
 RATCHET_DISC = 11.5
 RATCHET_INNER = 11.0
-RATCHET_OUTER = 13.5
+RATCHET_OUTER = 14.0
 RATCHET_TEETH = 12
 CARRIER_CORE_RADIUS = 7.5
+RATCHET_ROUND = 0.5
+SLOT_END_RADIUS = 0.75
+TOOTH_ROOT_ROUND = 0.5
+BLOCK_BACK_ROUND = 1.0
+CARRIER_ARM_INNER = 9.0
+CARRIER_ARM_OUTER = 10.5
 LAYER_LOW = 5.25
 LAYER_LENGTH = 4.0
 KNOB_RADIUS = 9.0
@@ -112,6 +119,7 @@ PINION_LENGTH = 21.0
 SPOKE_HALF = 2.5
 WINDOW_INNER = 13.0
 WINDOW_OUTER = 28.0
+WHEEL_WINDOW_ROUND = 1.0
 PRESS_RADIUS = 2.55
 PRESS_FLAT = 2.05
 RELIEF_RADIUS = 2.8
@@ -154,6 +162,8 @@ ANCHOR_BORE_H = 8.75
 ANCHOR_COUNTER_RADIUS = 3.75
 ANCHOR_COUNTER_FLOOR = 24.70
 ANCHOR_COUNTER_TOP = 27.0
+ANCHOR_HUB_ROUND = 3.0
+ANCHOR_PALLET_ROUND = 1.0
 
 # pendulum.go.
 CRUTCH_LOW = 35.30
@@ -171,6 +181,8 @@ SLOT_LOW = -61.25
 SLOT_HIGH = -56.75
 SLOT_RADIUS = 1.75
 PRESS_TOOL_LOW = 1.0
+CRUTCH_ARM_ROUND = 2.5
+PENDULUM_ROD_ROUND = 4.0
 
 # hardware.go.
 BACK_BEARING_Z = -5.0

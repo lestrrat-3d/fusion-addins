@@ -28,7 +28,6 @@ from ...lib.gen.constants import (
     CARRIER_BOSS_LENGTH,
     CARRIER_BOSS_LOW,
     CARRIER_BOSS_RADIUS,
-    CARRIER_CORE_RADIUS,
     COLLAR_LENGTH,
     COLLAR_RADIUS,
     CRUTCH_HIGH,
@@ -247,7 +246,8 @@ def _site_tools(
 
 
 def _plate_outline(ctx: BuildContext, what: str, top: float, z0: float, mounts: tuple[Pt, ...]):
-    """Outline, both windows, the three lip bores and the mount holes as one sketch, extruded PLATE_THICK from z0."""
+    """Outline, both windows (with 1.0 rounds), the three lip bores and the mount holes as one sketch, extruded
+    PLATE_THICK from z0."""
     g = ctx.g
     sk = fusion.new_sketch(ctx.comp, what)
     fusion.draw_loop(sk, sections.plate_outline(top))
@@ -329,7 +329,7 @@ def build_suspension_pin(ctx: BuildContext) -> adsk.fusion.BRepBody:
 
 
 def build_escape_wheel(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildEscapeWheel] Root disc with six windows, tooth 0 patterned 30 times, the front counterbore, window and
+    """[buildEscapeWheel] Root disc with six windows with 1.0 rounds, tooth 0 patterned 30 times, the front counterbore, window and
     counterbore rim chamfers, then the pinion (turned to its phase), and the D bore joined with the rear counterbore."""
     g, comp = ctx.g, ctx.comp
     sk = fusion.new_sketch(comp, "escape_wheel disc")
@@ -363,7 +363,7 @@ def build_escape_wheel(ctx: BuildContext) -> adsk.fusion.BRepBody:
 
 
 def build_anchor(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildAnchor] The 14-piece outline, the front counterbore, the D bore, then the outline and counterbore rim
+    """[buildAnchor] The 14-piece outline with four inside rounds, the front counterbore, the D bore, then the outline and counterbore rim
     chamfers."""
     sk = fusion.new_sketch(ctx.comp, "anchor outline")
     fusion.draw_loop(sk, sections.anchor_outline(ctx.g))
@@ -377,7 +377,7 @@ def build_anchor(ctx: BuildContext) -> adsk.fusion.BRepBody:
 
 
 def build_crutch(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildCrutch] Hub, arm and round end, the pin on its end, the keyed D counterbore and the D socket."""
+    """[buildCrutch] Hub, arm (roots rounded 2.5) and round end, the pin on its end, the keyed D counterbore and the D socket."""
     sk = fusion.new_sketch(ctx.comp, "crutch outline")
     fusion.draw_loop(sk, sections.crutch_outline(ctx.g))
     profile = fusion.profile_with_loops(sk, 1, "crutch outline_sketch", only=True)
@@ -391,7 +391,7 @@ def build_crutch(ctx: BuildContext) -> adsk.fusion.BRepBody:
 
 
 def build_pendulum(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildPendulum] Eye, rod and bob with a lip bore and the crutch slot, the bearing pocket, then rim chamfers."""
+    """[buildPendulum] Eye, rod (corners rounded 4.0) and bob with a lip bore and the crutch slot, the bearing pocket, then rim chamfers."""
     sk = fusion.new_sketch(ctx.comp, "pendulum outline")
     fusion.draw_loop(sk, sections.pendulum_outline(ctx.g))
     fusion.draw_circle(sk, _ORIGIN, LIP_RADIUS)
@@ -413,7 +413,7 @@ def build_suspension_cap(ctx: BuildContext) -> adsk.fusion.BRepBody:
 
 def build_great_wheel(ctx: BuildContext) -> adsk.fusion.BRepBody:
     """[buildGreatWheel] The 48-tooth gear with its round bore, the rear counterbore with its rim chamfer, then the
-    internal ratchet cut."""
+    internal ratchet cut (a ratchet tooth with its 0.5 root round)."""
     wheel = build_spur(ctx, "great_wheel", gears.great_dims(ctx.p), GREAT_REAR, GREAT_LENGTH, GREAT_BORE)
     counter = disc(ctx, "great_wheel counterbore", GREAT_COUNTER_RADIUS, GREAT_COUNTER_LOW, GREAT_COUNTER_FLOOR)
     wheel = fusion.cut(ctx, wheel, [counter], "great_wheel counterbore_cut")
@@ -430,25 +430,21 @@ def build_great_wheel(ctx: BuildContext) -> adsk.fusion.BRepBody:
 
 
 def build_pawl_carrier(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildPawlCarrier] Core, two pawls, a short boss in front, and the D bore."""
-    core = disc(ctx, "pawl_carrier core", CARRIER_CORE_RADIUS, LAYER_LOW, LAYER_LOW + LAYER_LENGTH)
-    rest = []
-    for j, gang in enumerate((math.pi / 2 - ctx.g.carrier_offset, 3 * math.pi / 2 - ctx.g.carrier_offset)):
-        sk = fusion.new_sketch(ctx.comp, f"pawl_carrier pawl {j + 1}")
-        fusion.draw_loop(sk, sections.pawl_loop(gang))
-        profile = fusion.profile_with_loops(sk, 1, f"pawl_carrier pawl_{j + 1}_sketch", only=True)
-        rest.append(fusion.extrude(ctx, profile, LAYER_LOW, LAYER_LENGTH, f"pawl_carrier pawl_{j + 1}_extrude"))
-    rest.append(
-        disc(ctx, "pawl_carrier boss", CARRIER_BOSS_RADIUS, CARRIER_BOSS_LOW, CARRIER_BOSS_LOW + CARRIER_BOSS_LENGTH)
-    )
-    body = fusion.join(ctx, core, rest, "pawl_carrier parts_join")
+    """[buildPawlCarrier] The pawl layer (one loop of the core and both pawls), the boss, and the D bore."""
+    gangs = (math.pi / 2 - ctx.g.carrier_offset, 3 * math.pi / 2 - ctx.g.carrier_offset)
+    sk = fusion.new_sketch(ctx.comp, "pawl_carrier layer")
+    fusion.draw_loop(sk, sections.pawl_layer(gangs))
+    profile = fusion.profile_with_loops(sk, 1, "pawl_carrier layer_sketch", only=True)
+    layer = fusion.extrude(ctx, profile, LAYER_LOW, LAYER_LENGTH, "pawl_carrier layer_extrude")
+    boss = disc(ctx, "pawl_carrier boss", CARRIER_BOSS_RADIUS, CARRIER_BOSS_LOW, CARRIER_BOSS_LOW + CARRIER_BOSS_LENGTH)
+    body = fusion.join(ctx, layer, [boss], "pawl_carrier parts_join")
     body = _bore_with_d(ctx, body, "pawl_carrier", LAYER_LOW - 1.0, LAYER_LOW - 1.0 + 7.75, d=sections.DRIVE_D)
     return _require_solid(ctx, body)
 
 
 def build_mainspring(ctx: BuildContext) -> adsk.fusion.BRepBody:
     """[buildMainspring, spiralspring Build] The spring profile (outer loop, D bore, eye hole) extruded over its
-    height, the five concave edges filleted, then the outer-loop chamfers."""
+    height, the five concave edges filleted (radius dm.fillet_radius), then the outer-loop chamfers."""
     sp = spring.spring_params()
     dm = ctx.g.spring
     outer, bore, eye = spring.profile(sp, dm)

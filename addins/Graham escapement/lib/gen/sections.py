@@ -1,23 +1,28 @@
 """Every 2D loop of the escapement parts, in part-local coordinates (origin on the part's axis).
 
 Own copy of the section geometry of decad-gallery models/escapement (plates.go, escapewheel.go, anchor.go, pendulum.go,
-drive.go, arbors.go, collars.go, builder.go dTool) at 3a4f9d8. Arcs are counterclockwise (curves.Arc); a clockwise
+drive.go, arbors.go, collars.go, builder.go dTool) at e11a188. Arcs are counterclockwise (curves.Arc); a clockwise
 piece of the gallery is the counterclockwise arc from its other end. Pieces that meet share one point tuple, so loops
-close exactly.
+close exactly. The gallery's sketch rounds are tangent arcs computed by fillet.py: each rounded loop is its sharp
+pieces plus a map of corner key to radius, and the public loop is fillet.round_loop of both.
 """
 
 from __future__ import annotations
 
 import math
+from typing import Sequence
 
+from . import fillet
 from .constants import (
-    BODY_PRESS_FLAT, BODY_PRESS_RADIUS, COLLAR_RADIUS, DRIVE_PRESS_RADIUS, FLAT_REACH, HUB_RING, KEYED_COUNTER_FLAT,
-    KEYED_COUNTER_RADIUS, KEYED_RING_FLAT, PLATE_BOTTOM, PLATE_CORNER, PLATE_LEFT, PLATE_RIGHT,
-    PRESS_FLAT, PRESS_RADIUS, RATCHET_DISC, RATCHET_INNER, RATCHET_OUTER, RATCHET_TEETH, SLOT_HIGH,
-    SLOT_LOW, SLOT_RADIUS, SPINE_HALF, SPOKE_HALF, WINDOW_BOTTOM, WINDOW_CORNER, WINDOW_INNER, WINDOW_OUTER,
+    ANCHOR_HUB_ROUND, ANCHOR_PALLET_ROUND, BLOCK_BACK_ROUND, BODY_PRESS_FLAT, BODY_PRESS_RADIUS, CARRIER_ARM_INNER,
+    CARRIER_ARM_OUTER, CARRIER_CORE_RADIUS, COLLAR_RADIUS, CRUTCH_ARM_ROUND, DRIVE_PRESS_RADIUS, FLAT_REACH,
+    HUB_RING, KEYED_COUNTER_FLAT, KEYED_COUNTER_RADIUS, KEYED_RING_FLAT, PENDULUM_ROD_ROUND, PLATE_BOTTOM,
+    PLATE_CORNER, PLATE_LEFT, PLATE_RIGHT, PRESS_FLAT, PRESS_RADIUS, RATCHET_DISC, RATCHET_INNER, RATCHET_OUTER,
+    RATCHET_ROUND, RATCHET_TEETH, SLOT_END_RADIUS, SLOT_HIGH, SLOT_LOW, SLOT_RADIUS, SPINE_HALF, SPOKE_HALF,
+    TOOTH_ROOT_ROUND, WHEEL_WINDOW_ROUND, WINDOW_BOTTOM, WINDOW_CORNER, WINDOW_INNER, WINDOW_OUTER, WINDOW_ROUND,
     WINDOW_SIDE, WINDOW_TOP,
 )
-from .curves import Arc, Line, Loop, Point
+from .curves import Arc, Curve, Line, Loop, Point
 from .layout import Geometry, polar
 
 Pt = Point
@@ -41,8 +46,10 @@ def plate_outline(top: float) -> Loop:
     ]
 
 
-def window_loop(g: Geometry, sx: float) -> Loop:
-    """Window on side sx (+1 right, -1 left): 6 lines and 5 arcs [instructions "Window loop"]."""
+def _window_pieces(g: Geometry, sx: float) -> tuple[list[Curve], dict[int, float]]:
+    """Sharp window on side sx (+1 right, -1 left): 6 lines and 5 arcs, and the round of each inside corner.
+
+    Keys: 4 F, 5 H, 6 I, 7 J, 8 K, 9 L, 10 A [instructions "Window loop"]."""
     py, gy = g.axis_p[1], g.axis_g[1]
     h = math.sqrt(HUB_RING * HUB_RING - SPINE_HALF * SPINE_HALF)
     fx = math.sqrt(HUB_RING * HUB_RING - (WINDOW_TOP - py) ** 2)
@@ -65,7 +72,7 @@ def window_loop(g: Geometry, sx: float) -> Loop:
         # The gallery's piece runs clockwise on the right and counterclockwise on the left.
         return Arc(centre, to, frm) if sx > 0 else Arc(centre, frm, to)
 
-    return [
+    pieces: list[Curve] = [
         Line(a, b),
         arc(c1, c, b),
         Line(c, d),
@@ -78,6 +85,17 @@ def window_loop(g: Geometry, sx: float) -> Loop:
         arc(hub_g, k, ll),
         Line(ll, a),
     ]
+    return pieces, {key: WINDOW_ROUND for key in range(4, 11)}
+
+
+def window_loop(g: Geometry, sx: float) -> Loop:
+    """Window on side sx with its 1.0 rounds: 6 lines and 12 arcs."""
+    return fillet.round_loop(*_window_pieces(g, sx))
+
+
+def window_rounds(g: Geometry, sx: float) -> list[fillet.Round]:
+    """The window's seven rounds in the order F, H, I, J, K, L, A."""
+    return fillet.loop_rounds(*_window_pieces(g, sx))
 
 
 def lip_centres(g: Geometry) -> list[Pt]:
@@ -88,19 +106,27 @@ def lip_centres(g: Geometry) -> list[Pt]:
 MOUNT_HOLES: tuple[Pt, ...] = ((-40.0, 90.0), (40.0, 90.0))
 
 
-def escape_windows() -> list[Loop]:
-    """The six windows of the escape wheel: 2 arcs and 2 lines each [escapeDisc]."""
-    out: list[Loop] = []
+def _escape_window_pieces(k: int) -> tuple[list[Curve], dict[int, float]]:
+    """Sharp window k of the escape wheel: 2 arcs and 2 lines, and the round of each corner (0 b, 1 c, 2 d, 3 a)."""
     d13, d28 = math.asin(SPOKE_HALF / WINDOW_INNER), math.asin(SPOKE_HALF / WINDOW_OUTER)
-    for k in range(6):
-        s1 = (90 + 60 * k) * _DEG
-        s2 = s1 + 60 * _DEG
-        a = polar(WINDOW_INNER, s1 + d13)
-        b = polar(WINDOW_INNER, s2 - d13)
-        c = polar(WINDOW_OUTER, s2 - d28)
-        d = polar(WINDOW_OUTER, s1 + d28)
-        out.append([Arc(_ORIGIN, a, b), Line(b, c), Arc(_ORIGIN, d, c), Line(d, a)])
-    return out
+    s1 = (90 + 60 * k) * _DEG
+    s2 = s1 + 60 * _DEG
+    a = polar(WINDOW_INNER, s1 + d13)
+    b = polar(WINDOW_INNER, s2 - d13)
+    c = polar(WINDOW_OUTER, s2 - d28)
+    d = polar(WINDOW_OUTER, s1 + d28)
+    pieces: list[Curve] = [Arc(_ORIGIN, a, b), Line(b, c), Arc(_ORIGIN, d, c), Line(d, a)]
+    return pieces, {key: WHEEL_WINDOW_ROUND for key in range(4)}
+
+
+def escape_windows() -> list[Loop]:
+    """The six windows of the escape wheel with their 1.0 rounds: 2 lines and 6 arcs each [escapeDisc]."""
+    return [fillet.round_loop(*_escape_window_pieces(k)) for k in range(6)]
+
+
+def escape_window_rounds(k: int) -> list[fillet.Round]:
+    """The four rounds of window k in the order b, c, d, a."""
+    return fillet.loop_rounds(*_escape_window_pieces(k))
 
 
 def escape_tooth(g: Geometry) -> Loop:
@@ -109,10 +135,12 @@ def escape_tooth(g: Geometry) -> Loop:
     return [Line(t, ll), Line(ll, b), Line(b, t)]
 
 
-def anchor_outline(g: Geometry) -> Loop:
-    """The anchor's 14 pieces about the pallet arbor, relative to P [anchorOutline]."""
+def _anchor_pieces(g: Geometry) -> tuple[list[Curve], dict[int, float]]:
+    """The anchor's 14 sharp pieces about the pallet arbor, relative to P, and its four rounds [anchorOutline].
+
+    Keys: 1 G_E and 4 G_X (pallet rounds), 2 H_E and 3 H_X (hub rounds)."""
     o = _ORIGIN
-    return [
+    pieces: list[Curve] = [
         Line(g.ce, g.fe),
         Arc(o, g.ge, g.fe),
         Line(g.he, g.ge),
@@ -128,31 +156,65 @@ def anchor_outline(g: Geometry) -> Loop:
         Line(g.me, g.ke),
         Arc(o, g.ke, g.ce),
     ]
+    return pieces, {1: ANCHOR_PALLET_ROUND, 4: ANCHOR_PALLET_ROUND, 2: ANCHOR_HUB_ROUND, 3: ANCHOR_HUB_ROUND}
+
+
+def anchor_outline(g: Geometry) -> Loop:
+    """The anchor with its four inside rounds: 8 lines and 10 arcs."""
+    return fillet.round_loop(*_anchor_pieces(g))
+
+
+def anchor_rounds(g: Geometry) -> list[fillet.Round]:
+    """The anchor's rounds in the order G_E, H_E, H_X, G_X."""
+    return fillet.loop_rounds(*_anchor_pieces(g))
 
 
 CRUTCH_PIN: tuple[Pt, float] = ((0.0, -45.0), 1.5)
 
 
-def crutch_outline(g: Geometry) -> Loop:
-    """Hub, arm and round end of the crutch, relative to P [buildCrutch]."""
+def _crutch_pieces(g: Geometry) -> tuple[list[Curve], dict[int, float]]:
+    """Sharp hub, arm and round end of the crutch, relative to P, and the arm roots (0 A_L, 3 A_R) [buildCrutch]."""
     e: Pt = (0.0, -45.0)
-    return [
+    pieces: list[Curve] = [
         Arc(_ORIGIN, g.crutch_ar, g.crutch_al),
         Line(g.crutch_al, g.crutch_bl),
         Arc(e, g.crutch_bl, g.crutch_br),
         Line(g.crutch_br, g.crutch_ar),
     ]
+    return pieces, {0: CRUTCH_ARM_ROUND, 3: CRUTCH_ARM_ROUND}
 
 
-def pendulum_outline(g: Geometry) -> Loop:
-    """Eye, rod and bob of the pendulum, relative to S [buildPendulum]."""
+def crutch_outline(g: Geometry) -> Loop:
+    """The crutch with both arm roots rounded 2.5: 2 lines and 4 arcs."""
+    return fillet.round_loop(*_crutch_pieces(g))
+
+
+def crutch_rounds(g: Geometry) -> list[fillet.Round]:
+    """The crutch's rounds in the order A_L, A_R."""
+    return fillet.loop_rounds(*_crutch_pieces(g))
+
+
+def _pendulum_pieces(g: Geometry) -> tuple[list[Curve], dict[int, float]]:
+    """Sharp eye, rod and bob of the pendulum, relative to S, and the rod corners (0 E_L, 1 Q_L, 2 Q_R, 3 E_R)
+    [buildPendulum]."""
     bob: Pt = (0.0, -g.params.pendulum_length)
-    return [
+    pieces: list[Curve] = [
         Arc(_ORIGIN, g.pend_er, g.pend_el),
         Line(g.pend_el, g.pend_ql),
         Arc(bob, g.pend_ql, g.pend_qr),
         Line(g.pend_qr, g.pend_er),
     ]
+    return pieces, {key: PENDULUM_ROD_ROUND for key in range(4)}
+
+
+def pendulum_outline(g: Geometry) -> Loop:
+    """The pendulum with its four rod corners rounded 4.0: 2 lines and 6 arcs."""
+    return fillet.round_loop(*_pendulum_pieces(g))
+
+
+def pendulum_rounds(g: Geometry) -> list[fillet.Round]:
+    """The pendulum's rounds in the order E_L, Q_L, Q_R, E_R."""
+    return fillet.loop_rounds(*_pendulum_pieces(g))
 
 
 def crutch_slot() -> Loop:
@@ -200,11 +262,21 @@ def press_d_area() -> float:
     return d_area(END_D)
 
 
-def ratchet_triangle() -> Loop:
-    """Ratchet tooth: (11 at 0 deg), (13.5 at 30 deg), (11 at 30 deg) [ratchetToolBody]."""
+def _ratchet_triangle_pieces() -> tuple[list[Curve], dict[int, float]]:
+    """Sharp ratchet tooth: (11 at 0 deg), (14 at 30 deg), (11 at 30 deg), and the root round at the outer vertex."""
     step = 2 * math.pi / RATCHET_TEETH
     a, c, d = polar(RATCHET_INNER, 0.0), polar(RATCHET_OUTER, step), polar(RATCHET_INNER, step)
-    return [Line(a, c), Line(c, d), Line(d, a)]
+    return [Line(a, c), Line(c, d), Line(d, a)], {0: RATCHET_ROUND}
+
+
+def ratchet_triangle() -> Loop:
+    """Ratchet tooth with its 0.5 root round: 3 lines and 1 arc [ratchetToolBody]."""
+    return fillet.round_loop(*_ratchet_triangle_pieces())
+
+
+def ratchet_rounds() -> list[fillet.Round]:
+    """The tooth's one round."""
+    return fillet.loop_rounds(*_ratchet_triangle_pieces())
 
 
 def ratchet_alpha() -> float:
@@ -220,40 +292,70 @@ def ratchet_alpha() -> float:
     return math.atan2(a[1] + t * dy, a[0] + t * dx)
 
 
-def ratchet_tool_outline() -> Loop:
-    """Outline of the union of the disc (r 11.5) and the 12 ratchet triangles.
+def _ratchet_tool_pieces() -> tuple[list[Curve], dict[int, float]]:
+    """Sharp outline of the union of the disc (r 11.5) and the 12 ratchet triangles, and the root round of each tooth.
 
-    Per tooth k: an arc on r 11.5 from 30k deg to 30k deg + alpha, a line out to (13.5 at 30(k+1) deg) and a radial
-    line in to (11.5 at 30(k+1) deg)."""
+    Per tooth k: an arc on r 11.5 from 30k deg to 30k deg + alpha, a line out to (14 at 30(k+1) deg) and a radial
+    line in to (11.5 at 30(k+1) deg). The round of tooth k is key 3k + 1."""
     n = RATCHET_TEETH
     step = 2 * math.pi / n
     alpha = ratchet_alpha()
     starts = [polar(RATCHET_DISC, step * k) for k in range(n)]
-    out: Loop = []
+    out: list[Curve] = []
     for k in range(n):
         x = polar(RATCHET_DISC, step * k + alpha)
         c = polar(RATCHET_OUTER, step * (k + 1))
         nxt = starts[(k + 1) % n]
         out += [Arc(_ORIGIN, starts[k], x), Line(x, c), Line(c, nxt)]
-    return out
+    return out, {3 * k + 1: RATCHET_ROUND for k in range(n)}
 
 
-def pawl_loop(gang: float) -> Loop:
-    """Pawl loop whose base angle is gang [pawlLoop]."""
-    o = _ORIGIN
+def ratchet_tool_outline() -> Loop:
+    """The tool outline with a 0.5 root round on each tooth: 24 lines and 24 arcs."""
+    return fillet.round_loop(*_ratchet_tool_pieces())
+
+
+def _pawl_pieces(gangs: Sequence[float]) -> tuple[list[Curve], dict[int, float]]:
+    """Sharp pawl layer: the core, both slots and both pawls as one loop of nine pieces per pawl [pawlLayer].
+
+    For pawl j with base angle g: core arc, slot-end round, arm inner arc, two lines to the tip, tip arc, contact
+    line, arm outer arc, back line. Keys 9j + 6 (contact to outer arc) is the tooth root, 9j + 8 (back to the next
+    core arc) is the block back."""
+    n = len(gangs)
 
     def at(r: float, a: float) -> Pt:
         return (r * math.cos(a), r * math.sin(a))
 
-    g = gang
-    p1, p2, p3 = at(7.0, g + 10 * _DEG), at(7.0, g), at(9.0, g)
-    p4, p5 = at(9.0, g - 120 * _DEG), at(10.5, g - 120 * _DEG)
-    p6, p7 = at(12.5, g - 116 * _DEG), at(12.5, g - 112 * _DEG)
-    p8, p9 = at(10.5, g - 112 * _DEG), at(10.5, g + 10 * _DEG)
-    return [
-        Arc(o, p2, p1), Line(p2, p3), Arc(o, p4, p3), Line(p4, p5), Line(p5, p6),
-        Arc(o, p6, p7), Line(p7, p8), Arc(o, p8, p9), Line(p9, p1),
-    ]
+    slot = SLOT_END_RADIUS / (CARRIER_CORE_RADIUS + SLOT_END_RADIUS)
+    corners = [at(CARRIER_CORE_RADIUS, g + 10 * _DEG) for g in gangs]
+    pieces: list[Curve] = []
+    rounds: dict[int, float] = {}
+    for j, g in enumerate(gangs):
+        c = g - slot
+        prev = corners[(j + n - 1) % n]
+        slot_start, slot_top = at(CARRIER_CORE_RADIUS, c), at(CARRIER_ARM_INNER, c)
+        centre = at(CARRIER_CORE_RADIUS + SLOT_END_RADIUS, c)
+        p4, p5 = at(CARRIER_ARM_INNER, g - 120 * _DEG), at(CARRIER_ARM_OUTER, g - 120 * _DEG)
+        p6, p7 = at(12.5, g - 116 * _DEG), at(12.5, g - 112 * _DEG)
+        p8, p9 = at(CARRIER_ARM_OUTER, g - 112 * _DEG), at(CARRIER_ARM_OUTER, g + 10 * _DEG)
+        rounds[9 * j + 6] = TOOTH_ROOT_ROUND
+        rounds[9 * j + 8] = BLOCK_BACK_ROUND
+        pieces += [
+            Arc(_ORIGIN, prev, slot_start), Arc(centre, slot_top, slot_start), Arc(_ORIGIN, p4, slot_top),
+            Line(p4, p5), Line(p5, p6), Arc(_ORIGIN, p6, p7), Line(p7, p8), Arc(_ORIGIN, p8, p9),
+            Line(p9, corners[j]),
+        ]
+    return pieces, rounds
+
+
+def pawl_layer(gangs: Sequence[float]) -> Loop:
+    """The pawl layer with its rounds: for two pawls 8 lines and 14 arcs."""
+    return fillet.round_loop(*_pawl_pieces(gangs))
+
+
+def pawl_rounds(gangs: Sequence[float]) -> list[fillet.Round]:
+    """The layer's rounds in the order pawl 1 tooth root, pawl 1 block back, pawl 2 tooth root, ..."""
+    return fillet.loop_rounds(*_pawl_pieces(gangs))
 
 
 # (radius, z) polygons with a point on the axis at each end [arbors.go *ArborPoints, pinPoints].
