@@ -13,6 +13,7 @@ import dataclasses
 import math
 
 from . import bodies as b
+from .constants import CARRIER_CORE_RADIUS, SLOT_END_RADIUS
 from .fasteners import PILLARS
 from .gears import great_dims, pinion_dims
 from .involute import gear_outline_polygon
@@ -20,7 +21,6 @@ from .layout import Geometry, angle_of
 from .motion import State
 from .params import Vec3
 from .pose import body_poses
-from .constants import CARRIER_CORE_RADIUS, SLOT_END_RADIUS
 from .sections import (
     KEYED_RING_D, DFamily, anchor_rounds, crutch_rounds, escape_window_rounds, pawl_rounds, pendulum_rounds,
     ratchet_rounds, window_rounds,

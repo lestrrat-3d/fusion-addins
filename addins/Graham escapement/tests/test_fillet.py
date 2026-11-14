@@ -68,14 +68,12 @@ class FilletTest(unittest.TestCase):
             fillet.round_loop([Line((0.0, 0.0), (1.0, 0.0)), Spline(((1.0, 0.0), (2.0, 1.0), (0.0, 0.0)))], {})
 
     def test_probe(self):
-        a, b = Line((0.0, 0.0), (5.0, 0.0)), Line((0.0, 0.0), (0.0, 5.0))
         r = fillet.loop_rounds([Line((5.0, 0.0), (0.0, 0.0)), Line((0.0, 0.0), (0.0, 5.0)), Line((0.0, 5.0), (5.0, 0.0))],
                                {0: 1.0})[0]
         p = r.probe()
         d_corner = math.hypot(p[0] - r.corner[0], p[1] - r.corner[1])
         d_centre = math.hypot(p[0] - r.centre[0], p[1] - r.centre[1])
         self.assertLess(abs(d_corner - (d_centre - r.radius)), 1e-9)
-        self.assertEqual((a.start, b.start), ((0.0, 0.0), (0.0, 0.0)))
 
 
 if __name__ == "__main__":

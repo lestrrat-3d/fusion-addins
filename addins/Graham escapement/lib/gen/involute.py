@@ -2,8 +2,8 @@
 clearance variant of internal/gearroot, at e11a188, and the planetarygearbox ring tool radii (gears.go ringTool).
 The spurgear refactor since the gearbox port (7302e55), including the re-emits 9037e391d, ef0539a3b (#242) and
 e11a188db (#249), did not change the radii, flank, closing-radius or root fillet math. The closing-radius bisection
-now tests `half(mid) > limit` where it tested `>=`; the two
-differ only on an exact tie. `validate_spur` and the closing-radius error text are not the gallery's, and the build
+now tests `half(mid) > limit` where it tested `>=`; the two differ
+only on an exact tie. `validate_spur` and the closing-radius error text are not the gallery's, and the build
 does not call them."""
 
 from __future__ import annotations
