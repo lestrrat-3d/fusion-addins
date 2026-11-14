@@ -35,7 +35,7 @@ class FinishPlanesTest(unittest.TestCase):
             "back_plate": [(-6.0, PLATE, 6, plate), (0.0, PLATE, 6, plate)],
             "front_plate": [(28.0, PLATE, 6, plate), (34.0, PLATE, 6, plate)],
             "escape_wheel": [(22.0, INNER_MULTI_OR_RIM, 6, (3.75,)), (25.0, INNER_MULTI_OR_RIM, 7, (3.75,))],
-            "anchor": [(21.0, RIM, 1, (3.75,)), (26.0, RIM, 2, (3.75,))],
+            "anchor": [(21.0, RIM, 1, ()), (26.0, RIM, 1, ())],
             "pendulum": [(38.80, RIM, 2, plate), (44.80, RIM, 2, plate)],
             "great_wheel": [(1.5, INNER_RIM, 1, (4.10,))],
             "mainspring": [(0.0, OUTER_OR_LONG_INNER, 2, ()), (6.0, OUTER_OR_LONG_INNER, 2, ())],

@@ -16,9 +16,6 @@ from ...lib.gen import bearing, edgefinish, fasteners, gears, sections, spring
 from ...lib.gen.constants import (
     ANCHOR_BORE_AT,
     ANCHOR_BORE_H,
-    ANCHOR_COUNTER_FLOOR,
-    ANCHOR_COUNTER_RADIUS,
-    ANCHOR_COUNTER_TOP,
     ANCHOR_HIGH,
     ANCHOR_LOW,
     BACK_LOW,
@@ -54,8 +51,6 @@ from ...lib.gen.constants import (
     PILLAR_HIGH,
     PILLAR_LOW,
     PILLAR_RADIUS,
-    PINION_COUNTER_FLOOR,
-    PINION_COUNTER_LOW,
     PINION_LENGTH,
     PINION_REAR,
     PLATE_THICK,
@@ -330,8 +325,8 @@ def build_suspension_pin(ctx: BuildContext) -> adsk.fusion.BRepBody:
 
 
 def build_escape_wheel(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildEscapeWheel] Root disc with six windows with 1.0 rounds, tooth 0 patterned 30 times, the front counterbore, window and
-    counterbore rim chamfers, then the pinion (turned to its phase), and the D bore joined with the rear counterbore."""
+    """[buildEscapeWheel] Root disc with six windows with 1.0 rounds, tooth 0 patterned 30 times, the front
+    counterbore, window and counterbore rim chamfers, then the pinion (turned to its phase), and the D bore."""
     g, comp = ctx.g, ctx.comp
     sk = fusion.new_sketch(comp, "escape_wheel disc")
     fusion.draw_circle(sk, _ORIGIN, ROOT_RADIUS)
@@ -357,21 +352,16 @@ def build_escape_wheel(ctx: BuildContext) -> adsk.fusion.BRepBody:
     bore = d_tool(
         ctx, "escape_wheel bore", -BORE_TOOL_REACH, WHEEL_HIGH + BORE_TOOL_REACH + 1, d=sections.BODY_D
     )
-    rear = disc(ctx, "escape_wheel rear_counterbore", WHEEL_COUNTER_RADIUS, PINION_COUNTER_LOW, PINION_COUNTER_FLOOR)
-    tool = fusion.join(ctx, bore, [rear], "escape_wheel bore_tool_join")
-    part = fusion.cut(ctx, part, [tool], "escape_wheel bore_cut")
+    part = fusion.cut(ctx, part, [bore], "escape_wheel bore_cut")
     return _require_solid(ctx, part)
 
 
 def build_anchor(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildAnchor] The 14-piece outline with four inside rounds, the front counterbore, the D bore, then the outline and counterbore rim
-    chamfers."""
+    """[buildAnchor] The 14-piece outline with four inside rounds, the D bore, then the outline chamfers."""
     sk = fusion.new_sketch(ctx.comp, "anchor outline")
     fusion.draw_loop(sk, sections.anchor_outline(ctx.g))
     profile = fusion.profile_with_loops(sk, 1, "anchor outline_sketch", only=True)
     body = fusion.extrude(ctx, profile, ANCHOR_LOW, ANCHOR_HIGH - ANCHOR_LOW, "anchor outline_extrude")
-    counter = disc(ctx, "anchor counterbore", ANCHOR_COUNTER_RADIUS, ANCHOR_COUNTER_FLOOR, ANCHOR_COUNTER_TOP)
-    body = fusion.cut(ctx, body, [counter], "anchor counterbore_cut")
     body = _bore_with_d(ctx, body, "anchor", ANCHOR_BORE_AT, ANCHOR_BORE_AT + ANCHOR_BORE_H, d=sections.BODY_D)
     finish_face_edges(ctx, body)
     return _require_solid(ctx, body)

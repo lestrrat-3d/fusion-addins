@@ -15,7 +15,7 @@ import dataclasses
 import math
 
 from .constants import (
-    ANCHOR_COUNTER_RADIUS, GREAT_COUNTER_RADIUS, LIP_RADIUS, PENDULUM_HIGH, SEAT_RADIUS, WHEEL_COUNTER_RADIUS,
+    GREAT_COUNTER_RADIUS, LIP_RADIUS, PENDULUM_HIGH, SEAT_RADIUS, WHEEL_COUNTER_RADIUS,
 )
 from .curves import Circle, Loop
 from .layout import Geometry
@@ -55,8 +55,8 @@ _PLANES: dict[str, tuple[FinishPlane, ...]] = {
         FinishPlane(25.0, INNER_MULTI_OR_RIM, 7, (WHEEL_COUNTER_RADIUS,)),
     ),
     "anchor": (
-        FinishPlane(21.0, RIM, 1, (ANCHOR_COUNTER_RADIUS,)),
-        FinishPlane(26.0, RIM, 2, (ANCHOR_COUNTER_RADIUS,)),
+        FinishPlane(21.0, RIM, 1),
+        FinishPlane(26.0, RIM, 1),
     ),
     "pendulum": (
         FinishPlane(38.80, RIM, 2, _PLATE_RADII),
@@ -139,10 +139,7 @@ def _kept(g: Geometry, part: str, z: float) -> list[tuple[Loop | Circle, bool]]:
             out.append((Circle((0.0, 0.0), WHEEL_COUNTER_RADIUS), False))
         return out
     if part == "anchor":
-        out = [(anchor_outline(g), True)]
-        if z == 26.0:
-            out.append((Circle((0.0, 0.0), ANCHOR_COUNTER_RADIUS), False))
-        return out
+        return [(anchor_outline(g), True)]
     if part == "great_wheel":
         return [(Circle((0.0, 0.0), GREAT_COUNTER_RADIUS), False)]
     if part == "pendulum":

@@ -10,7 +10,7 @@ import math
 
 from . import bodies, edgefinish, gears
 from .constants import (
-    ANCHOR_COUNTER_RADIUS, CARRIER_BOSS_RADIUS, COLLAR_LENGTH, GREAT_BORE, GREAT_COUNTER_RADIUS, LIP_RADIUS,
+    CARRIER_BOSS_RADIUS, COLLAR_LENGTH, GREAT_BORE, GREAT_COUNTER_RADIUS, LIP_RADIUS,
     MOUNT_RADIUS, RETAINER_HIGH, RETAINER_LOW, RETAINER_RADIUS, SEAT_RADIUS, SPRING_SOCKET_R, WHEEL_COUNTER_RADIUS,
     WHEEL_HIGH, WHEEL_LOW,
 )
@@ -219,12 +219,12 @@ def part_volume(g: Geometry, part: str) -> Expect:
         value = (pi * 33.0**2 - windows) * (WHEEL_HIGH - WHEEL_LOW)
         value += 30 * _tooth_outside_area(g) * (WHEEL_HIGH - WHEEL_LOW)
         value += _gear_area(pinion) * 20.5
-        value -= pi * WHEEL_COUNTER_RADIUS**2 * (1.80 + 1.05) + d_body * 20.65 + c
+        value -= pi * WHEEL_COUNTER_RADIUS**2 * 1.05 + d_body * 22.45 + c
         f = _fillet_allowance(pinion, 21.0)
         value += f
         return Expect(value, 0.5 * f + 0.002 * value)
     if part == "anchor":
-        value = _loop_area(anchor_outline(g)) * 5 - pi * ANCHOR_COUNTER_RADIUS**2 * 1.30 - d_body * 3.70 - c
+        value = (_loop_area(anchor_outline(g)) - d_body) * 5 - c
         return Expect(value, 0.002 * value)
     if part == "crutch":
         value = _loop_area(crutch_outline(g)) * 3 + pi * 1.5**2 * 6.0 - d_kc * 2.0 - d_end * 1.0

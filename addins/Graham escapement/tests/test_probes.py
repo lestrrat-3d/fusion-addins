@@ -62,10 +62,8 @@ def material(part, x, y, z):
         if math.hypot(x, y) <= 33.0:
             return not any(inside(w, x, y) for w in sections.escape_windows()) and not d_void(sections.BODY_D, x, y)
         return inside(sections.escape_tooth(G), x, y)
-    if part == "anchor" and z in (22.5, 23.5, 24.2):
+    if part == "anchor" and z in (22.5, 23.5, 24.2, 25.0, 25.9):
         return inside(sections.anchor_outline(G), x, y) and not d_void(sections.BODY_D, x, y)
-    if part == "anchor" and z == 25.0:
-        return inside(sections.anchor_outline(G), x, y) and not near((0.0, 0.0), 3.75, x, y)
     if part in ("crutch", "winding_knob") and z == 36.5:
         base = inside(sections.crutch_outline(G), x, y) if part == "crutch" else math.hypot(x, y) < 9.0
         return base and not d_void(sections.KEYED_COUNTER_D, x, y)
@@ -120,7 +118,7 @@ class PartProbesTest(unittest.TestCase):
                     continue
                 checked += 1
                 self.assertEqual(got, pr.expect == INSIDE, f"{part} {pr.label} {pr.point}")
-        self.assertGreaterEqual(checked, 108)
+        self.assertGreaterEqual(checked, 110)
 
     def test_arbor_probes_agree_with_meridians(self):
         """Independent oracle for the four arbor keys: the meridian's radius at z, less the flat boxes."""
