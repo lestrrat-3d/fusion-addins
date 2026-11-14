@@ -6,7 +6,14 @@ import _support  # noqa: F401
 from gen.bearing import lookup
 from gen.dims import derive, rim_inner_radius
 from gen.kits import default_params_for
-from gen.inputs import INPUT_SPECS, params_from_values
+from gen.inputs import (
+    INPUT_SPECS,
+    SELECTOR_IDS,
+    kit_input_values,
+    params_from_values,
+    status_html,
+    status_rows,
+)
 from gen.params import (
     MIN_EDGE_CHAMFER,
     Frame,
@@ -119,9 +126,13 @@ class ParamsTest(unittest.TestCase):
     def test_input_specs(self):
         ids = [s.id for s in INPUT_SPECS]
         self.assertEqual(len(ids), len(set(ids)))
-        # Placement is chosen by selection in the dialog, so the table holds the 24 gallery inputs, the ears box, the
+        # Placement is chosen by selection in the dialog, so the table holds the 26 gallery inputs, the ears box, the
         # split box and the sacrificial bridging box.
-        self.assertEqual(len(ids), 27)
+        self.assertEqual(len(ids), 29)
+        self.assertEqual(ids[ids.index("bearing_clearance") + 1 :][:3], ["planet_bearing", "shaft_bearing", "seat_chamfer"])
+        specs = {s.id: s for s in INPUT_SPECS}
+        for sel in SELECTOR_IDS:
+            self.assertEqual((specs[sel].kind, specs[sel].default, specs[sel].choices), ("choice", "605ZZ", ("605ZZ", "608ZZ")))
         self.assertEqual(ids.index("edge_chamfer"), ids.index("seat_chamfer") + 1)
         fields = {f.name for f in dataclasses.fields(default_params())}
         self.assertEqual(set(ids) - fields, {"ears"})
@@ -168,6 +179,31 @@ class ParamsTest(unittest.TestCase):
         self.assertFalse(params_from_values(values).sacrificial_bridging)
         values["sacrificial_bridging"] = 1
         self.assertTrue(params_from_values(values).sacrificial_bridging)
+
+    def test_params_from_values_selectors(self):
+        values = {s.id: s.default for s in INPUT_SPECS}
+        values["pressure_angle"] = 20 * math.pi / 180
+        values["planet_bearing"] = "608ZZ"
+        values["shaft_bearing"] = "605ZZ"
+        p = params_from_values(values)
+        self.assertEqual((p.planet_bearing, p.shaft_bearing), ("608ZZ", "605ZZ"))
+
+    def test_kit_input_values(self):
+        self.assertEqual(
+            kit_input_values("608ZZ", "608ZZ"), {"sun_teeth": 14.0, "planet_teeth": 28.0, "ring_teeth": 70.0}
+        )
+        self.assertEqual(kit_input_values("605ZZ", ""), {})
+
+    def test_status_html(self):
+        self.assertEqual(status_html([]), "")
+        self.assertEqual(status_html(["a"]), "<b>Error:</b> a")
+        two = status_html(["a", "b"])
+        self.assertEqual(two.count("<b>Error:</b>"), 2)
+        self.assertEqual(two, "<b>Error:</b> a<br><b>Error:</b> b")
+        self.assertEqual(status_html(["x < y"]), "<b>Error:</b> x &lt; y")
+
+    def test_status_rows(self):
+        self.assertEqual([status_rows(["m"] * n) for n in (0, 1, 2, 20)], [2, 2, 4, 12])
 
     def test_params_from_values_defaults(self):
         values = {s.id: s.default for s in INPUT_SPECS}

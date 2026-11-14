@@ -59,13 +59,15 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
 
 def command_input_changed(args: adsk.core.InputChangedEventArgs):
     dialog.advance_placement_focus(args.inputs, args.input)
+    # A spinner changed here fires inputChanged again, which only revalidates: a spinner id is not a selector.
+    dialog.apply_kit_defaults(args.inputs, args.input)
     dialog.sync_dependent_inputs(args.inputs)
-    p, err = dialog.read_params(args.inputs)
-    dialog.show_status(args.inputs, p, err)
+    p, messages = dialog.read_params(args.inputs)
+    dialog.show_status(args.inputs, p, messages)
 
 
 def command_validate_input(args: adsk.core.ValidateInputsEventArgs):
-    args.areInputsValid = dialog.read_params(args.inputs)[1] == ""
+    args.areInputsValid = not dialog.read_params(args.inputs)[1]
 
 
 def command_execute(args: adsk.core.CommandEventArgs):
@@ -73,10 +75,10 @@ def command_execute(args: adsk.core.CommandEventArgs):
     from . import build
 
     log = _log if _log is not None else NullLog()
-    p, err = dialog.read_params(args.command.commandInputs)
+    p, messages = dialog.read_params(args.command.commandInputs)
     if p is None:
         args.executeFailed = True
-        args.executeFailedMessage = err
+        args.executeFailedMessage = messages[0]
         return
     design = adsk.fusion.Design.cast(app.activeProduct)
     if design is None:
