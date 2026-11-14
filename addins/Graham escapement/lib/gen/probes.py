@@ -110,24 +110,30 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
     ]
     probes["escape_arbor"] = [
         _in("axis", 0, 0, 10), _in("under bearing", 2.25, 0, -2.5), _in("collar", 3.5, 0, 26),
-        _in("body round", -2.7, 0, 10), _in("kept by flat", 2.45, 0, 10),
-        _out("flat", 2.65, 0, 10), _out("beyond body", -2.9, 0, 10), _out("seat", -2.6, 0, -2.5),
+        _in("body round", -3.2, 0, 10), _in("kept by flat", 2.45, 0, 10), _in("body step", -2.9, 0, 0.5),
+        _out("flat", 2.65, 0, 10), _out("beyond body", -3.4, 0, 10), _out("seat", -2.6, 0, -2.5),
+        _out("below body step", -2.9, 0, 0.1),
     ]
     probes["pallet_arbor"] = [
-        _in("under bearing", 2.25, 0, -2.5), _in("shoulder", 3.5, 0, 10), _in("body round", -2.7, 0, 24),
-        _in("end unflattened", 2.25, 0, 30),
-        _out("body flat", 2.65, 0, 24), _out("end flat", 2.25, 0, 36), _out("seat", -2.6, 0, -2.5),
+        _in("under bearing", 2.25, 0, -2.5), _in("shoulder", 3.5, 0, 10), _in("body round", -3.2, 0, 24),
+        _in("end unflattened", 2.25, 0, 30), _in("end round", -1.9, 0, 36), _in("end kept by flat", 1.4, 0, 36),
+        _out("body flat", 2.65, 0, 24), _out("beyond body", -3.4, 0, 24), _out("end flat", 1.75, 0, 36),
+        _out("beyond end", -2.1, 0, 36), _out("end step", -2.25, 0, 34.0), _out("seat", -2.6, 0, -2.5),
         _out("past end", 0, 0, 38.5),
     ]
     probes["great_wheel_arbor"] = [
-        _in("collar", 3.5, 0, 1.75), _in("drive before flat", 2.95, 0, 4.25), _in("drive kept by flat", 2.45, 0, 10),
-        _in("body round", -2.7, 0, 22), _in("end", 2.25, 0, 30.5),
-        _out("drive flat", 2.75, 0, 10), _out("body flat", 2.65, 0, 22), _out("end flat", 2.25, 0, 36),
-        _out("beyond drive", -3.15, 0, 10),
+        _in("collar", 3.5, 0, 1.75), _in("journal", -3.0, 0, 4.25), _in("journal before flat", 2.95, 0, 4.25),
+        _in("carrier kept by flat", 2.7, 0, 10), _in("carrier round", -3.2, 0, 10),
+        _in("carrier flat end", 2.65, 0, 17.0), _in("body round", -3.2, 0, 22), _in("end", 2.25, 0, 30.5),
+        _in("end round", -1.9, 0, 36), _in("end kept by flat", 1.4, 0, 36),
+        _out("beyond journal", -3.15, 0, 4.25), _out("carrier flat", 2.9, 0, 10), _out("beyond carrier", -3.4, 0, 10),
+        _out("body flat", 2.65, 0, 22), _out("end flat", 1.75, 0, 36), _out("beyond end", -2.1, 0, 36),
     ]
     probes["suspension_pin"] = [
         _in("shank", 2.25, 0, 42), _in("shoulder", 3.5, 0, 37), _in("round side", -2.25, 0, 32.5),
-        _out("rear flat", 2.25, 0, 32.5), _out("front flat", 2.25, 0, 46), _out("beyond shank", 2.6, 0, 42),
+        _in("shank below step", -2.25, 0, 45.0), _in("front peg", -1.9, 0, 46), _in("front kept by flat", 1.4, 0, 46),
+        _out("rear flat", 2.25, 0, 32.5), _out("front flat", 1.75, 0, 46), _out("beyond front peg", -2.1, 0, 46),
+        _out("beyond shank", 2.6, 0, 42),
     ]
     probes["escape_wheel"] = [
         _in("tooth 0", -1.1, 37.0, 23.5), _in("spoke", 0, 20.5, 23.5), _in("D flat side", 2.75, 0, 10),
@@ -152,9 +158,10 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
     probes["crutch"] = [
         _in("arm", 0, -20, 36.8), _in("pin", 0, -45, 41.55), _in("floor", -3.5, 0, 37.8),
         _in("beyond counterbore flat", 3.5, 0, 36.5), _in("counterbore wall", -3.9, 0, 36.5),
-        _in("socket flat side", 2.25, 0, 37.8),
+        _in("socket flat side", 1.7, 0, 37.8),
         _out("beside arm", 4, -20, 36.8), _out("keyed counterbore", -3.5, 0, 36.5),
         _out("counterbore at its flat", 3.2, 0, 36.5), _out("socket", -2, 0, 37.8),
+        _out("socket at flat", 1.4, 0, 37.8),
         rnd("arm round left", crutch_rounds(g)[0], 36.8), rnd("arm round right", crutch_rounds(g)[1], 36.8),
     ]
     lp = g.params.pendulum_length
@@ -163,7 +170,10 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
         _out("slot", 0, -59, 41.8), _out("lip", 0, 0, 39.30), _out("pocket", 6, 0, 42.05),
         rnd("rod round eye", pendulum_rounds(g)[3], 41.8), rnd("rod round bob", pendulum_rounds(g)[2], 41.8),
     ]
-    probes["suspension_cap"] = [_in("wall", 3.0, 0, 46.05), _in("flat side", 2.25, 0, 46.05), _out("bore", -2.0, 0, 46.05)]
+    probes["suspension_cap"] = [
+        _in("wall", 3.0, 0, 46.05), _in("flat side", 1.7, 0, 46.05),
+        _out("bore", -2.0, 0, 46.05), _out("bore at flat", 1.4, 0, 46.05),
+    ]
     probes["great_wheel"] = [
         _in("tooth 0", 37.0, 0, 3), Probe("land", _polar(12.5, 5 * _DEG, 7), INSIDE),
         Probe("under pocket", _polar(12.5, 27 * _DEG, 3), INSIDE), _in("bore wall", 3.6, 0, 4.25),
@@ -175,9 +185,9 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
     probes["pawl_carrier"] = [
         _in("core", 6, 0, 7), Probe("pawl tooth", _polar(11.5, pawl_g - 114 * _DEG, 7), INSIDE),
         Probe("arm", _polar(9.75, pawl_g - 60 * _DEG, 7), INSIDE), _in("boss", 0, 3.5, 10),
-        _in("D flat side", 2.75, 0, 7),
-        Probe("slot", _polar(8.0, pawl_g - 60 * _DEG, 7), OUTSIDE), _out("bore", -3.0, 0, 7),
-        _out("beside boss", 0, 4.5, 10.5),
+        _in("boss edge", -4.9, 0, 10), _in("D flat side", 2.95, 0, 7),
+        Probe("slot", _polar(8.0, pawl_g - 60 * _DEG, 7), OUTSIDE), _out("bore", -3.2, 0, 7),
+        _out("beside boss", -5.1, 0, 10),
         rnd("tooth root round", pawl_rounds(gangs)[0], 7), rnd("block back round", pawl_rounds(gangs)[1], 7),
         _in("slot end wall", slot_ctr[0] + 0.8 * along[0], slot_ctr[1] + 0.8 * along[1], 7.25),
         _out("slot end centre", slot_ctr[0], slot_ctr[1], 7.25),
@@ -185,9 +195,9 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
     ]
     probes["mainspring"] = [
         _in("strip", 0, r1 + t / 2, 3), _in("hub", 0, -4.5, 3),
-        _in("flat side", 0, 3.0, 3),
+        _in("flat side", 0, 3.4, 3),
         _out("gap", 0, r1 - gap / 2, 3), _out("bore", 0, 0, 3), _out("eye hole", dm.eye_center_x, dm.eye_center_y, 3),
-        _out("bore arc", 0, -3.2, 3), _out("bore rim chamfer", 0, -3.5, 0.1),
+        _out("bore arc", 0, -3.2, 3), _out("bore rim chamfer", 0, -3.85, 0.1),
         _in("root taper", d + e + rm * math.cos(phi), rm * math.sin(phi), 3),
     ]
     probes["spring_spacer"] = [
@@ -197,15 +207,16 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
     probes["spring_anchor_pin"] = [_in("pin", 0, 0, 20), _out("beside pin", 1.6, 0, 20)]
     probes["winding_knob"] = [
         _in("knob", 6, 0, 36.8), _in("floor", -3.5, 0, 37.8), _in("counterbore wall", -3.9, 0, 36.5),
-        _out("keyed counterbore", -3.5, 0, 36.5), _out("socket", -2, 0, 37.8),
+        _in("socket flat side", 1.7, 0, 37.8),
+        _out("keyed counterbore", -3.5, 0, 36.5), _out("socket", -2, 0, 37.8), _out("socket at flat", 1.4, 0, 37.8),
     ]
     probes["arbor_collar"] = [
         _in("wall", 3.2, 0, 1.5), _in("D flat side", 2.75, 0, 1.5), _out("bore", -2.75, 0, 1.5),
         _out("beyond", 3.8, 0, 1.5),
     ]
     probes["end_collar"] = [
-        _in("arc side", -3.5, 0, 1.5), _in("between flats", 3.0, 0, 1.5), _in("bore flat side", 2.25, 0, 1.5),
-        _out("bore", -2.0, 0, 1.5), _out("beyond chord", 3.4, 0, 1.5),
+        _in("arc side", -3.5, 0, 1.5), _in("between flats", 3.0, 0, 1.5), _in("bore flat side", 1.7, 0, 1.5),
+        _out("bore", -2.0, 0, 1.5), _out("bore at flat", 1.4, 0, 1.5), _out("beyond chord", 3.4, 0, 1.5),
     ]
     probes["bearing"] = [_in("race", 4.75, 0, 2.5), _out("bore", 0, 0, 2.5)]
     probes["bolt"] = [
@@ -319,9 +330,9 @@ _COLLAR_ROWS: tuple[tuple[str, str, list[tuple[float, float]], float, str], ...]
     ("collar knob", b.KNOB_COLLAR, _d_outline(KEYED_RING_D), 2.25, b.WINDING_KNOB),
 )
 
-_ARBOR_BODY = (2.8, 2.55)
-_ARBOR_END = (2.5, 2.0)
-_ARBOR_DRIVE = (3.05, 2.55)
+_ARBOR_BODY = (3.3, 2.55)
+_ARBOR_END = (2.0, 1.5)
+_ARBOR_CARRIER = (3.3, 2.80)
 
 _BORE_ROWS: tuple[tuple[str, str, list[tuple[float, float]], float, str], ...] = (
     ("bore escape wheel", b.ESCAPE_ARBOR, _d_outline(_ARBOR_BODY), 10.0, b.ESCAPE_WHEEL),
@@ -331,8 +342,8 @@ _BORE_ROWS: tuple[tuple[str, str, list[tuple[float, float]], float, str], ...] =
     ("bore crutch collar", b.PALLET_ARBOR, _d_outline(_ARBOR_END), 36.0, b.CRUTCH_COLLAR),
     ("bore crutch", b.PALLET_ARBOR, _d_outline(_ARBOR_END), 37.8, b.CRUTCH),
     ("bore great wheel", b.GREAT_WHEEL_ARBOR, _ring(3.05), 4.25, b.GREAT_WHEEL),
-    ("bore pawl carrier", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_DRIVE), 7.0, b.PAWL_CARRIER),
-    ("bore mainspring", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_DRIVE), 14.25, b.MAINSPRING),
+    ("bore pawl carrier", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_CARRIER), 7.0, b.PAWL_CARRIER),
+    ("bore mainspring", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_CARRIER), 14.25, b.MAINSPRING),
     ("bore spring spacer", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_BODY), 22.0, b.SPRING_SPACER),
     ("bore knob collar", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_END), 36.0, b.KNOB_COLLAR),
     ("bore knob", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_END), 37.8, b.WINDING_KNOB),

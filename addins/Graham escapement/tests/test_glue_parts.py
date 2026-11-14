@@ -46,8 +46,8 @@ def _loops_for(part, z, extra_loop=0):
             (False, [e], None, rim, 0.0)
         ] * n
     if fp.rule == edgefinish.OUTER_OR_LONG_INNER:
-        # Outer loop, then n - 1 inner loops of length 20.86 (the bore), and the eye hole of length 11.94.
-        return [(True, [e] * 40, None, None, 900.0)] * min(n, 1) + [(False, [e] * 2, None, None, 20.86)] * (n - 1) + [
+        # Outer loop, then n - 1 inner loops of length 22.44 (the bore), and the eye hole of length 11.94.
+        return [(True, [e] * 40, None, None, 900.0)] * min(n, 1) + [(False, [e] * 2, None, None, 22.44)] * (n - 1) + [
             (False, [e], None, None, 11.94)
         ]
     raise AssertionError(fp.rule)
@@ -110,7 +110,15 @@ class GluePartsTest(unittest.TestCase):
                 container_comps={},
             )
             self.fusion = fusion
-            with mock.patch.multiple(fusion, **patches):
+            real_d_section = parts.sections.d_section
+
+            def d_section(d):
+                calls.append(("d_section", d))
+                return real_d_section(d)
+
+            with mock.patch.multiple(fusion, **patches), mock.patch.object(
+                parts.sections, "d_section", side_effect=d_section
+            ):
                 for part in only or bodies.PARTS:
                     ctx.part = part
                     cur["part"] = part
@@ -121,6 +129,26 @@ class GluePartsTest(unittest.TestCase):
     def test_every_builder_runs(self):
         calls = self.run_parts()
         self.assertEqual([c[1] for c in calls if c[0] == "PART"], list(bodies.PARTS))
+
+    def test_d_families_per_builder(self):
+        from gen import sections
+
+        want = {
+            "front_plate": [sections.REAR_PEG_D], "pawl_carrier": [sections.CARRIER_D],
+            "crutch": [sections.KEYED_COUNTER_D, sections.END_D],
+            "winding_knob": [sections.KEYED_COUNTER_D, sections.END_D], "suspension_cap": [sections.END_D],
+            "end_collar": [sections.KEYED_RING_D, sections.END_D],
+        }
+        calls = self.run_parts(only=list(want))
+        part, got = None, {}
+        for c in calls:
+            if c[0] == "PART":
+                part = c[1]
+            elif c[0] == "d_section":
+                got.setdefault(part, []).append(c[1])
+        self.assertEqual(set(got), set(want))
+        for key, families in want.items():
+            self.assertEqual(got[key], families, key)
 
     def test_chamfer_calls_match_finish_planes(self):
         calls = self.run_parts()
@@ -198,7 +226,8 @@ class GluePartsTest(unittest.TestCase):
                 self.assertEqual(got[what], span, what)
         flats = {
             "escape_arbor": [(0.2, 23.95)], "pallet_arbor": [(21.0, 27.8), (34.25, 39.25)],
-            "great_wheel_arbor": [(5.25, 27.8), (34.25, 39.25)], "suspension_pin": [(30.05, 33.95), (45.3, 47.75)],
+            "great_wheel_arbor": [(5.25, 17.55), (17.45, 27.8), (34.25, 39.25)],
+            "suspension_pin": [(30.05, 33.95), (45.3, 47.75)],
         }
         for part, spans in flats.items():
             calls = self.run_parts(only=[part])

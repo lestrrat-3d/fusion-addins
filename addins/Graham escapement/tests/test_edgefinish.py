@@ -72,7 +72,7 @@ class KeepLoopTest(unittest.TestCase):
     def test_outer_or_long_inner(self):
         keep = lambda outer, length: keep_loop(OUTER_OR_LONG_INNER, outer, 5, None, None, [], (), length)  # noqa: E731
         self.assertTrue(keep(True, 1000.0))
-        self.assertTrue(keep(False, 20.86))
+        self.assertTrue(keep(False, 22.44))
         self.assertFalse(keep(False, 11.94))
         self.assertTrue(keep(False, 20.0))
 

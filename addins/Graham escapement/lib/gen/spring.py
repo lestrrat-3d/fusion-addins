@@ -39,7 +39,7 @@ class SpringParams:
 
 def spring_params() -> SpringParams:
     """The escapement's mainspring: layout.go SpringParams."""
-    return SpringParams(64.0, 12.0, 1.5, 6.0, 1.0, 6.1, 0.5, 0.30, 3.0, 0.4, 0)
+    return SpringParams(64.0, 12.0, 1.5, 6.0, 1.0, 6.6, 0.5, 0.30, 3.0, 0.4, 0)
 
 
 @dataclasses.dataclass(frozen=True)

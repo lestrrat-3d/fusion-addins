@@ -50,19 +50,29 @@ class VolumeTest(unittest.TestCase):
             self.assertAlmostEqual(vol(part).value, v, delta=0.01, msg=part)
 
     def test_escape_arbor_flat(self):
-        # The flat removes seg(2.8, 2.55) over the r 2.8 run [0.25, 24.0] cut at [0.20, 23.95]: 23.70 mm, 9.2212 mm^3.
-        # It removes nothing from the r 2.5 runs (2.5 < 2.55).
-        stair = math.pi * (2.5**2 * 5.25 + 2.8**2 * 23.75 + 3.7**2 * 3.75 + 2.5**2 * 5.25)
-        flat = _segment_area(2.8, 2.55) * 23.70
-        self.assertAlmostEqual(flat, 9.2212, places=3)
+        # The flat removes seg(3.3, 2.55) over the r 3.3 run [0.25, 24.0] cut at [0.20, 23.95]: 23.70 mm.
+        # It removes nothing from the r 2.5 runs (2.5 < 2.55) and nothing from the r 3.7 collar (z 24.0 to 27.75).
+        stair = math.pi * (2.5**2 * 5.25 + 3.3**2 * 23.75 + 3.7**2 * 3.75 + 2.5**2 * 5.25)
+        flat = _segment_area(3.3, 2.55) * 23.70
+        self.assertAlmostEqual(flat, 50.8934, places=3)
+        self.assertAlmostEqual(stair - flat, 1129.0888, places=3)
         self.assertAlmostEqual(vol("escape_arbor").value, stair - flat, places=6)
 
     def test_arbor_flat_runs(self):
-        # The pin's rear flat [30.05, 33.95] meets the r 2.5 run [31.05, 34] for 2.9 mm, the front flat [45.30, 47.75]
-        # the run [39.80, 46.75] for 1.45 mm; both flats sit at x = 2.0.
-        stair = math.pi * (2.5**2 * 2.95 + 3.7**2 * 5.8 + 2.5**2 * 6.95)
-        want = stair - _segment_area(2.5, 2.0) * (2.9 + 1.45)
+        # The pin's rear flat [30.05, 33.95] meets the r 2.5 run [31.05, 34] for 2.9 mm at x = 2.0; the front flat
+        # [45.30, 47.75] meets the r 2.0 peg run [45.25, 46.75] for 1.45 mm at x = 1.5.
+        stair = math.pi * (2.5**2 * 2.95 + 3.7**2 * 5.8 + 2.5**2 * 5.45 + 2.0**2 * 1.5)
+        want = stair - _segment_area(2.5, 2.0) * 2.9 - _segment_area(2.0, 1.5) * 1.45
         self.assertAlmostEqual(vol("suspension_pin").value, want, places=6)
+
+    def test_great_wheel_arbor_flat_overlap(self):
+        # The x 2.80 box [5.25, 17.55] and the x 2.55 box [17.45, 27.80] overlap by 0.10 mm; the deeper cut counts once.
+        stair = math.pi * (2.5**2 * 5.25 + 3.7**2 * 3.0 + 3.05**2 * 1.95 + 3.3**2 * 22.55 + 2.5**2 * 5.5 + 2.0**2 * 5.0)
+        want = (
+            stair - _segment_area(3.3, 2.80) * 12.20 - _segment_area(3.3, 2.55) * 10.30
+            - _segment_area(2.0, 1.5) * 4.0
+        )
+        self.assertAlmostEqual(vol("great_wheel_arbor").value, want, places=6)
 
     def test_chamfered_parts_lose_volume(self):
         from gen.edgefinish import chamfer_volume

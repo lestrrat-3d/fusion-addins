@@ -15,7 +15,8 @@ from typing import Sequence
 from . import fillet
 from .constants import (
     ANCHOR_HUB_ROUND, ANCHOR_PALLET_ROUND, BLOCK_BACK_ROUND, BODY_PRESS_FLAT, BODY_PRESS_RADIUS, CARRIER_ARM_INNER,
-    CARRIER_ARM_OUTER, CARRIER_CORE_RADIUS, COLLAR_RADIUS, CRUTCH_ARM_ROUND, DRIVE_PRESS_RADIUS, FLAT_REACH,
+    CARRIER_ARM_OUTER, CARRIER_CORE_RADIUS, CARRIER_PRESS_FLAT, COLLAR_RADIUS, CRUTCH_ARM_ROUND, END_PRESS_FLAT,
+    END_PRESS_RADIUS, FLAT_REACH,
     HUB_RING, KEYED_COUNTER_FLAT, KEYED_COUNTER_RADIUS, KEYED_RING_FLAT, PENDULUM_ROD_ROUND, PLATE_BOTTOM,
     PLATE_CORNER, PLATE_LEFT, PLATE_RIGHT, PRESS_FLAT, PRESS_RADIUS, RATCHET_DISC, RATCHET_INNER, RATCHET_OUTER,
     RATCHET_ROUND, RATCHET_TEETH, SLOT_END_RADIUS, SLOT_HIGH, SLOT_LOW, SLOT_RADIUS, SPINE_HALF, SPOKE_HALF,
@@ -233,9 +234,10 @@ def _segment_area(r: float, floor: float) -> float:
 
 DFamily = tuple[float, float]  # (arc radius, chord x)
 
-END_D: DFamily = (PRESS_RADIUS, PRESS_FLAT)
-BODY_D: DFamily = (BODY_PRESS_RADIUS, BODY_PRESS_FLAT)
-DRIVE_D: DFamily = (DRIVE_PRESS_RADIUS, BODY_PRESS_FLAT)
+END_D: DFamily = (END_PRESS_RADIUS, END_PRESS_FLAT)  # 2.05, 1.55: crutch, knob, keyed rings, cap
+REAR_PEG_D: DFamily = (PRESS_RADIUS, PRESS_FLAT)  # 2.55, 2.05: front plate suspension socket
+BODY_D: DFamily = (BODY_PRESS_RADIUS, BODY_PRESS_FLAT)  # 3.35, 2.60: escape wheel, anchor, spring retainer
+CARRIER_D: DFamily = (BODY_PRESS_RADIUS, CARRIER_PRESS_FLAT)  # 3.35, 2.85: pawl carrier
 KEYED_COUNTER_D: DFamily = (KEYED_COUNTER_RADIUS, KEYED_COUNTER_FLAT)
 KEYED_RING_D: DFamily = (COLLAR_RADIUS, KEYED_RING_FLAT)
 
@@ -254,7 +256,7 @@ def d_area(d: DFamily) -> float:
 
 
 def press_d() -> Loop:
-    """D section of the end press fit: arc radius 2.55, chord at x = 2.05."""
+    """D section of the end press fit: arc radius 2.05, chord at x = 1.55."""
     return d_section(END_D)
 
 
@@ -360,23 +362,25 @@ def pawl_rounds(gangs: Sequence[float]) -> list[fillet.Round]:
 
 # (radius, z) polygons with a point on the axis at each end [arbors.go *ArborPoints, pinPoints].
 _MERIDIANS: dict[str, tuple[Pt, ...]] = {
-    "escape_arbor": ((0, -5), (2.5, -5), (2.5, 0.25), (2.8, 0.25), (2.8, 24.0), (3.7, 24.0), (3.7, 27.75),
+    "escape_arbor": ((0, -5), (2.5, -5), (2.5, 0.25), (3.3, 0.25), (3.3, 24.0), (3.7, 24.0), (3.7, 27.75),
                      (2.5, 27.75), (2.5, 33), (0, 33)),
-    "pallet_arbor": ((0, -5), (2.5, -5), (2.5, 0.25), (3.7, 0.25), (3.7, 20.95), (2.8, 20.95), (2.8, 27.75),
-                     (2.5, 27.75), (2.5, 38.25), (0, 38.25)),
-    "great_wheel_arbor": ((0, -5), (2.5, -5), (2.5, 0.25), (3.7, 0.25), (3.7, 3.25), (3.05, 3.25), (3.05, 17.45),
-                          (2.8, 17.45), (2.8, 27.75), (2.5, 27.75), (2.5, 38.25), (0, 38.25)),
-    "suspension_pin": ((0, 31.05), (2.5, 31.05), (2.5, 34), (3.7, 34), (3.7, 39.80), (2.5, 39.80), (2.5, 46.75),
-                       (0, 46.75)),
+    "pallet_arbor": ((0, -5), (2.5, -5), (2.5, 0.25), (3.7, 0.25), (3.7, 20.95), (3.3, 20.95), (3.3, 27.75),
+                     (2.5, 27.75), (2.5, 33.25), (2.0, 33.25), (2.0, 38.25), (0, 38.25)),
+    "great_wheel_arbor": ((0, -5), (2.5, -5), (2.5, 0.25), (3.7, 0.25), (3.7, 3.25), (3.05, 3.25), (3.05, 5.20),
+                          (3.3, 5.20), (3.3, 27.75), (2.5, 27.75), (2.5, 33.25), (2.0, 33.25), (2.0, 38.25),
+                          (0, 38.25)),
+    "suspension_pin": ((0, 31.05), (2.5, 31.05), (2.5, 34), (3.7, 34), (3.7, 39.80), (2.5, 39.80), (2.5, 45.25),
+                       (2.0, 45.25), (2.0, 46.75), (0, 46.75)),
 }
 _MERIDIANS = {k: tuple((float(r), float(z)) for r, z in v) for k, v in _MERIDIANS.items()}
 
-# Flat boxes cut from each arbor: (flat x, z0, z1) [arbors.go *Flats].
+# Flat boxes cut from each arbor: (flat x, z0, z1) [arbors.go *Flats]. The great wheel arbor's first two boxes
+# overlap by 0.10 mm (z 17.45 to 17.55), as in the gallery.
 ARBOR_FLATS: dict[str, tuple[tuple[float, float, float], ...]] = {
     "escape_arbor": ((2.55, 0.20, 23.95),),
-    "pallet_arbor": ((2.55, 21.0, 27.80), (2.0, 34.25, 39.25)),
-    "great_wheel_arbor": ((2.55, 5.25, 27.80), (2.0, 34.25, 39.25)),
-    "suspension_pin": ((2.0, 30.05, 33.95), (2.0, 45.30, 47.75)),
+    "pallet_arbor": ((2.55, 21.0, 27.80), (1.5, 34.25, 39.25)),
+    "great_wheel_arbor": ((2.80, 5.25, 17.55), (2.55, 17.45, 27.80), (1.5, 34.25, 39.25)),
+    "suspension_pin": ((2.0, 30.05, 33.95), (1.5, 45.30, 47.75)),
 }
 
 

@@ -135,7 +135,7 @@ def _shift(loop: Loop, dx: float, dy: float) -> Loop:
 def d_tool(
     ctx: BuildContext, what: str, z0: float, z1: float, at: Pt = _ORIGIN, d: sections.DFamily = sections.END_D
 ) -> adsk.fusion.BRepBody:
-    """The D section of family d (arc radius, chord x; default the end press fit r2.55, x 2.05) about `at`, extruded
+    """The D section of family d (arc radius, chord x; default the end press fit r 2.05, x 1.55) about `at`, extruded
     over z0 to z1, flat on +X [dTool]."""
     loop = sections.d_section(d)
     if at != _ORIGIN:
@@ -285,7 +285,7 @@ def build_front_plate(ctx: BuildContext) -> adsk.fusion.BRepBody:
     tools = _seat_tools(ctx, FRONT_LOW - 1)
     tools += _site_tools(ctx, "hole", fasteners.HOLE_RADIUS, fasteners.hole_span())
     tools += _site_tools(ctx, "pocket", fasteners.HEAD_POCKET_RADIUS, fasteners.pocket_tool_span())
-    tools.append(d_tool(ctx, "front_plate suspension_socket", 31.0, 35.0, g.axis_s))
+    tools.append(d_tool(ctx, "front_plate suspension_socket", 31.0, 35.0, g.axis_s, sections.REAR_PEG_D))
     tools.append(
         disc(ctx, "front_plate anchor_socket", SPRING_SOCKET_R, SPRING_SOCKET_LOW, SPRING_SOCKET_HIGH, g.spring_anchor)
     )
@@ -438,7 +438,7 @@ def build_pawl_carrier(ctx: BuildContext) -> adsk.fusion.BRepBody:
     layer = fusion.extrude(ctx, profile, LAYER_LOW, LAYER_LENGTH, "pawl_carrier layer_extrude")
     boss = disc(ctx, "pawl_carrier boss", CARRIER_BOSS_RADIUS, CARRIER_BOSS_LOW, CARRIER_BOSS_LOW + CARRIER_BOSS_LENGTH)
     body = fusion.join(ctx, layer, [boss], "pawl_carrier parts_join")
-    body = _bore_with_d(ctx, body, "pawl_carrier", LAYER_LOW - 1.0, LAYER_LOW - 1.0 + 7.75, d=sections.DRIVE_D)
+    body = _bore_with_d(ctx, body, "pawl_carrier", LAYER_LOW - 1.0, LAYER_LOW - 1.0 + 7.75, d=sections.CARRIER_D)
     return _require_solid(ctx, body)
 
 
