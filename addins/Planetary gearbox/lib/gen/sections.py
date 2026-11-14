@@ -1,7 +1,7 @@
 """2D sections of the carrier, cover and flat tool as closed loops of lines and arcs.
 
 Own copy of decad-gallery models/planetarygearbox carrier.go and cover.go section geometry
-(f22a29d: D-shaped bore tool, with PRESS_FIT_CLEARANCE since d8cf8d8).
+at 45b5875 (D-shaped bore tool with PRESS_FIT_CLEARANCE; per-role pin and shaft sockets).
 """
 
 from __future__ import annotations

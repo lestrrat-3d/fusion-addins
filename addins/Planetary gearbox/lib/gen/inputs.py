@@ -48,8 +48,8 @@ INPUT_SPECS: tuple[InputSpec, ...] = (
     InputSpec("flat_depth", "Flat depth", "length", 0.5),
     InputSpec("input_shaft_length", "Input shaft length", "length", 12),
     InputSpec("bearing_clearance", "Bearing clearance", "length", 0.05),
-    # Gallery PlanetBearing / ShaftBearing, placed in the gallery's table order (after BearingClearance); the drop-down
-    # lists the catalog names.
+    # Directive (docs/planetarygearbox/directives.md): drop-down selectors after Bearing clearance. Gallery
+    # PlanetBearing / ShaftBearing; the drop-down lists the catalog names.
     InputSpec("planet_bearing", "Planet bearing", "choice", "605ZZ", choices=catalog_names()),
     InputSpec("shaft_bearing", "Shaft bearing", "choice", "605ZZ", choices=catalog_names()),
     InputSpec("seat_chamfer", "Seat chamfer", "length", 0.5),

@@ -44,7 +44,7 @@ def default_params_for(kit: str) -> Params:
                 ring_teeth=ring,
             )
     names = ", ".join(k.name for k, _, _, _ in _KITS)
-    raise ValueError(f"unknown kit {json.dumps(kit)}; choose one of {names}")
+    raise ValueError(f"unknown kit {json.dumps(kit, ensure_ascii=False)}; choose one of {names}")
 
 
 def kit_for(planet_bearing: str, shaft_bearing: str) -> Kit | None:

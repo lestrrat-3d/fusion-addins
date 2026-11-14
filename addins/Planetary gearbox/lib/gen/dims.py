@@ -58,7 +58,7 @@ def rim_inner_radius(bolt_circle: float) -> float:
 def derive(p: Params) -> Dims:
     """Compute the derived dimensions of p. Does not validate p."""
     m = p.module
-    # Deviation: the gallery's derive uses a zero Spec for a name the catalog lacks; raising surfaces the bug sooner.
+    # The gallery's derive uses a zero Spec for a name the catalog lacks; raising surfaces the bug sooner.
     pb, sb = lookup(p.planet_bearing), lookup(p.shaft_bearing)
     if pb is None:
         raise ValueError(f"unknown bearing {json.dumps(p.planet_bearing, ensure_ascii=False)}")
