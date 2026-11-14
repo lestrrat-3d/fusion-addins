@@ -404,12 +404,11 @@ class GlueBuildTest(unittest.TestCase):
     def test_shaft_flat_calls(self):
         world, _ = self.run_build(stages=2)
         calls = world.calls
-        # One flat box per span: input 1, link 1, output none (its thin rod stays round). The flat is not patterned.
-        self.assertEqual(len([c for c in calls if c[1].endswith("flat_box_extrude")]), 2)
+        # One flat box per span: input 2 (over the sun and on the free end), link 1, output 1 (on the free end).
+        self.assertEqual(len([c for c in calls if c[1].endswith("flat_box_extrude")]), 4)
         self.assertFalse([c for c in calls if "key" in c[1]])
-        for part in ("input_shaft", "link_shaft"):
+        for part in ("input_shaft", "link_shaft", "output_shaft"):
             self.assertIn(("combine", f"{part} flat_cut"), calls)
-        self.assertNotIn(("combine", "output_shaft flat_cut"), calls)
         for part in ("link_shaft", "output_shaft"):
             self.assertIn(("combine", f"{part} step_join"), calls)
         self.assertIn(("combine", "sun d_bore_cut"), calls)
