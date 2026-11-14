@@ -110,7 +110,8 @@ class ChamferVolumeTest(unittest.TestCase):
             self.assertEqual(chamfer_volume(G, part), 0.0)
 
     def test_values(self):
-        want = {"escape_wheel": 97.8142, "anchor": 57.4097, "great_wheel": 3.3510, "mainspring": 595.2211}
+        want = {"escape_wheel": 95.4116, "anchor": 56.7339, "great_wheel": 3.3510, "mainspring": 595.1306,
+                "back_plate": 364.1377, "front_plate": 356.1377, "pendulum": 132.9947}
         for part, v in want.items():
             self.assertAlmostEqual(chamfer_volume(G, part), v, delta=1e-3, msg=part)
 

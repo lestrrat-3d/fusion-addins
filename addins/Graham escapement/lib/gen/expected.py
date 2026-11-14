@@ -55,7 +55,7 @@ from .sections import (
     crutch_outline,
     crutch_slot,
     escape_windows,
-    pawl_loop,
+    pawl_layer,
     pendulum_outline,
     plate_outline,
     d_area,
@@ -69,7 +69,6 @@ from .spring import profile, spring_params
 _DENSE = 60
 _STEP = math.radians(0.1)
 _CAVITY_HEIGHT = 2.0  # the nut cavity's z span [24, 26]
-_PAWL_OVERLAP = 10 * math.pi / 180  # the pawl loop's r 7 arc, 10 degrees, lies in the core's r 7 to 7.5 strip
 
 
 def _loop_area(loop) -> float:
@@ -240,9 +239,8 @@ def part_volume(g: Geometry, part: str) -> Expect:
         value -= pi * (GREAT_COUNTER_RADIUS**2 - (GREAT_BORE / 2) ** 2) * 2.0 + c
         return Expect(value, 0.5 * f + 0.002 * value)
     if part == "pawl_carrier":
-        gang = math.pi / 2 - g.carrier_offset
-        pawl = _loop_area(pawl_loop(gang)) - (7.5**2 - 7.0**2) / 2 * _PAWL_OVERLAP
-        value = pi * 7.5**2 * 4 + 2 * pawl * 4 + pi * CARRIER_BOSS_RADIUS**2 * 1.75 - d_drive * 5.75
+        gangs = (math.pi / 2 - g.carrier_offset, 3 * math.pi / 2 - g.carrier_offset)
+        value = _loop_area(pawl_layer(gangs)) * 4 + pi * CARRIER_BOSS_RADIUS**2 * 1.75 - d_drive * 5.75
         return Expect(value, 0.002 * value)
     if part == "mainspring":
         outer, bore, eye = profile(spring_params(), g.spring)
