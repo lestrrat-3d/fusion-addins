@@ -1,7 +1,7 @@
 # Planetary gearbox
 
 A Fusion add-in that rebuilds the decad-gallery model `planetarygearbox`: a fixed internal ring gear housing one or
-more stages, each with a sun gear, planet gears on 605ZZ bearings, a separate press-fit pin for each planet, a carrier
+more stages, each with a sun gear, planet gears on bearings (605ZZ or 608ZZ, set by `Planet bearing`), a separate press-fit pin for each planet, a carrier
 plate and a shaft, closed by two bearing covers that eight M2 bolts and eight M2 nuts hold to the ring. The shafts and
 the pins have a D-shaped flat (`Flat depth`) that fits the D-shaped bores of the suns and the carrier. The default
 gearbox has 34 bodies, and each further stage adds 12. It takes the gallery's inputs with the gallery's defaults and
@@ -11,13 +11,14 @@ component holds one sub-component per gallery container (`Housing`, `Cover Beari
 of its container. As in the gallery, the ring, the covers and the carriers have a 45° chamfer (`Edge chamfer`, 0.5 mm) on
 the edges of their large flat faces. The ring has three mounting ears by default; the `Mounting ears` check box in the
 dialog turns them off, and the `Ear count` and `Ear bore diameter` inputs are disabled while it is unchecked.
+The `Planet bearing` and `Shaft bearing` drop-downs each pick a 605ZZ or a 608ZZ; the defaults are 605ZZ.
 The `Split pins/shafts` check box is off by default; when it is checked, each carrier pin and each shaft is cut in two
 along the plane through its axis that is parallel to the D flat, so each becomes two bodies (`<name> Half 1`,
 `<name> Half 2`).
 
 ## Gallery revision
 
-Gallery revision: 7302e55e86987d27568c9634a00b4efc51d6b02b (`GALLERY_REVISION` in `config.py`)
+Gallery revision: c2cbb770602f28d1ed797ecf747f9e5de6ca4220 (`GALLERY_REVISION` in `config.py`)
 
 The add-in translates decad-gallery at this commit: `models/planetarygearbox` and the models it builds from,
 `models/spurgear`, `models/ballbearing`, `models/m2bolt` and `models/m2nut`.

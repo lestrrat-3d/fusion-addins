@@ -7,7 +7,7 @@ from gen import gears, layout
 from gen.curves import Circle, loop_polygon, rotate
 from gen.dims import derive
 from gen.involute import gear_outline_polygon
-from gen.params import default_params
+from gen.params import KITS, default_params, default_params_for
 from gen.phase import planet_orbit_angle, planet_tooth_angle, ring_tooth_angle
 from gen.polygon import count_inside, point_in_polygon
 from gen.probes import fastener_points, mesh_points, part_probes
@@ -33,10 +33,10 @@ def in_flat_tool(p, d, x, y):
     return math.hypot(x, y) < radius and x < radius - p.flat_depth
 
 
-def in_thick_d(p, d, x, y, extra=0.0):
-    """The D thick part of a pin or shaft (extra = 0), or its socket and hole (extra = 0.05): a disc of the shaft
-    collar diameter, cut by a flat Flat depth inside the disc's +X edge."""
-    radius = d.collar / 2 + extra
+def in_thick_d(p, d, x, y, extra=0.0, pin=False):
+    """The D thick part of a pin or shaft (extra = 0), or its socket and hole (extra = 0.05): a disc of the pin collar
+    diameter (pin) or the shaft collar diameter, cut by a flat Flat depth inside the disc's +X edge."""
+    radius = (d.pin_collar if pin else d.collar) / 2 + extra
     return math.hypot(x, y) < radius and (p.flat_depth == 0 or x < radius - p.flat_depth)
 
 
@@ -77,7 +77,7 @@ def material(p, d, part, pt):
     x, y, z = pt
     r = math.hypot(x, y)
     t, tc, tv = p.gear_thickness, p.carrier_thickness, p.cover_thickness
-    wb = d.bearing.width
+    wbp, wbs = d.planet_bearing.width, d.shaft_bearing.width
     if part == "sun":
         gd = gears.sun_gear(p)
         return 0 <= z <= t and point_in_polygon(gear_outline_polygon(gd, 60), (x, y)) and not in_flat_tool(p, d, x, y)
@@ -85,9 +85,9 @@ def material(p, d, part, pt):
         gd = gears.planet_gear(p)
         if not (0 <= z <= t) or not point_in_polygon(gear_outline_polygon(gd, 60), (x, y)):
             return False
-        if r < d.lip / 2:
+        if r < d.planet_lip / 2:
             return False
-        return not (z > t - wb and r < d.pocket / 2)
+        return not (z > t - wbp and r < d.planet_pocket / 2)
     if part == "ring":
         lo, hi = layout.part_local_z(p, d, "ring")
         gd = gears.ring_tool(p)
@@ -120,12 +120,12 @@ def material(p, d, part, pt):
         ):
             return False
         if 0 <= z <= tv:
-            if r > d.ring_outer or r < d.lip / 2:
+            if r > d.ring_outer or r < d.cover_lip / 2:
                 return False
             if any(math.hypot(x - bx, y - by) < p.bolt_hole_diameter / 2 for bx, by in bolt_hole_centers(d)):
                 return False
             return not any(point_in_polygon(loop_polygon(w), (x, y)) for w in cover_window_loops(p, d))
-        return tv < z <= tv + wb and d.pocket / 2 < r < d.cover_boss / 2
+        return tv < z <= tv + wbs and d.cover_pocket / 2 < r < d.cover_boss / 2
     if part == "bolt":
         if -6 < z < 0:
             return r < 1.0
@@ -139,7 +139,8 @@ def material(p, d, part, pt):
     if part == "nut":
         return 0 <= z <= 1.6 and in_nut_hex(x, y, 2.0) and r > 1.0
     if part in ("housing_bearing", "planet_bearing"):
-        return 0 <= z <= wb and 4 < r < 11
+        b = d.shaft_bearing if part == "housing_bearing" else d.planet_bearing
+        return 0 <= z <= b.width and b.bore_diameter / 2 + 1.5 < r < b.outer_diameter / 2 - 1.5
     if part == "carrier":
         if not 0 <= z <= tc:
             return False
@@ -148,7 +149,7 @@ def material(p, d, part, pt):
         # A D socket through the plate for each pin: the thick part's radius plus 0.05, flat on the outer side.
         for q in range(p.planet_count):
             lx, ly = rotate((x, y), -planet_orbit_angle(p, q))
-            if in_thick_d(p, d, lx - d.orbit, ly, 0.05):
+            if in_thick_d(p, d, lx - d.orbit, ly, 0.05, pin=True):
                 return False
         return True
     if part == "carrier_pin":
@@ -157,7 +158,7 @@ def material(p, d, part, pt):
         if -(p.gear_thickness + g) <= z <= thick_bottom:
             return r < d.pin / 2
         if thick_bottom < z <= tc:
-            return in_thick_d(p, d, x, y)
+            return in_thick_d(p, d, x, y, pin=True)
         return False
     spec = {
         "input_shaft": layout.input_shaft_spec,
@@ -199,6 +200,14 @@ class ProbesTest(unittest.TestCase):
 
     def test_probes_two_stages(self):
         self.check(P2, D2)
+
+    def test_probes_every_kit(self):
+        for kit in KITS:
+            with self.subTest(kit=kit.name):
+                p = default_params_for(kit.name)
+                self.check(p, derive(p))
+                p = dataclasses.replace(p, stages=2)
+                self.check(p, derive(p))
 
     def test_probes_with_bridging(self):
         p = dataclasses.replace(P1, sacrificial_bridging=True)

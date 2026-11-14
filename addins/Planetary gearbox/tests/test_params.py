@@ -3,17 +3,20 @@ import math
 import unittest
 
 import _support  # noqa: F401
-from gen.bearing import Bearing, bearing_605zz
+from gen.bearing import BEARING_605ZZ, BEARING_608ZZ, Bearing, lookup
 from gen.dims import derive, rim_inner_radius
 from gen.inputs import INPUT_SPECS, params_from_values
 from gen.params import (
+    KITS,
     MIN_EDGE_CHAMFER,
     Frame,
     default_params,
+    default_params_for,
     frame_axes,
     frame_is_valid,
     gear_root_clearance,
     gear_root_depth,
+    kit_for,
     placement_frame,
     ratio,
 )
@@ -29,8 +32,11 @@ REFERENCE_DIMS = {
     "pin": 5.0,
     "shaft": 5.0,
     "shaft_bore": 5.1,
-    "pocket": 14.1,
-    "lip": 10,
+    "pin_collar": 7.4,
+    "planet_pocket": 14.1,
+    "planet_lip": 10,
+    "cover_pocket": 14.1,
+    "cover_lip": 10,
     "collar": 7.4,
     "cover_boss": 20.1,
     "cover_hub": 26.1,
@@ -58,7 +64,8 @@ class ParamsTest(unittest.TestCase):
         for name, want in REFERENCE_DIMS.items():
             with self.subTest(name=name):
                 near(self, getattr(d, name), want)
-        self.assertEqual(d.bearing, Bearing(5, 14, 5))
+        self.assertEqual(d.planet_bearing, Bearing("605ZZ", 5, 14, 5, 8))
+        self.assertEqual(d.shaft_bearing, Bearing("605ZZ", 5, 14, 5, 8))
 
     def test_rim_inner_radius(self):
         self.assertAlmostEqual(rim_inner_radius(40.55), 36.85, places=12)
@@ -84,14 +91,47 @@ class ParamsTest(unittest.TestCase):
         near(self, ratio(dataclasses.replace(default_params(), stages=2)), (1 + 71 / 13) ** 2)
 
     def test_bearing(self):
-        self.assertEqual(bearing_605zz(), Bearing(5, 14, 5))
+        self.assertEqual(lookup("605ZZ"), BEARING_605ZZ)
+        self.assertEqual(lookup("608ZZ"), Bearing("608ZZ", 8, 22, 7, 12))
+        self.assertIsNone(lookup("609ZZ"))
+
+    def test_derive_per_role(self):
+        """Each role reads its own bearing [params_internal_test TestDerivePerRole]."""
+        shaft = derive(dataclasses.replace(default_params(), shaft_bearing="608ZZ"))
+        for name, want in {
+            "shaft": 8, "shaft_bore": 8.1, "collar": 10.4, "cover_pocket": 22.1, "cover_lip": 18, "cover_boss": 28.1,
+            "cover_hub": 34.1, "pin": 5, "pin_collar": 7.4, "planet_pocket": 14.1,
+        }.items():
+            with self.subTest(shaft=name):
+                near(self, getattr(shaft, name), want)
+        planet = derive(dataclasses.replace(default_params(), planet_bearing="608ZZ"))
+        for name, want in {
+            "pin": 8, "pin_collar": 10.4, "planet_pocket": 22.1, "planet_lip": 18, "boss": 14, "arm": 10,
+            "shaft": 5, "shaft_bore": 5.1, "collar": 7.4, "cover_pocket": 14.1, "cover_lip": 10,
+        }.items():
+            with self.subTest(planet=name):
+                near(self, getattr(planet, name), want)
+        derive(dataclasses.replace(default_params(), planet_bearing="609ZZ"))  # an unknown name does not raise
+
+    def test_kits(self):
+        self.assertEqual([k.name for k in KITS], [
+            "planet605-shaft605", "planet605-shaft608", "planet608-shaft605", "planet608-shaft608",
+        ])
+        self.assertEqual(default_params_for("planet605-shaft605"), default_params())
+        p = default_params_for("planet608-shaft608")
+        self.assertEqual((p.planet_bearing, p.shaft_bearing), ("608ZZ", "608ZZ"))
+        self.assertEqual((p.sun_teeth, p.planet_teeth, p.ring_teeth), (14, 28, 70))
+        self.assertEqual(kit_for("605ZZ", "608ZZ").name, "planet605-shaft608")
+        self.assertIsNone(kit_for("609ZZ", "605ZZ"))
+        with self.assertRaisesRegex(ValueError, "unknown kit \"x\"; choose one of planet605-shaft605, "):
+            default_params_for("x")
 
     def test_input_specs(self):
         ids = [s.id for s in INPUT_SPECS]
         self.assertEqual(len(ids), len(set(ids)))
-        # Placement is chosen by selection in the dialog, so the table holds the 24 gallery inputs, the ears box, the
-        # split box and the sacrificial bridging box.
-        self.assertEqual(len(ids), 27)
+        # Placement is chosen by selection in the dialog, so the table holds the 24 gallery inputs, the two bearing
+        # drop-downs, the ears box, the split box and the sacrificial bridging box.
+        self.assertEqual(len(ids), 29)
         self.assertEqual(ids.index("edge_chamfer"), ids.index("seat_chamfer") + 1)
         fields = {f.name for f in dataclasses.fields(default_params())}
         self.assertEqual(set(ids) - fields, {"ears"})

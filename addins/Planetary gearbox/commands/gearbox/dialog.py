@@ -10,7 +10,7 @@ import adsk.core
 import adsk.fusion
 
 from ...lib.gen.inputs import INPUT_SPECS, params_from_values
-from ...lib.gen.params import Params, Vec3, default_params, placement_frame, ratio
+from ...lib.gen.params import Params, Vec3, default_params, kit_for, placement_frame, ratio
 from ...lib.gen.validate import ValidationError, validate
 
 RATIO_ID = "ratio"
@@ -60,6 +60,10 @@ def add_inputs(inputs: adsk.core.CommandInputs, build_label: str) -> None:
             inputs.addIntegerSpinnerCommandInput(spec.id, spec.label, 0, 9999, 1, int(spec.default))
         elif spec.kind == "bool":
             inputs.addBoolValueInput(spec.id, spec.label, True, "", bool(spec.default))
+        elif spec.kind == "choice":
+            drop = inputs.addDropDownCommandInput(spec.id, spec.label, adsk.core.DropDownStyles.TextListDropDownStyle)
+            for i, name in enumerate(spec.choices):
+                drop.listItems.add(name, i == int(spec.default))
         else:
             inputs.addValueInput(spec.id, spec.label, "", adsk.core.ValueInput.createByReal(spec.default))
     sync_dependent_inputs(inputs)
@@ -78,6 +82,23 @@ def sync_dependent_inputs(inputs: adsk.core.CommandInputs) -> None:
         dependent = inputs.itemById(spec.id)
         if box is not None and dependent is not None:
             dependent.isEnabled = box.value
+
+
+BEARING_IDS = ("planet_bearing", "shaft_bearing")
+
+
+def apply_kit_teeth(inputs: adsk.core.CommandInputs, changed: adsk.core.CommandInput | None) -> None:
+    """Deviation (docs/planetarygearbox/deviations.md, Bearing kits): choosing a bearing sets the sun, planet and ring
+    teeth to the gallery kit for the two bearings, so the pair passes the fit checks. The teeth stay editable."""
+    if changed is None or changed.id not in BEARING_IDS:
+        return
+    names = [adsk.core.DropDownCommandInput.cast(inputs.itemById(i)).selectedItem.name for i in BEARING_IDS]
+    kit = kit_for(names[0], names[1])
+    if kit is None:
+        return
+    for input_id, teeth in (("sun_teeth", kit.sun_teeth), ("planet_teeth", kit.planet_teeth),
+                            ("ring_teeth", kit.ring_teeth)):
+        adsk.core.IntegerSpinnerCommandInput.cast(inputs.itemById(input_id)).value = teeth
 
 
 def advance_placement_focus(inputs: adsk.core.CommandInputs, changed: adsk.core.CommandInput | None) -> None:
@@ -164,6 +185,9 @@ def read_params(inputs: adsk.core.CommandInputs) -> tuple[Params | None, str]:
             continue
         if spec.kind == "bool":
             values[spec.id] = float(adsk.core.BoolValueCommandInput.cast(inp).value)
+            continue
+        if spec.kind == "choice":
+            values[spec.id] = float(adsk.core.DropDownCommandInput.cast(inp).selectedItem.index)
             continue
         vin = adsk.core.ValueCommandInput.cast(inp)
         if not vin.isValidExpression:

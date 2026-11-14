@@ -49,6 +49,7 @@ from ...lib.gen.sections import (
     cover_window_loops,
     flat_box,
     flat_tool_section,
+    pin_thick_section,
     socket_section,
     thick_section,
 )
@@ -180,12 +181,12 @@ def build_sun(ctx: BuildContext) -> adsk.fusion.BRepBody:
     return _require_solid(ctx, sun)
 
 
-def chamfer_seat(ctx: BuildContext, body: adsk.fusion.BRepBody, z: float) -> None:
-    """Chamfer the bearing pocket's rim at height z [chamferSeat]."""
+def chamfer_seat(ctx: BuildContext, body: adsk.fusion.BRepBody, z: float, pocket: float) -> None:
+    """Chamfer the bearing pocket's rim at height z [chamferSeat]. pocket is the pocket's diameter."""
     sc = ctx.p.seat_chamfer
     if sc == 0:
         return
-    edges = fusion.circular_edges_at(body, ctx.d.pocket / 2, z)
+    edges = fusion.circular_edges_at(body, pocket / 2, z)
     if not edges:
         raise fusion.BuildError(f"{ctx.part} seat_chamfer: no pocket rim edge at z={z}")
     fusion.chamfer(ctx, edges, sc, f"{ctx.part} seat_chamfer")
@@ -214,21 +215,22 @@ def finish_face_edges(ctx: BuildContext, body: adsk.fusion.BRepBody) -> None:
 def build_planet(ctx: BuildContext) -> adsk.fusion.BRepBody:
     """[buildPlanet]"""
     p, d = ctx.p, ctx.d
-    t, wb = p.gear_thickness, d.bearing.width
+    t, wb = p.gear_thickness, d.planet_bearing.width
     gd = gears.planet_gear(p)
-    planet = build_spur(ctx, "planet", gd, t, d.lip, fillet_fallback=True)
+    planet = build_spur(ctx, "planet", gd, t, d.planet_lip, fillet_fallback=True)
     sk = fusion.new_sketch(ctx.comp, "planet pocket")
-    fusion.draw_circle(sk, (0.0, 0.0), d.pocket / 2)
+    fusion.draw_circle(sk, (0.0, 0.0), d.planet_pocket / 2)
     profile = fusion.profile_with_loops(sk, 1, "planet pocket_sketch", only=True)
     tool = fusion.extrude(ctx, profile, t - wb, wb + 1.0, "planet pocket_extrude")
     planet = fusion.cut(ctx, planet, [tool], "planet pocket_cut")
-    chamfer_seat(ctx, planet, t)
+    chamfer_seat(ctx, planet, t, d.planet_pocket)
     return _require_solid(ctx, planet)
 
 
 def build_bearing(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildBearing / ballbearing Build] The 605ZZ envelope: a ring from the bore to the outer diameter."""
-    b = ctx.d.bearing
+    """[buildBearing / ballbearing Build] A catalog bearing's envelope: a ring from the bore to the outer diameter.
+    The cover bearings are the shaft bearing and the planet bearings the planet bearing."""
+    b = ctx.d.shaft_bearing if ctx.part == "housing_bearing" else ctx.d.planet_bearing
     sk = fusion.new_sketch(ctx.comp, f"{ctx.part} ring")
     fusion.draw_circle(sk, (0.0, 0.0), b.outer_diameter / 2)
     fusion.draw_circle(sk, (0.0, 0.0), b.bore_diameter / 2)
@@ -289,10 +291,10 @@ def build_ring(ctx: BuildContext) -> adsk.fusion.BRepBody:
 def build_cover(ctx: BuildContext) -> adsk.fusion.BRepBody:
     """[buildCover] Frame with three windows and bolt holes, plus a bearing boss; then edge finishing on both faces."""
     p, d = ctx.p, ctx.d
-    tv, wb = p.cover_thickness, d.bearing.width
+    tv, wb = p.cover_thickness, d.shaft_bearing.width
     sk = fusion.new_sketch(ctx.comp, "cover frame")
     fusion.draw_circle(sk, (0.0, 0.0), d.ring_outer)
-    fusion.draw_circle(sk, (0.0, 0.0), d.lip / 2)
+    fusion.draw_circle(sk, (0.0, 0.0), d.cover_lip / 2)
     for c in bolt_hole_centers(d):
         fusion.draw_circle(sk, c, p.bolt_hole_diameter / 2)
     for loop in cover_window_loops(p, d):
@@ -302,7 +304,7 @@ def build_cover(ctx: BuildContext) -> adsk.fusion.BRepBody:
 
     sk = fusion.new_sketch(ctx.comp, "cover boss")
     fusion.draw_circle(sk, (0.0, 0.0), d.cover_boss / 2)
-    fusion.draw_circle(sk, (0.0, 0.0), d.pocket / 2)
+    fusion.draw_circle(sk, (0.0, 0.0), d.cover_pocket / 2)
     profile = fusion.profile_with_loops(sk, 2, "cover cover_boss_sketch")
     boss = fusion.extrude(ctx, profile, tv - 1.0, wb + 1.0, "cover cover_boss_extrude")
     cover = fusion.join(ctx, frame, [boss], "cover cover_join")
@@ -314,7 +316,7 @@ def build_cover(ctx: BuildContext) -> adsk.fusion.BRepBody:
     pocket = fusion.extrude(ctx, profile, tv - HEAD_HEIGHT, HEAD_HEIGHT + FASTENER_STOCK, "cover head_pocket_extrude")
     for cut_tool in _tool_instances(ctx, pocket, layout.head_pocket_poses(d), "cover head_pocket"):
         cover = fusion.cut(ctx, cover, [cut_tool], "cover head_pocket_cut")
-    chamfer_seat(ctx, cover, tv + wb)
+    chamfer_seat(ctx, cover, tv + wb, d.cover_pocket)
     finish_face_edges(ctx, cover)
     return _require_solid(ctx, cover)
 
@@ -347,7 +349,7 @@ def build_pin(ctx: BuildContext) -> adsk.fusion.BRepBody:
     spans = layout.pin_spans(p)
     rod = extrude_d_section(ctx, "carrier_pin rod", Circle((0.0, 0.0), d.pin / 2), spans.rod[0],
                             spans.rod[1] - spans.rod[0])
-    thick = extrude_d_section(ctx, "carrier_pin thick", thick_section(p, d), spans.thick[0],
+    thick = extrude_d_section(ctx, "carrier_pin thick", pin_thick_section(p, d), spans.thick[0],
                               spans.thick[1] - spans.thick[0])
     return _require_solid(ctx, fusion.join(ctx, rod, [thick], "carrier_pin pin_join"))
 

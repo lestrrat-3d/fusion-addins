@@ -3,8 +3,8 @@ import math
 import unittest
 
 import _support  # noqa: F401
-from gen.params import Frame, default_params
-from gen.validate import ValidationError, validate
+from gen.params import KITS, Frame, default_params, default_params_for
+from gen.validate import ValidationError, problems, validate
 
 CASES = [
     ({"ring_teeth": 72}, "ring teeth"),
@@ -64,7 +64,9 @@ class ValidateTest(unittest.TestCase):
         with self.assertRaises(ValidationError) as cm:
             validate(dataclasses.replace(default_params(), gear_thickness=5.5))
         self.assertEqual(
-            str(cm.exception), "gear thickness 5.5 leaves less than 1 for the lip behind a 5 wide bearing"
+            str(cm.exception),
+            "gear thickness 5.5 leaves less than 1 for the lip behind a 5 wide bearing; "
+            "a 605ZZ planet bearing needs GearThickness >= 6",
         )
         with self.assertRaises(ValidationError) as cm:
             validate(dataclasses.replace(default_params(), gear_thickness=float("nan")))
@@ -74,7 +76,8 @@ class ValidateTest(unittest.TestCase):
         cases = [
             ({"planet_count": 6}, "neighbouring planet centers are 20.999999999999996 apart; tips need 31.46 for at "
              "least 0.5 clearance"),
-            ({"module": 0.5}, "the 5.1 mm shaft bore leaves less than one module of wall under the sun root"),
+            ({"module": 0.5}, "the 5.1 mm shaft bore leaves less than one module of wall under the sun root; "
+             "SunTeeth must be at least 17 for the 5.1 mm shaft at module 0.5"),
             ({"flat_depth": 1.3}, "flat depth 1.3 is out of range"),
             ({"carrier_thickness": 1.9}, "carrier thickness 1.9 is out of range"),
             ({"flat_depth": -0.1}, "flat depth -0.1 is out of range"),
@@ -150,6 +153,61 @@ class ValidateTest(unittest.TestCase):
                 "spurgear: adjacent teeth overlap at the root circle (radius 34.5)"
             ),
         )
+
+
+class KitValidateTest(unittest.TestCase):
+    """The bearing kits and the gallery's bearing rules [problems_test.go, kits_test.go]."""
+
+    def test_every_kit_validates(self):
+        for kit in KITS:
+            with self.subTest(kit=kit.name):
+                self.assertEqual(problems(default_params_for(kit.name)), [])
+                validate(default_params_for(kit.name))
+
+    def test_unknown_bearing_names(self):
+        for field, role in (("planet_bearing", "planet"), ("shaft_bearing", "shaft")):
+            with self.subTest(field=field):
+                want = f'{role} bearing "609ZZ" is not in the bearing catalog; choose one of 605ZZ, 608ZZ'
+                self.assertEqual(problems(dataclasses.replace(default_params(), **{field: "609ZZ"})), [want])
+
+    def test_608_shaft_with_default_teeth_names_the_kit(self):
+        p = dataclasses.replace(default_params(), shaft_bearing="608ZZ")
+        got = problems(p)
+        self.assertEqual(got[0], (
+            "the 8.1 mm shaft bore leaves less than one module of wall under the sun root; "
+            "SunTeeth must be at least 14 for the 8.1 mm shaft at module 1; try 14/28/70"
+        ))
+        with self.assertRaises(ValidationError) as cm:
+            validate(p)
+        self.assertEqual(str(cm.exception), got[0])
+
+    def test_608_planet_pocket_wall(self):
+        p = dataclasses.replace(default_params(), planet_bearing="608ZZ", sun_teeth=13, planet_teeth=26, ring_teeth=65)
+        self.assertIn("PlanetTeeth must be at least 28 for the 608ZZ planet bearing", problems(p)[0])
+
+    def test_608_planet_lip(self):
+        p = dataclasses.replace(default_params(), planet_bearing="608ZZ", gear_thickness=7.5)
+        self.assertIn("a 608ZZ planet bearing needs GearThickness >= 8", problems(p)[0])
+
+    def test_input_problems_stop_before_the_fit_checks(self):
+        p = dataclasses.replace(default_params(), shaft_bearing="608ZZ", sun_teeth=14, planet_teeth=29, ring_teeth=72)
+        got = problems(p)
+        self.assertEqual(len(got), 1)
+        self.assertIn("must divide by planet count", got[0])
+
+    def test_planet_count_zero_does_not_raise(self):
+        self.assertTrue(problems(dataclasses.replace(default_params(), planet_count=0)))
+
+    def test_each_unknown_bearing_is_reported_once(self):
+        p = dataclasses.replace(default_params(), planet_bearing="609ZZ", shaft_bearing="610ZZ")
+        got = problems(p)
+        self.assertEqual(len(got), 2)
+        self.assertIn('planet bearing "609ZZ"', got[0])
+        self.assertIn('shaft bearing "610ZZ"', got[1])
+
+    def test_input_problems_come_alone(self):
+        p = dataclasses.replace(default_params(), shaft_bearing="608ZZ", flat_depth=-1)
+        self.assertEqual(problems(p), ["flat depth -1 is out of range"])
 
 
 if __name__ == "__main__":

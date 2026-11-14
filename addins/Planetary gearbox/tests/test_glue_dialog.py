@@ -103,5 +103,39 @@ class EarInputsTest(unittest.TestCase):
         self.assertTrue(items["ear_bore_diameter"].isEnabled)
 
 
+class KitTeethTest(unittest.TestCase):
+    """Choosing a bearing sets the kit's teeth, with adsk mocked."""
+
+    def _dialog(self):
+        adsk = mock.MagicMock()
+        adsk.core.DropDownCommandInput.cast = lambda x: x
+        adsk.core.IntegerSpinnerCommandInput.cast = lambda x: x
+        fakes = {"adsk": adsk, "adsk.core": adsk.core, "adsk.fusion": adsk.fusion}
+        with mock.patch.dict(sys.modules, fakes), mock.patch.object(sys, "path", [_ADDINS] + sys.path):
+            return importlib.import_module("Planetary gearbox.commands.gearbox.dialog")
+
+    def _inputs(self, planet, shaft):
+        items = {
+            "planet_bearing": types.SimpleNamespace(id="planet_bearing", selectedItem=types.SimpleNamespace(name=planet)),
+            "shaft_bearing": types.SimpleNamespace(id="shaft_bearing", selectedItem=types.SimpleNamespace(name=shaft)),
+        }
+        for i, v in (("sun_teeth", 13), ("planet_teeth", 29), ("ring_teeth", 71)):
+            items[i] = types.SimpleNamespace(id=i, value=v)
+        return items, types.SimpleNamespace(itemById=lambda i: items.get(i))
+
+    def test_shaft_608_sets_the_kit_teeth(self):
+        dialog = self._dialog()
+        items, inputs = self._inputs("605ZZ", "608ZZ")
+        dialog.apply_kit_teeth(inputs, items["shaft_bearing"])
+        self.assertEqual([items[i].value for i in ("sun_teeth", "planet_teeth", "ring_teeth")], [14, 28, 70])
+
+    def test_other_input_leaves_the_teeth(self):
+        dialog = self._dialog()
+        items, inputs = self._inputs("605ZZ", "608ZZ")
+        dialog.apply_kit_teeth(inputs, types.SimpleNamespace(id="module"))
+        dialog.apply_kit_teeth(inputs, None)
+        self.assertEqual(items["sun_teeth"].value, 13)
+
+
 if __name__ == "__main__":
     unittest.main()

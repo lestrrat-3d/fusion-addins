@@ -73,9 +73,9 @@ class LayoutTest(unittest.TestCase):
 
     def test_shaft_specs(self):
         s = layout.input_shaft_spec(P1, D1)
-        self.assertEqual((s.bottom, s.top, s.collar, s.flats), (-21, 8, (-4, -0.5), ((0, 9),)))
+        self.assertEqual((s.bottom, s.top, s.collar, s.flats), (-21, 8, (-3.75, -0.5), ((0, 9), (-22, -10))))
         s = layout.output_shaft_spec(P1, D1)
-        self.assertEqual((s.bottom, s.top, s.collar, s.flats, s.thick_top), (0, 24, None, (), 6.75))
+        self.assertEqual((s.bottom, s.top, s.collar, s.flats, s.thick_top), (0, 24, None, ((13, 25),), 6.75))
         self.assertIsNone(layout.link_shaft_spec(P1, D1))
         s = layout.link_shaft_spec(P2, D2)
         assert s is not None

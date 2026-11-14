@@ -59,6 +59,7 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
 
 def command_input_changed(args: adsk.core.InputChangedEventArgs):
     dialog.advance_placement_focus(args.inputs, args.input)
+    dialog.apply_kit_teeth(args.inputs, args.input)
     dialog.sync_dependent_inputs(args.inputs)
     p, err = dialog.read_params(args.inputs)
     dialog.show_status(args.inputs, p, err)

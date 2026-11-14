@@ -65,8 +65,13 @@ def flat_tool_section(p: Params, d: Dims) -> Loop | Circle:
 
 
 def socket_radius(d: Dims) -> float:
-    """Radius of the D socket through the carrier plate, and of its centre hole: the thick part's radius plus the
-    press-fit clearance."""
+    """Radius of a pin's D socket through the carrier plate: the pin's thick part radius plus the press-fit
+    clearance."""
+    return d.pin_collar / 2 + PRESS_FIT_CLEARANCE
+
+
+def hole_radius(d: Dims) -> float:
+    """Radius of the carrier's centre hole: the shaft's thick part radius plus the press-fit clearance."""
     return d.collar / 2 + PRESS_FIT_CLEARANCE
 
 
@@ -81,11 +86,11 @@ def socket_area(p: Params, d: Dims) -> float:
 
 def carrier_hole_section(p: Params, d: Dims) -> Loop | Circle:
     """The centre hole of the carrier, a D section about the axis that takes a link or output shaft's thick part."""
-    return d_section(0.0, socket_radius(d), p.flat_depth)
+    return d_section(0.0, hole_radius(d), p.flat_depth)
 
 
 def carrier_hole_area(p: Params, d: Dims) -> float:
-    return d_area(socket_radius(d), p.flat_depth)
+    return d_area(hole_radius(d), p.flat_depth)
 
 
 def thick_area(p: Params, d: Dims) -> float:
@@ -93,8 +98,17 @@ def thick_area(p: Params, d: Dims) -> float:
 
 
 def thick_section(p: Params, d: Dims) -> Loop | Circle:
-    """The thick part of a carrier pin, a link shaft or the output shaft, about its own axis."""
+    """The thick part of a link shaft or the output shaft, about its own axis."""
     return d_section(0.0, d.collar / 2, p.flat_depth)
+
+
+def pin_thick_area(p: Params, d: Dims) -> float:
+    return d_area(d.pin_collar / 2, p.flat_depth)
+
+
+def pin_thick_section(p: Params, d: Dims) -> Loop | Circle:
+    """The thick part of a carrier pin, about its own axis: the pin collar diameter, not the shaft's."""
+    return d_section(0.0, d.pin_collar / 2, p.flat_depth)
 
 
 def flat_box(p: Params, d: Dims) -> tuple[Point, Point]:

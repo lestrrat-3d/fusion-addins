@@ -12,7 +12,7 @@ import _support  # noqa: F401
 
 from gen import containers, layout
 from gen.dims import derive
-from gen.params import default_params, placement_frame
+from gen.params import KITS, default_params, default_params_for, placement_frame
 
 _ADDINS = _support.ADDINS
 
@@ -263,6 +263,29 @@ class GlueBuildTest(unittest.TestCase):
     def test_two_stages(self):
         self.check_names({"stages": 2}, 46)
 
+    def test_every_kit_builds(self):
+        """Each kit builds every body; the cover's lip loop sits at the shaft bearing's lip radius."""
+        for kit in KITS:
+            with self.subTest(kit=kit.name):
+                p = default_params_for(kit.name)
+                d = derive(p)
+                lip = d.cover_lip / 2
+                loops = dict(FACE_LOOPS)
+                loops["cover"] = (
+                    [(True, 1, 44.0)] + [(False, 4, 13.25)] * 3 + [(False, 1, lip)] + [(False, 1, 39.3)] * 4,
+                    FACE_LOOPS["cover"][1],
+                )
+                changes = {
+                    k: getattr(p, k)
+                    for k in ("planet_bearing", "shaft_bearing", "sun_teeth", "planet_teeth", "ring_teeth")
+                }
+                world, built = self.run_build(face_loops=loops, **changes)
+                want = sorted(i.name for i in layout.instances(p, d))
+                self.assertEqual(sorted(name for _, name, _ in built), want)
+                self.assertTrue(all(b.isSolid for b in world.alive))
+                # One bearing body per instance, built from the role's bearing.
+                self.assertEqual(len([c for c in world.calls if c[1].endswith("bearing_extrude")]), 2)
+
     def test_pins_shafts_not_split_by_default(self):
         world, _ = self.run_build(stages=2)
         self.assertEqual([c for c in world.calls if c[0] == "split"], [])
@@ -381,12 +404,12 @@ class GlueBuildTest(unittest.TestCase):
     def test_shaft_flat_calls(self):
         world, _ = self.run_build(stages=2)
         calls = world.calls
-        # One flat box per span: input 1, link 1, output none (its thin rod stays round). The flat is not patterned.
-        self.assertEqual(len([c for c in calls if c[1].endswith("flat_box_extrude")]), 2)
+        # One flat box per span: input 2 (over the sun and on the free end), link 1, output 1 (on the free end). The
+        # flat is not patterned.
+        self.assertEqual(len([c for c in calls if c[1].endswith("flat_box_extrude")]), 4)
         self.assertFalse([c for c in calls if "key" in c[1]])
-        for part in ("input_shaft", "link_shaft"):
+        for part in ("input_shaft", "link_shaft", "output_shaft"):
             self.assertIn(("combine", f"{part} flat_cut"), calls)
-        self.assertNotIn(("combine", "output_shaft flat_cut"), calls)
         for part in ("link_shaft", "output_shaft"):
             self.assertIn(("combine", f"{part} step_join"), calls)
         self.assertIn(("combine", "sun d_bore_cut"), calls)

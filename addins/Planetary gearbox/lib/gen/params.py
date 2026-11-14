@@ -14,6 +14,10 @@ Vec3 = tuple[float, float, float]
 LIP_WIDTH = 2.0
 LIP_THICKNESS = 1.0
 COLLAR_CLEARANCE = 0.5
+# params.go collarBearingGap: the Tight gap between the input shaft's collar and the front bearing's inner face.
+COLLAR_BEARING_GAP = 0.25
+# params.go endFlatMargin: how far a flat on a shaft's outer end stays clear of the bearing boss the shaft leaves.
+END_FLAT_MARGIN = 1.0
 BOLT_RIM_MARGIN = 1.5
 ARM_MARGIN = 1.0
 COLLAR_MARGIN = 1.2
@@ -137,6 +141,9 @@ class Params:
     edge_chamfer: float = MIN_EDGE_CHAMFER
     input_shaft_length: float = 12.0
     bearing_clearance: float = SEAT_CLEARANCE
+    # Catalog names (bearing.py): the bearing each planet turns on, and the one each cover holds for a shaft.
+    planet_bearing: str = "605ZZ"
+    shaft_bearing: str = "605ZZ"
     carrier_wall: float = 3.0
     ring_wall: float = 7.1
     backlash: float = 0.15
@@ -153,6 +160,50 @@ class Params:
 
 def default_params() -> Params:
     return Params()
+
+
+@dataclasses.dataclass(frozen=True)
+class Kit:
+    """One supported bearing pair with the tooth set that passes the checks [kits.go], at module 1, three planets."""
+
+    name: str
+    planet_bearing: str
+    shaft_bearing: str
+    sun_teeth: int
+    planet_teeth: int
+    ring_teeth: int
+
+
+# The default kit first [kits.go kits].
+KITS: tuple[Kit, ...] = (
+    Kit("planet605-shaft605", "605ZZ", "605ZZ", 13, 29, 71),
+    Kit("planet605-shaft608", "605ZZ", "608ZZ", 14, 28, 70),
+    Kit("planet608-shaft605", "608ZZ", "605ZZ", 13, 29, 71),
+    Kit("planet608-shaft608", "608ZZ", "608ZZ", 14, 28, 70),
+)
+
+
+def kit_for(planet_bearing: str, shaft_bearing: str) -> Kit | None:
+    """The kit with these two bearings, or None."""
+    for k in KITS:
+        if k.planet_bearing == planet_bearing and k.shaft_bearing == shaft_bearing:
+            return k
+    return None
+
+
+def default_params_for(kit: str) -> Params:
+    """DefaultParams with the kit's bearings and teeth [kits.go DefaultParamsFor]. Raises ValueError for a bad name."""
+    for k in KITS:
+        if k.name == kit:
+            return dataclasses.replace(
+                Params(),
+                planet_bearing=k.planet_bearing,
+                shaft_bearing=k.shaft_bearing,
+                sun_teeth=k.sun_teeth,
+                planet_teeth=k.planet_teeth,
+                ring_teeth=k.ring_teeth,
+            )
+    raise ValueError(f'planetarygearbox: unknown kit "{kit}"; choose one of {", ".join(k.name for k in KITS)}')
 
 
 def ratio(p: Params) -> float:

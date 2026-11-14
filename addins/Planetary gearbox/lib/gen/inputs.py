@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 
+from .bearing import CATALOG
 from .params import Params
 
 
@@ -11,10 +12,13 @@ from .params import Params
 class InputSpec:
     id: str
     label: str
-    kind: str  # "length" (mm) | "angle" (deg shown) | "count" | "scalar" | "bool" (check box, 1 = checked)
+    # "length" (mm) | "angle" (deg shown) | "count" | "scalar" | "bool" (check box, 1 = checked) |
+    # "choice" (drop-down over `choices`; the value is the index of the chosen entry)
+    kind: str
     default: float
     # Id of the "bool" input that enables this one. Its dialog input is disabled while that box is unchecked.
     needs: str = ""
+    choices: tuple[str, ...] = ()
 
 
 EARS_ID = "ears"
@@ -40,6 +44,9 @@ INPUT_SPECS: tuple[InputSpec, ...] = (
     InputSpec("flat_depth", "Flat depth", "length", 0.5),
     InputSpec("input_shaft_length", "Input shaft length", "length", 12),
     InputSpec("bearing_clearance", "Bearing clearance", "length", 0.05),
+    # The two bearing roles pick a catalog bearing each (gallery PlanetBearing and ShaftBearing, both 605ZZ by default).
+    InputSpec("planet_bearing", "Planet bearing", "choice", 0, choices=tuple(b.name for b in CATALOG)),
+    InputSpec("shaft_bearing", "Shaft bearing", "choice", 0, choices=tuple(b.name for b in CATALOG)),
     InputSpec("seat_chamfer", "Seat chamfer", "length", 0.5),
     InputSpec("edge_chamfer", "Edge chamfer", "length", 0.5),
     InputSpec("carrier_wall", "Carrier wall", "length", 3),
@@ -64,11 +71,14 @@ def params_from_values(values: dict[str, float]) -> Params:
 
     A "bool" value is not a Params field. It switches off every input that needs it: with the ears box unchecked
     the ear count is 0, the gallery's way to leave the ring a plain cylinder."""
-    kwargs: dict[str, float | int] = {}
+    kwargs: dict[str, float | int | str] = {}
     for spec in INPUT_SPECS:
         if spec.kind == "bool":
             continue
         v = values[spec.id]
+        if spec.kind == "choice":
+            kwargs[spec.id] = spec.choices[int(v)]  # pyright: ignore[reportArgumentType]
+            continue
         kwargs[spec.id] = int(v) if spec.kind == "count" else float(v)
     if not values[EARS_ID]:
         kwargs["ear_count"] = 0

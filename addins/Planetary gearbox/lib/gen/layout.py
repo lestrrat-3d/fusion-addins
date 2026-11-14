@@ -1,7 +1,7 @@
 """Axial layout, instance poses and body names.
 
 Own copy of decad-gallery models/planetarygearbox planetarygearbox.go (Named, build, buildHousing), place.go and the
-shaft spans of carrier.go / cover.go, and fasteners.go (buildFasteners, fastener names) at 92c1f03.
+shaft spans of carrier.go / cover.go, and fasteners.go (buildFasteners, fastener names) at c2cbb77.
 """
 
 from __future__ import annotations
@@ -20,7 +20,9 @@ from .fasteners import (
     nut_cavity_height,
 )
 from .params import (
+    COLLAR_BEARING_GAP,
     COLLAR_CLEARANCE,
+    END_FLAT_MARGIN,
     FIT_CLEARANCE,
     PIN_SHOULDER_CLEARANCE,
     PLANET_BEARING_LIFT,
@@ -172,12 +174,15 @@ def _collar(lo: float, hi: float) -> tuple[float, float] | None:
 
 
 def input_shaft_spec(p: Params, d: Dims) -> ShaftSpec:
-    g, tv, wb = p.stage_gap, p.cover_thickness, d.bearing.width
+    g, tv, wb = p.stage_gap, p.cover_thickness, d.shaft_bearing.width
+    bottom = -(g + tv + wb + p.input_shaft_length)
+    # [buildInputShaft] The collar starts COLLAR_BEARING_GAP above the front bearing's inner face. A second flat runs
+    # along the end that reaches out of the cover, ending END_FLAT_MARGIN short of the boss.
     return ShaftSpec(
-        bottom=-(g + tv + wb + p.input_shaft_length),
+        bottom=bottom,
         top=p.gear_thickness,
-        collar=_collar(-(g + tv), -COLLAR_CLEARANCE),
-        flats=((0.0, p.gear_thickness + 1),),
+        collar=_collar(-(g + tv) + COLLAR_BEARING_GAP, -COLLAR_CLEARANCE),
+        flats=((0.0, p.gear_thickness + 1), (bottom - 1, bottom + p.input_shaft_length - END_FLAT_MARGIN)),
     )
 
 
@@ -192,12 +197,14 @@ def link_shaft_spec(p: Params, d: Dims) -> ShaftSpec | None:
 
 
 def output_shaft_spec(p: Params, d: Dims) -> ShaftSpec:
-    g, tc, tv, wb = p.stage_gap, p.carrier_thickness, p.cover_thickness, d.bearing.width
+    g, tc, tv, wb = p.stage_gap, p.carrier_thickness, p.cover_thickness, d.shaft_bearing.width
+    top = tc + g + tv + wb + p.output_shaft_length
+    # [Build] A flat on the free end, starting END_FLAT_MARGIN clear of the rear boss.
     return ShaftSpec(
         bottom=0.0,
-        top=tc + g + tv + wb + p.output_shaft_length,
+        top=top,
         collar=None,
-        flats=(),
+        flats=((top - p.output_shaft_length + END_FLAT_MARGIN, top + 1),),
         thick_top=tc + g + tv - FIT_CLEARANCE,
     )
 
@@ -220,7 +227,6 @@ def pin_spans(p: Params) -> PinSpans:
 
 def part_local_z(p: Params, d: Dims, part: str) -> tuple[float, float]:
     """Axial range of the master body of part, in part-local coordinates."""
-    wb = d.bearing.width
     if part == "bolt":
         return (-FASTENER_LENGTH, HEAD_HEIGHT)
     if part == "nut":
@@ -228,9 +234,11 @@ def part_local_z(p: Params, d: Dims, part: str) -> tuple[float, float]:
     if part == "ring":
         return (RING_MARGIN, RING_MARGIN + d.ring_length)
     if part == "cover":
-        return (0.0, p.cover_thickness + wb)
-    if part in ("housing_bearing", "planet_bearing"):
-        return (0.0, wb)
+        return (0.0, p.cover_thickness + d.shaft_bearing.width)
+    if part == "housing_bearing":
+        return (0.0, d.shaft_bearing.width)
+    if part == "planet_bearing":
+        return (0.0, d.planet_bearing.width)
     if part in ("sun", "planet"):
         return (0.0, p.gear_thickness)
     if part == "carrier":
@@ -249,13 +257,14 @@ def part_local_z(p: Params, d: Dims, part: str) -> tuple[float, float]:
 
 def instances(p: Params, d: Dims) -> list[Instance]:
     """Every body of the gearbox in the gallery's Named() order."""
-    g, tv, wb, t = p.stage_gap, p.cover_thickness, d.bearing.width, p.gear_thickness
+    g, tv, t = p.stage_gap, p.cover_thickness, p.gear_thickness
+    wbs, wbp = d.shaft_bearing.width, d.planet_bearing.width
     length = d.ring_length
     out = [
         Instance(RING_NAME, "ring", Pose(z=-RING_MARGIN - g)),
         Instance(FRONT_COVER_NAME, "cover", Pose(flip=True, z=-g)),
         Instance(REAR_COVER_NAME, "cover", Pose(z=length - g)),
-        Instance(FRONT_BEARING_NAME, "housing_bearing", Pose(z=-(g + tv + wb))),
+        Instance(FRONT_BEARING_NAME, "housing_bearing", Pose(z=-(g + tv + wbs))),
         Instance(REAR_BEARING_NAME, "housing_bearing", Pose(z=length - g + tv)),
         Instance(INPUT_SHAFT_NAME, "input_shaft", Pose()),
     ]
@@ -283,7 +292,7 @@ def instances(p: Params, d: Dims) -> list[Instance]:
             phi = planet_orbit_angle(p, i)
             x, y = d.orbit * math.cos(phi), d.orbit * math.sin(phi)
             out.append(Instance(planet_name(k, i), "planet", Pose(planet_tooth_angle(p, i), x, y, z)))
-            zb = z + t - wb + PLANET_BEARING_LIFT
+            zb = z + t - wbp + PLANET_BEARING_LIFT
             out.append(Instance(bearing_name(k, i), "planet_bearing", Pose(0.0, x, y, zb)))
         zc = z + t + g
         for i in range(p.planet_count):
