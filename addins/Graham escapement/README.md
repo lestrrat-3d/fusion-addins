@@ -14,7 +14,7 @@ movement.
 
 ## Gallery revision
 
-Gallery revision: 3a4f9d8dc3d5ea6ed7ca003efec7be0467525492 (`GALLERY_REVISION` in `config.py`)
+Gallery revision: e11a188db314f97d3bf3b56c37ca87f0d339b791 (`GALLERY_REVISION` in `config.py`)
 
 The add-in translates decad-gallery at this commit: `models/escapement` and the models it builds from,
 `models/spurgear`, `models/spiralspring`, `models/ballbearing`, `models/m2bolt` and `models/m2nut`.
