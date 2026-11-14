@@ -50,7 +50,7 @@ from .params import (
 from .report import fmt_num as n
 
 
-_TOOTH_CHAIN = "spurgear: tooth: spurgear: tooth section: "
+_TOOTH_CHAIN = "tooth: spurgear: tooth section: "
 
 
 class ValidationError(ValueError):
@@ -340,7 +340,7 @@ def _spur_problem(p: Params, d: Dims) -> str | None:
             try:
                 closing_radius(gd)
             except ValueError as e:
-                # [spurgear assemble "spurgear: tooth: %w" + Variant.tooth "spurgear: tooth section: %w"]
+                # [spurgear assemble "tooth: %w" + Variant.tooth "spurgear: tooth section: %w"]
                 return prefix + _TOOTH_CHAIN + str(e)
     return None
 

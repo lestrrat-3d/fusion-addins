@@ -149,8 +149,8 @@ class ValidateTest(unittest.TestCase):
         self.assertEqual(
             str(cm.exception),
             (
-                "ring tooth spaces: spurgear: tooth: spurgear: tooth section: "
-                "spurgear: adjacent teeth overlap at the root circle (radius 34.5)"
+                "ring tooth spaces: tooth: spurgear: tooth section: "
+                "embedded tooth: flanks of adjacent teeth overlap at the root circle (radius 34.5)"
             ),
         )
 
