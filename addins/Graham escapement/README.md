@@ -4,7 +4,7 @@ A Fusion add-in that rebuilds the decad-gallery model `escapement`: a desk-clock
 movement. A spiral mainspring turns a great wheel, which turns a 30-tooth escape wheel through a 13-tooth pinion. An
 anchor with two pallets lets the escape wheel advance half a tooth at a time, and a crutch on the anchor's arbor pushes
 a 180 mm pendulum. The movement sits in a two-plate frame on seven 605ZZ bearings and four M2 bolts and nuts. The
-default build has 36 bodies, including four printed collar rings. The dialog takes the gallery's inputs with the
+default build has 34 bodies, including two keyed collar rings. The dialog takes the gallery's inputs with the
 gallery's defaults (`Pendulum length`, `Amplitude`, `Lock angle`, `Lift angle`, `Phase`, `Backlash`) and the gallery's
 input rules. Bodies are grouped the way the gallery groups them: the `Graham Escapement` component holds one
 sub-component per gallery container (`Frame`, `Bearings`, `Arbors`, `Escapement`, `Pendulum Assembly`, `Drive`,

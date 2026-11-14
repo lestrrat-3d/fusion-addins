@@ -135,6 +135,7 @@ class GluePartsTest(unittest.TestCase):
 
         want = {
             "front_plate": [sections.REAR_PEG_D], "pawl_carrier": [sections.CARRIER_D],
+            "spring_retainer": [sections.BODY_D],
             "crutch": [sections.KEYED_COUNTER_D, sections.END_D],
             "winding_knob": [sections.KEYED_COUNTER_D, sections.END_D], "suspension_cap": [sections.END_D],
             "end_collar": [sections.KEYED_RING_D, sections.END_D],
@@ -211,12 +212,13 @@ class GluePartsTest(unittest.TestCase):
                 "pawl_carrier layer_extrude": (5.25, 9.25), "pawl_carrier boss_extrude": (8.75, 11.0),
                 "pawl_carrier bore_extrude": (4.25, 12.0),
             },
-            "spring_spacer": {"spring_spacer disc_extrude": (17.5, 27.75), "spring_spacer bore_extrude": (16.5, 28.75)},
+            "spring_retainer": {
+                "spring_retainer disc_extrude": (17.5, 20.5), "spring_retainer bore_extrude": (16.5, 21.5),
+            },
             "winding_knob": {
                 "winding_knob disc_extrude": (35.3, 38.3), "winding_knob counterbore_extrude": (34.3, 37.3),
                 "winding_knob bore_extrude": (34.3, 39.3),
             },
-            "arbor_collar": {"arbor_collar ring_extrude": (0.0, 3.0), "arbor_collar bore_extrude": (-1.0, 4.0)},
             "end_collar": {"end_collar ring_extrude": (0.0, 3.0), "end_collar bore_extrude": (-1.0, 4.0)},
         }
         for part, spans in want.items():

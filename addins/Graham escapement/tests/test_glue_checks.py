@@ -149,10 +149,10 @@ class RunAllTest(unittest.TestCase):
                 records = _run_all(adsk)
             summary = [f for e, f in records if e == "summary"]
             self.assertEqual(len(summary), 1)
-            self.assertEqual(summary[0]["bodies"], 36)
-            self.assertEqual(summary[0]["expected"], 36)
+            self.assertEqual(summary[0]["bodies"], 34)
+            self.assertEqual(summary[0]["expected"], 34)
             # 3 checks per body, 6 point events, 1 top and 20 container results.
-            self.assertEqual(summary[0]["pass"] + summary[0]["fail"], 3 * 36 + 6 + 21)
+            self.assertEqual(summary[0]["pass"] + summary[0]["fail"], 3 * 34 + 6 + 21)
             self.assertEqual(records[-1][0], "summary")
             self.assertFalse([e for e, f in records if f.get("result") == "PASS"])
 

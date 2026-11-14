@@ -10,8 +10,9 @@ import math
 
 from . import bodies, edgefinish, gears
 from .constants import (
-    ANCHOR_COUNTER_RADIUS, CARRIER_BOSS_RADIUS, COLLAR_LENGTH, COLLAR_RADIUS, GREAT_BORE, GREAT_COUNTER_RADIUS,
-    LIP_RADIUS, MOUNT_RADIUS, SEAT_RADIUS, SPRING_SOCKET_R, WHEEL_COUNTER_RADIUS, WHEEL_HIGH, WHEEL_LOW,
+    ANCHOR_COUNTER_RADIUS, CARRIER_BOSS_RADIUS, COLLAR_LENGTH, GREAT_BORE, GREAT_COUNTER_RADIUS, LIP_RADIUS,
+    MOUNT_RADIUS, RETAINER_HIGH, RETAINER_LOW, RETAINER_RADIUS, SEAT_RADIUS, SPRING_SOCKET_R, WHEEL_COUNTER_RADIUS,
+    WHEEL_HIGH, WHEEL_LOW,
 )
 from .curves import Line, loop_polygon
 from .fasteners import (
@@ -250,17 +251,14 @@ def part_volume(g: Geometry, part: str) -> Expect:
         outer, bore, eye = profile(spring_params(), g.spring)
         value = (_loop_area(outer) - _loop_area(bore) - pi * eye.radius**2) * 6 - c
         return Expect(value, 0.002 * value + 1.0)
-    if part == "spring_spacer":
-        value = (pi * 3.7**2 - d_body) * 10.25
+    if part == "spring_retainer":
+        value = (pi * RETAINER_RADIUS**2 - d_body) * (RETAINER_HIGH - RETAINER_LOW)
         return Expect(value, 0.002 * value)
     if part == "spring_anchor_pin":
         value = pi * 1.5**2 * 20.7
         return Expect(value, 0.002 * value)
     if part == "winding_knob":
         value = pi * 9.0**2 * 3 - d_kc * 2.0 - d_end * 1.0
-        return Expect(value, 0.002 * value)
-    if part == "arbor_collar":
-        value = (pi * COLLAR_RADIUS**2 - d_body) * COLLAR_LENGTH
         return Expect(value, 0.002 * value)
     if part == "end_collar":
         value = (d_kr - d_end) * COLLAR_LENGTH
@@ -293,10 +291,9 @@ _PART_Z: dict[str, tuple[float, float]] = {
     "great_wheel": (1.5, 8.5),
     "pawl_carrier": (5.25, 11.0),
     "mainspring": (0.0, 6.0),
-    "spring_spacer": (17.5, 27.75),
+    "spring_retainer": (17.5, 20.5),
     "spring_anchor_pin": (10.25, 30.95),
     "winding_knob": (35.30, 38.30),
-    "arbor_collar": (0.0, 3.0),
     "end_collar": (0.0, 3.0),
     "bearing": (0.0, 5.0),
     "bolt": (-10.0, 2.0),

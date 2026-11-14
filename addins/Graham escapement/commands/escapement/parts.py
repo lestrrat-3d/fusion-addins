@@ -66,11 +66,12 @@ from ...lib.gen.constants import (
     RATCHET_FLOOR,
     RATCHET_TEETH,
     RATCHET_TOOL,
+    RETAINER_HIGH,
+    RETAINER_LOW,
+    RETAINER_RADIUS,
     ROOT_RADIUS,
     SEAT_DEPTH,
     SEAT_RADIUS,
-    SPACER_HIGH,
-    SPACER_LOW,
     SPRING_ANCHOR_HIGH,
     SPRING_ANCHOR_LOW,
     SPRING_ANCHOR_PIN_R,
@@ -462,10 +463,11 @@ def build_mainspring(ctx: BuildContext) -> adsk.fusion.BRepBody:
     return _require_solid(ctx, body)
 
 
-def build_spring_spacer(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildSpringSpacer] A pressed tube from the spring hub's front face to the front bearing."""
-    body = disc(ctx, "spring_spacer disc", COLLAR_RADIUS, SPACER_LOW, SPACER_HIGH)
-    body = _bore_with_d(ctx, body, "spring_spacer", SPACER_LOW - 1.0, SPACER_HIGH + 1.0, d=sections.BODY_D)
+def build_spring_retainer(ctx: BuildContext) -> adsk.fusion.BRepBody:
+    """[buildSpringRetainer] The pressed ring that stops the spring hub on the front: a disc r 5.0 over z 17.5 to
+    20.5 with the body-family D bore."""
+    body = disc(ctx, "spring_retainer disc", RETAINER_RADIUS, RETAINER_LOW, RETAINER_HIGH)
+    body = _bore_with_d(ctx, body, "spring_retainer", RETAINER_LOW - 1.0, RETAINER_HIGH + 1.0, d=sections.BODY_D)
     return _require_solid(ctx, body)
 
 
@@ -480,13 +482,6 @@ def build_winding_knob(ctx: BuildContext) -> adsk.fusion.BRepBody:
     body = disc(ctx, "winding_knob disc", KNOB_RADIUS, KNOB_LOW, KNOB_HIGH)
     body = _keyed_counterbore(ctx, body, "winding_knob counterbore")
     body = _bore_with_d(ctx, body, "winding_knob", KNOB_LOW - PRESS_TOOL_LOW, KNOB_HIGH + PRESS_TOOL_LOW)
-    return _require_solid(ctx, body)
-
-
-def build_arbor_collar(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[buildCollarRing] A ring of the collar radius with the body-family D bore, local z 0 to 3."""
-    body = disc(ctx, "arbor_collar ring", COLLAR_RADIUS, 0.0, COLLAR_LENGTH)
-    body = _bore_with_d(ctx, body, "arbor_collar", -PRESS_TOOL_LOW, COLLAR_LENGTH + PRESS_TOOL_LOW, d=sections.BODY_D)
     return _require_solid(ctx, body)
 
 

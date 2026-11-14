@@ -153,16 +153,16 @@ class GlueBuildTest(unittest.TestCase):
     def test_default_build_names_and_count(self):
         world, built = self.run_build()
         self.assertEqual([name for _, name, _ in built], list(bodies.BODY_NAMES))
-        self.assertEqual(world.alive.__len__(), 36)
+        self.assertEqual(world.alive.__len__(), 34)
         self.assertEqual(sorted(b.name for b in world.alive), sorted(bodies.BODY_NAMES))
         self.assertTrue(all(b.isSolid for b in world.alive))
         copies = [c for c in world.calls if c[0] == "copy"]
-        self.assertEqual(len(copies), 6 + 3 + 3 + 1 + 1)
+        self.assertEqual(len(copies), 6 + 3 + 3 + 1)
 
     def test_collar_kinds_are_copied_once(self):
         world, built = self.run_build()
         by_name = {name: body for _, name, body in built}
-        for part in ("arbor_collar", "end_collar"):
+        for part in ("end_collar",):
             first, last = bodies.PART_BODIES[part]
             self.assertEqual(world.calls.count(("copy", f"{part} copy")), 1, part)
             self.assertEqual((by_name[first].part, by_name[last].part), (part, part))
@@ -234,7 +234,7 @@ class GlueBuildTest(unittest.TestCase):
     def test_stray_body_fails_count(self):
         with self.assertRaises(Exception) as cm:
             self.run_build(stray_part="front_plate")
-        self.assertEqual(str(cm.exception), "expected 36 bodies, found 37")
+        self.assertEqual(str(cm.exception), "expected 34 bodies, found 35")
 
 
 if __name__ == "__main__":

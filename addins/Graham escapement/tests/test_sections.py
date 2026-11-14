@@ -251,6 +251,22 @@ class SectionsTest(unittest.TestCase):
             self.assertGreater(d[1], 2.5)
         self.assertEqual(sections.REAR_PEG_D, (2.55, 2.05))
 
+    def test_press_fit_walls(self):
+        """The wall arithmetic of the gallery's TestPressFitWalls: every pressed wall is at least 1.6 mm."""
+        from gen import constants as k
+        from gen.spring import derive, spring_params
+
+        walls = {
+            "retainer": k.RETAINER_RADIUS - k.BODY_PRESS_RADIUS,
+            "carrier boss": k.CARRIER_BOSS_RADIUS - k.BODY_PRESS_RADIUS,
+            "collar": k.COLLAR_RADIUS - k.END_PRESS_RADIUS,
+            "keyed ring flat": k.KEYED_RING_FLAT - k.END_PRESS_FLAT,
+        }
+        for name, wall in walls.items():
+            self.assertGreaterEqual(wall, 1.6 - 1e-9, name)
+        dm = derive(spring_params())
+        self.assertAlmostEqual(dm.hub_radius - dm.bore_radius, 2.4, delta=1e-9)
+
     def test_meridians(self):
         expect = {
             "escape_arbor": [(0, -5), (2.5, -5), (2.5, 0.25), (3.3, 0.25), (3.3, 24.0), (3.7, 24.0), (3.7, 27.75),

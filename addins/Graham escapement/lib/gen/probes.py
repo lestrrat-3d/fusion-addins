@@ -200,19 +200,15 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
         _out("bore arc", 0, -3.2, 3), _out("bore rim chamfer", 0, -3.85, 0.1),
         _in("root taper", d + e + rm * math.cos(phi), rm * math.sin(phi), 3),
     ]
-    probes["spring_spacer"] = [
-        _in("wall", 3.0, 0, 20), _in("D flat side", 2.75, 0, 20), _out("bore", -2.75, 0, 20),
-        _out("bore at flat", 2.5, 0, 20),
+    probes["spring_retainer"] = [
+        _in("wall", -4.5, 0, 19), _in("D flat side", 2.75, 0, 19),
+        _out("bore", -3.2, 0, 19), _out("bore at flat", 2.5, 0, 19), _out("beyond", -5.1, 0, 19),
     ]
     probes["spring_anchor_pin"] = [_in("pin", 0, 0, 20), _out("beside pin", 1.6, 0, 20)]
     probes["winding_knob"] = [
         _in("knob", 6, 0, 36.8), _in("floor", -3.5, 0, 37.8), _in("counterbore wall", -3.9, 0, 36.5),
         _in("socket flat side", 1.7, 0, 37.8),
         _out("keyed counterbore", -3.5, 0, 36.5), _out("socket", -2, 0, 37.8), _out("socket at flat", 1.4, 0, 37.8),
-    ]
-    probes["arbor_collar"] = [
-        _in("wall", 3.2, 0, 1.5), _in("D flat side", 2.75, 0, 1.5), _out("bore", -2.75, 0, 1.5),
-        _out("beyond", 3.8, 0, 1.5),
     ]
     probes["end_collar"] = [
         _in("arc side", -3.5, 0, 1.5), _in("between flats", 3.0, 0, 1.5), _in("bore flat side", 1.7, 0, 1.5),
@@ -323,8 +319,6 @@ def _d_outline(d: DFamily) -> list[tuple[float, float]]:
 # (label, source body, outline, z in the source's own frame, target body) [collars.go, install and fit tests].
 _COLLAR_ROWS: tuple[tuple[str, str, list[tuple[float, float]], float, str], ...] = (
     ("collar escape front", b.ESCAPE_ARBOR, _ring(3.7), 24.5, b.ESCAPE_WHEEL),
-    ("collar escape rear", b.ESCAPE_REAR_COLLAR, _ring(3.7), 2.15, b.ESCAPE_WHEEL),
-    ("collar pallet front", b.PALLET_FRONT_COLLAR, _ring(3.7), 0.75, b.ANCHOR),
     ("collar great wheel", b.GREAT_WHEEL_ARBOR, _ring(3.7), 2.5, b.GREAT_WHEEL),
     ("collar crutch", b.CRUTCH_COLLAR, _d_outline(KEYED_RING_D), 2.25, b.CRUTCH),
     ("collar knob", b.KNOB_COLLAR, _d_outline(KEYED_RING_D), 2.25, b.WINDING_KNOB),
@@ -336,15 +330,13 @@ _ARBOR_CARRIER = (3.3, 2.80)
 
 _BORE_ROWS: tuple[tuple[str, str, list[tuple[float, float]], float, str], ...] = (
     ("bore escape wheel", b.ESCAPE_ARBOR, _d_outline(_ARBOR_BODY), 10.0, b.ESCAPE_WHEEL),
-    ("bore escape rear collar", b.ESCAPE_ARBOR, _d_outline(_ARBOR_BODY), 1.75, b.ESCAPE_REAR_COLLAR),
     ("bore anchor", b.PALLET_ARBOR, _d_outline(_ARBOR_BODY), 24.0, b.ANCHOR),
-    ("bore pallet front collar", b.PALLET_ARBOR, _d_outline(_ARBOR_BODY), 26.25, b.PALLET_FRONT_COLLAR),
     ("bore crutch collar", b.PALLET_ARBOR, _d_outline(_ARBOR_END), 36.0, b.CRUTCH_COLLAR),
     ("bore crutch", b.PALLET_ARBOR, _d_outline(_ARBOR_END), 37.8, b.CRUTCH),
     ("bore great wheel", b.GREAT_WHEEL_ARBOR, _ring(3.05), 4.25, b.GREAT_WHEEL),
     ("bore pawl carrier", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_CARRIER), 7.0, b.PAWL_CARRIER),
     ("bore mainspring", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_CARRIER), 14.25, b.MAINSPRING),
-    ("bore spring spacer", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_BODY), 22.0, b.SPRING_SPACER),
+    ("bore spring retainer", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_BODY), 19.0, b.SPRING_RETAINER),
     ("bore knob collar", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_END), 36.0, b.KNOB_COLLAR),
     ("bore knob", b.GREAT_WHEEL_ARBOR, _d_outline(_ARBOR_END), 37.8, b.WINDING_KNOB),
     ("bore suspension cap", b.SUSPENSION_PIN, _d_outline(_ARBOR_END), 46.05, b.SUSPENSION_CAP),
