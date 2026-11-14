@@ -48,8 +48,7 @@ class SectionsTest(unittest.TestCase):
                  sections.window_loop(G, -1), sections.escape_tooth(G), sections.anchor_outline(G),
                  sections.crutch_outline(G), sections.pendulum_outline(G), sections.crutch_slot(),
                  sections.press_d(), sections.ratchet_triangle(), sections.ratchet_tool_outline(),
-                 sections.pawl_loop(1.0), sections.pawl_loop(-2.0), sections.pawl_layer((1.0, 1.0 + math.pi)),
-                 sections.pawl_layer((-2.0, -2.0 + math.pi))]
+                 sections.pawl_layer((1.0, 1.0 + math.pi)), sections.pawl_layer((-2.0, -2.0 + math.pi))]
         loops += sections.escape_windows()
         loops += [sections.arbor_meridian(p) for p in sections.ARBOR_FLATS]
         for i, loop in enumerate(loops):
@@ -67,7 +66,6 @@ class SectionsTest(unittest.TestCase):
 
     def test_window_points(self):
         py = G.axis_p[1]
-        h = math.sqrt(100 - 16)
         for sx in (1.0, -1.0):
             loop = sections.window_loop(G, sx)
             self.assertEqual((len(lines(loop)), len(arcs(loop))), (6, 12))

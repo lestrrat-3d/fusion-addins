@@ -315,24 +315,6 @@ def ratchet_tool_outline() -> Loop:
     return fillet.round_loop(*_ratchet_tool_pieces())
 
 
-def pawl_loop(gang: float) -> Loop:
-    """Pawl loop whose base angle is gang [pawlLoop]."""
-    o = _ORIGIN
-
-    def at(r: float, a: float) -> Pt:
-        return (r * math.cos(a), r * math.sin(a))
-
-    g = gang
-    p1, p2, p3 = at(7.0, g + 10 * _DEG), at(7.0, g), at(9.0, g)
-    p4, p5 = at(9.0, g - 120 * _DEG), at(10.5, g - 120 * _DEG)
-    p6, p7 = at(12.5, g - 116 * _DEG), at(12.5, g - 112 * _DEG)
-    p8, p9 = at(10.5, g - 112 * _DEG), at(10.5, g + 10 * _DEG)
-    return [
-        Arc(o, p2, p1), Line(p2, p3), Arc(o, p4, p3), Line(p4, p5), Line(p5, p6),
-        Arc(o, p6, p7), Line(p7, p8), Arc(o, p8, p9), Line(p9, p1),
-    ]
-
-
 def _pawl_pieces(gangs: Sequence[float]) -> tuple[list[Curve], dict[int, float]]:
     """Sharp pawl layer: the core, both slots and both pawls as one loop of nine pieces per pawl [pawlLayer].
 

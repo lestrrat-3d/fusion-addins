@@ -179,7 +179,10 @@ class GluePartsTest(unittest.TestCase):
                 "crutch counterbore_extrude": (34.3, 37.3), "crutch bore_extrude": (34.3, 39.3),
             },
             "great_wheel": {"great_wheel counterbore_extrude": (0.5, 3.5)},
-            "pawl_carrier": {"pawl_carrier boss_extrude": (8.75, 11.0), "pawl_carrier bore_extrude": (4.25, 12.0)},
+            "pawl_carrier": {
+                "pawl_carrier layer_extrude": (5.25, 9.25), "pawl_carrier boss_extrude": (8.75, 11.0),
+                "pawl_carrier bore_extrude": (4.25, 12.0),
+            },
             "spring_spacer": {"spring_spacer disc_extrude": (17.5, 27.75), "spring_spacer bore_extrude": (16.5, 28.75)},
             "winding_knob": {
                 "winding_knob disc_extrude": (35.3, 38.3), "winding_knob counterbore_extrude": (34.3, 37.3),
@@ -201,6 +204,14 @@ class GluePartsTest(unittest.TestCase):
             calls = self.run_parts(only=[part])
             got = [(c[2], c[3]) for c in calls if c[0] == "extrude" and c[1] == f"{part} flat_box_extrude"]
             self.assertEqual(got, spans, part)
+
+    def test_pawl_carrier_is_one_layer_loop(self):
+        calls = self.run_parts(only=["pawl_carrier"])
+        profiles = [c for c in calls if c[0] == "profile"]
+        self.assertIn(("profile", "pawl_carrier layer_sketch", 1, True), profiles)
+        self.assertEqual(len([c for c in profiles if c[1].startswith("pawl_carrier layer")]), 1)
+        self.assertFalse([c for c in calls if len(c) > 1 and isinstance(c[1], str) and "pawl_1" in c[1]])
+        self.assertIn(("join", "pawl_carrier parts_join"), calls)
 
     def test_no_boss_builders(self):
         for part in ("escape_wheel", "anchor"):
