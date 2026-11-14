@@ -27,6 +27,8 @@ LOOSE_GEAR_CLEARANCE = 0.5
 GEAR_ROOT_MEASUREMENT_MARGIN = 0.02
 FIT_CLEARANCE = 0.25
 PLANET_BEARING_LIFT = FIT_CLEARANCE
+# params.go collarBearingGap: the Tight gap between the input shaft's collar and the front bearing's inner face.
+COLLAR_BEARING_GAP = FIT_CLEARANCE
 PIN_SHOULDER_CLEARANCE = FIT_CLEARANCE  # params.go pinShoulderClearance: pin's thick part above the bearing's race
 PIN_SHOULDER_REACH = FIT_CLEARANCE  # params.go pinShoulderReach: shortest thick part below the plate
 STEP_OVERLAP = 0.05  # params.go stepOverlap: how far a thin rod reaches into its thick part

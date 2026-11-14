@@ -20,6 +20,7 @@ from .fasteners import (
     nut_cavity_height,
 )
 from .params import (
+    COLLAR_BEARING_GAP,
     COLLAR_CLEARANCE,
     FIT_CLEARANCE,
     PIN_SHOULDER_CLEARANCE,
@@ -176,7 +177,7 @@ def input_shaft_spec(p: Params, d: Dims) -> ShaftSpec:
     return ShaftSpec(
         bottom=-(g + tv + wb + p.input_shaft_length),
         top=p.gear_thickness,
-        collar=_collar(-(g + tv), -COLLAR_CLEARANCE),
+        collar=_collar(-(g + tv) + COLLAR_BEARING_GAP, -COLLAR_CLEARANCE),
         flats=((0.0, p.gear_thickness + 1),),
     )
 

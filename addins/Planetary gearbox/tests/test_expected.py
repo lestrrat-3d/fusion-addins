@@ -17,7 +17,7 @@ D2 = derive(P2)
 REFERENCE = {
     "housing_bearing": (671.5154, 0.5),
     "planet_bearing": (671.5154, 0.5),
-    "input_shaft": (642.8541, 0.5),
+    "input_shaft": (637.2023, 0.5),
     "output_shaft": (620.5314, 0.5),
     "carrier": (3253.6953, 0.5),
     "carrier_pin": (313.0304, 0.5),
