@@ -1,7 +1,7 @@
 """2D sections of the carrier, cover and flat tool as closed loops of lines and arcs.
 
 Own copy of decad-gallery models/planetarygearbox carrier.go and cover.go section geometry
-(f22a29d: D-shaped bore tool, with PRESS_FIT_CLEARANCE since d8cf8d8).
+at 45b5875 (D-shaped bore tool with PRESS_FIT_CLEARANCE; per-role pin and shaft sockets).
 """
 
 from __future__ import annotations
@@ -64,36 +64,50 @@ def flat_tool_section(p: Params, d: Dims) -> Loop | Circle:
     return d_section(0.0, _bore_radius(d), p.flat_depth)
 
 
-def socket_radius(d: Dims) -> float:
-    """Radius of the D socket through the carrier plate, and of its centre hole: the thick part's radius plus the
-    press-fit clearance."""
+def pin_socket_radius(d: Dims) -> float:
+    """Radius of a pin's D socket through the carrier plate: the pin's thick part's radius plus the press-fit
+    clearance [carrier.go]."""
+    return d.pin_collar / 2 + PRESS_FIT_CLEARANCE
+
+
+def carrier_hole_radius(d: Dims) -> float:
+    """Radius of the carrier's centre hole: the shaft's thick part's radius plus the press-fit clearance."""
     return d.collar / 2 + PRESS_FIT_CLEARANCE
 
 
 def socket_section(p: Params, d: Dims) -> Loop | Circle:
     """The tool for the socket of planet 0, at (orbit, 0); the other sockets are copies turned about the axis."""
-    return d_section(d.orbit, socket_radius(d), p.flat_depth)
+    return d_section(d.orbit, pin_socket_radius(d), p.flat_depth)
 
 
 def socket_area(p: Params, d: Dims) -> float:
-    return d_area(socket_radius(d), p.flat_depth)
+    return d_area(pin_socket_radius(d), p.flat_depth)
 
 
 def carrier_hole_section(p: Params, d: Dims) -> Loop | Circle:
     """The centre hole of the carrier, a D section about the axis that takes a link or output shaft's thick part."""
-    return d_section(0.0, socket_radius(d), p.flat_depth)
+    return d_section(0.0, carrier_hole_radius(d), p.flat_depth)
 
 
 def carrier_hole_area(p: Params, d: Dims) -> float:
-    return d_area(socket_radius(d), p.flat_depth)
+    return d_area(carrier_hole_radius(d), p.flat_depth)
 
 
-def thick_area(p: Params, d: Dims) -> float:
+def pin_thick_area(p: Params, d: Dims) -> float:
+    return d_area(d.pin_collar / 2, p.flat_depth)
+
+
+def pin_thick_section(p: Params, d: Dims) -> Loop | Circle:
+    """The thick part of a carrier pin, about its own axis."""
+    return d_section(0.0, d.pin_collar / 2, p.flat_depth)
+
+
+def shaft_thick_area(p: Params, d: Dims) -> float:
     return d_area(d.collar / 2, p.flat_depth)
 
 
-def thick_section(p: Params, d: Dims) -> Loop | Circle:
-    """The thick part of a carrier pin, a link shaft or the output shaft, about its own axis."""
+def shaft_thick_section(p: Params, d: Dims) -> Loop | Circle:
+    """The thick part of a link shaft or the output shaft, about its own axis."""
     return d_section(0.0, d.collar / 2, p.flat_depth)
 
 

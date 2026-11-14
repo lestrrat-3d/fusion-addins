@@ -5,7 +5,9 @@ import unittest
 import _support  # noqa: F401
 from gen.bridge import nut_bridge_volume
 from gen.dims import derive
+from gen import layout
 from gen.expected import assembled_z, part_local_bounds, part_volume
+from gen.kits import default_params_for, supported_combinations
 from gen.params import default_params
 
 P1 = default_params()
@@ -17,7 +19,7 @@ D2 = derive(P2)
 REFERENCE = {
     "housing_bearing": (671.5154, 0.5),
     "planet_bearing": (671.5154, 0.5),
-    "input_shaft": (642.8541, 0.5),
+    "input_shaft": (637.2023, 0.5),
     "output_shaft": (620.5314, 0.5),
     "carrier": (3253.6953, 0.5),
     "carrier_pin": (313.0304, 0.5),
@@ -65,6 +67,31 @@ Z_K2 = {
     "Carrier Pin 2.1": (13, 25),
     "Link Shaft 1": (9, 21),
     "Output Shaft": (22, 46),
+}
+
+# Closed-form references of the non-default kits (mm^3): bearings to 1e-3, shafts and pin to 0.5.
+KIT_BEARING = {"605ZZ": 671.5154, "608ZZ": 2309.0706}
+KIT_Z = {
+    "planet608-shaft608": {
+        "Front Cover": (-11, -1),
+        "Rear Cover": (13, 23),
+        "Front Bearing": (-11, -4),
+        "Rear Bearing": (16, 23),
+        "Input Shaft": (-23, 8),
+        "Planet Bearing 1.1": (1.25, 8.25),
+        "Carrier Pin 1.1": (0, 12),
+        "Output Shaft": (9, 35),
+    },
+    "planet605-shaft608": {
+        "Front Cover": (-11, -1),
+        "Rear Cover": (13, 23),
+        "Front Bearing": (-11, -4),
+        "Rear Bearing": (16, 23),
+        "Input Shaft": (-23, 8),
+        "Planet Bearing 1.1": (3.25, 8.25),
+        "Carrier Pin 1.1": (0, 12),
+        "Output Shaft": (9, 35),
+    },
 }
 
 
@@ -117,6 +144,46 @@ class ExpectedTest(unittest.TestCase):
                 with self.subTest(name=name, stages=p.stages):
                     self.assertLess(abs(got[name][0] - lo), 1e-9)
                     self.assertLess(abs(got[name][1] - hi), 1e-9)
+
+    def test_kit_volumes(self):
+        for kit, pin, planet_bearing, shaft_bearing in (
+            ("planet608-shaft608", 719.3335, "608ZZ", "608ZZ"),
+            ("planet605-shaft608", 313.0304, "605ZZ", "608ZZ"),
+        ):
+            p = default_params_for(kit)
+            d = derive(p)
+            with self.subTest(kit=kit):
+                self.assertLessEqual(
+                    abs(part_volume(p, d, "housing_bearing").value - KIT_BEARING[shaft_bearing]), 1e-3
+                )
+                self.assertLessEqual(
+                    abs(part_volume(p, d, "planet_bearing").value - KIT_BEARING[planet_bearing]), 1e-3
+                )
+                self.assertLessEqual(abs(part_volume(p, d, "input_shaft").value - 1660.4859), 0.5)
+                self.assertLessEqual(abs(part_volume(p, d, "output_shaft").value - 1530.9017), 0.5)
+                self.assertLessEqual(abs(part_volume(p, d, "carrier_pin").value - pin), 0.5)
+
+    def test_kit_assembled_z(self):
+        for kit, table in KIT_Z.items():
+            p = default_params_for(kit)
+            got = assembled_z(p, derive(p))
+            for name, (lo, hi) in table.items():
+                with self.subTest(kit=kit, name=name):
+                    self.assertLess(abs(got[name][0] - lo), 1e-9)
+                    self.assertLess(abs(got[name][1] - hi), 1e-9)
+
+    def test_kit_volumes_positive(self):
+        for k in supported_combinations():
+            for stages in (1, 2):
+                p = dataclasses.replace(default_params_for(k.name), stages=stages)
+                d = derive(p)
+                for part in layout.PARTS:
+                    if part == "link_shaft" and stages == 1:
+                        continue
+                    with self.subTest(kit=k.name, stages=stages, part=part):
+                        v = part_volume(p, d, part).value
+                        self.assertTrue(math.isfinite(v))
+                        self.assertGreater(v, 0)
 
     def test_local_bounds(self):
         want = {

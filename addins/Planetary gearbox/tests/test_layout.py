@@ -5,6 +5,7 @@ import unittest
 import _support  # noqa: F401
 from gen import layout
 from gen.dims import derive
+from gen.kits import default_params_for, supported_combinations
 from gen.params import default_params
 
 P1 = default_params()
@@ -67,13 +68,25 @@ class LayoutTest(unittest.TestCase):
         self.assertEqual(names[-2:], ["Carrier 2", "Output Shaft"])
         self.assertEqual(layout.expected_body_count(P2), 46)
 
+    def test_kit_bodies(self):
+        want = [i.name for i in layout.instances(P1, D1)]
+        for k in supported_combinations():
+            with self.subTest(kit=k.name):
+                p = default_params_for(k.name)
+                self.assertEqual(layout.expected_body_count(p), 34)
+                self.assertEqual([i.name for i in layout.instances(p, derive(p))], want)
+
     def test_parts_are_known(self):
         for inst in layout.instances(P2, D2):
             self.assertIn(inst.part, layout.PARTS)
 
     def test_shaft_specs(self):
         s = layout.input_shaft_spec(P1, D1)
-        self.assertEqual((s.bottom, s.top, s.collar, s.flats), (-21, 8, (-4, -0.5), ((0, 9),)))
+        self.assertEqual((s.bottom, s.top, s.collar, s.flats), (-21, 8, (-3.75, -0.5), ((0, 9),)))
+        self.assertAlmostEqual(s.collar[1] - s.collar[0], 3.25, places=12)
+        tight = dataclasses.replace(P1, stage_gap=0.75)
+        c = layout.input_shaft_spec(tight, derive(tight)).collar
+        self.assertAlmostEqual(c[1] - c[0], 3.0, places=12)
         s = layout.output_shaft_spec(P1, D1)
         self.assertEqual((s.bottom, s.top, s.collar, s.flats, s.thick_top), (0, 24, None, (), 6.75))
         self.assertIsNone(layout.link_shaft_spec(P1, D1))

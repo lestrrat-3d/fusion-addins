@@ -1,6 +1,6 @@
 """Expected volumes and axial bounds of each part, from the 2D sections and the edge finishing (millimeters).
 
-The bolt and nut volumes are ports of the m2bolt / m2nut gallery tests (a800069)."""
+The bolt and nut volumes are ports of the m2bolt / m2nut gallery tests (a800069). Bearing-derived sizes follow decad-gallery planetarygearbox at 45b5875."""
 
 from __future__ import annotations
 
@@ -47,8 +47,9 @@ from .sections import (
     cover_window_loops,
     flat_area,
     flat_tool_area,
+    pin_thick_area,
+    shaft_thick_area,
     socket_area,
-    thick_area,
 )
 
 _DENSE = 60
@@ -144,7 +145,8 @@ def part_volume(p: Params, d: Dims, part: str, fillet_radius: float | None = Non
 
     fillet_radius replaces the gear's root fillet radius (0 = no fillet) when a fallback was taken.
     """
-    t, tv, wb = p.gear_thickness, p.cover_thickness, d.bearing.width
+    t, tv = p.gear_thickness, p.cover_thickness
+    ws, wp = d.shaft_bearing.width, d.planet_bearing.width
     if part in ("sun", "planet"):
         gd = _gear_gd(p, part)
         if fillet_radius is not None:
@@ -155,9 +157,9 @@ def part_volume(p: Params, d: Dims, part: str, fillet_radius: float | None = Non
             value = (_area(gd) - bore) * t + f
         else:
             value = (
-                (_area(gd) - math.pi * d.lip**2 / 4) * t
-                - math.pi / 4 * (d.pocket**2 - d.lip**2) * wb
-                - _chamfer(p, d.pocket / 2)
+                (_area(gd) - math.pi * d.planet_lip**2 / 4) * t
+                - math.pi / 4 * (d.planet_pocket**2 - d.planet_lip**2) * wp
+                - _chamfer(p, d.planet_pocket / 2)
                 + f
             )
         return Expect(value, 0.5 * f + 0.002 * value)
@@ -173,14 +175,14 @@ def part_volume(p: Params, d: Dims, part: str, fillet_radius: float | None = Non
     if part == "cover":
         bolts = 4 * math.pi * (p.bolt_hole_diameter / 2) ** 2
         windows = sum(polygon_area(loop_polygon(w)) for w in cover_window_loops(p, d))
-        frame = (math.pi * d.ring_outer**2 - math.pi * d.lip**2 / 4 - bolts - windows) * tv
-        boss = math.pi / 4 * (d.cover_boss**2 - d.pocket**2) * wb
+        frame = (math.pi * d.ring_outer**2 - math.pi * d.cover_lip**2 / 4 - bolts - windows) * tv
+        boss = math.pi / 4 * (d.cover_boss**2 - d.cover_pocket**2) * ws
         pockets = 4 * math.pi * ((head_pocket_diameter() / 2) ** 2 - (p.bolt_hole_diameter / 2) ** 2) * HEAD_HEIGHT
-        value = frame - pockets + boss - _chamfer(p, d.pocket / 2)
+        value = frame - pockets + boss - _chamfer(p, d.cover_pocket / 2)
         value -= edgefinish.edge_chamfer_volume(p, d, part)
         return Expect(value, 0.002 * value)
     if part in ("housing_bearing", "planet_bearing"):
-        b = d.bearing
+        b = d.shaft_bearing if part == "housing_bearing" else d.planet_bearing
         value = math.pi / 4 * (b.outer_diameter**2 - b.bore_diameter**2) * b.width
         return Expect(value, 0.001 * value)
     if part == "carrier":
@@ -194,7 +196,7 @@ def part_volume(p: Params, d: Dims, part: str, fillet_radius: float | None = Non
         # The rod reaches into the thick part, so it counts only up to the thick part's lower face.
         spans = layout.pin_spans(p)
         rod = math.pi * (d.pin / 2) ** 2 * (spans.thick[0] - spans.rod[0])
-        value = rod + thick_area(p, d) * (spans.thick[1] - spans.thick[0])
+        value = rod + pin_thick_area(p, d) * (spans.thick[1] - spans.thick[0])
         return Expect(value, 0.002 * value)
     if part == "bolt":
         value = _bolt_volume(FASTENER_LENGTH)
@@ -213,7 +215,7 @@ def part_volume(p: Params, d: Dims, part: str, fillet_radius: float | None = Non
     if spec.thick_top is not None:
         # D thick part, then the thin rod; the flat cuts only the rod.
         rod_bottom = spec.bottom + spec.thick_top
-        value = thick_area(p, d) * spec.thick_top + math.pi * r * r * (spec.top - rod_bottom)
+        value = shaft_thick_area(p, d) * spec.thick_top + math.pi * r * r * (spec.top - rod_bottom)
         if p.flat_depth > 0:
             value -= flat_area(p, d) * sum(_overlap((rod_bottom, spec.top), lo, hi) for lo, hi in spec.flats)
         return Expect(value, 0.002 * value)
@@ -242,13 +244,15 @@ def part_local_bounds(p: Params, d: Dims, part: str) -> tuple[float, float, floa
         xmax = ring_xmax(p, d)
     elif part == "cover":
         xmax = d.ring_outer
-    elif part in ("housing_bearing", "planet_bearing"):
-        xmax = d.bearing.outer_diameter / 2
+    elif part == "housing_bearing":
+        xmax = d.shaft_bearing.outer_diameter / 2
+    elif part == "planet_bearing":
+        xmax = d.planet_bearing.outer_diameter / 2
     elif part == "carrier":
         xmax = d.orbit + d.boss / 2
     elif part == "carrier_pin":
         # The thick part's flat is on +X in the pin's own frame (no flat when the depth is 0).
-        xmax = d.collar / 2 - p.flat_depth
+        xmax = d.pin_collar / 2 - p.flat_depth
     else:
         xmax = None
     return (zmin, zmax, xmax)

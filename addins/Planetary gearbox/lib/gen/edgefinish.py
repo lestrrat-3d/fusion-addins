@@ -2,7 +2,7 @@
 
 Own copy of decad-gallery models/planetarygearbox edgefinish.go (largeFaceArea, outerLoop, windowsAndRim,
 radiusAbout) and the finishFaceEdges calls in gears.go buildRing, cover.go buildCover and carrier.go buildCarrier at
-44d180a. The gallery chamfers both ring faces in one call because decad cannot chamfer the ring twice; Fusion chamfers
+45b5875. The gallery chamfers both ring faces in one call because decad cannot chamfer the ring twice; Fusion chamfers
 each face in its own feature. The removed volumes are the add-in's own; the gallery tests none.
 """
 
@@ -57,7 +57,7 @@ def keep_loop(rule: str, is_outer: bool, edge_count: int, start_radius: float, d
     if rule == WINDOWS_AND_RIM:
         return is_outer or edge_count > 1
     if rule == LIP:
-        return is_outer or edge_count > 1 or (edge_count == 1 and abs(start_radius - d.lip / 2) < LIP_RADIUS_TOL)
+        return is_outer or edge_count > 1 or (edge_count == 1 and abs(start_radius - d.cover_lip / 2) < LIP_RADIUS_TOL)
     raise ValueError(f"unknown edge finishing rule {rule}")
 
 
@@ -115,7 +115,7 @@ def edge_chamfer_volume(p: Params, d: Dims, part: str) -> float:
     if part == "cover":
         return (
             2 * _rim(d.ring_outer, c, True)
-            + _rim(d.lip / 2, c, False)
+            + _rim(d.cover_lip / 2, c, False)
             + 2 * COVER_SPOKES * window_chamfer_volume(d, c)
         )
     if part == "carrier":

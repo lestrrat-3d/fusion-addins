@@ -1,7 +1,7 @@
 """Axial layout, instance poses and body names.
 
 Own copy of decad-gallery models/planetarygearbox planetarygearbox.go (Named, build, buildHousing), place.go and the
-shaft spans of carrier.go / cover.go, and fasteners.go (buildFasteners, fastener names) at 92c1f03.
+shaft spans of carrier.go / cover.go, and fasteners.go (buildFasteners, fastener names) at 45b5875.
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ from .fasteners import (
     nut_cavity_height,
 )
 from .params import (
+    COLLAR_BEARING_GAP,
     COLLAR_CLEARANCE,
     FIT_CLEARANCE,
     PIN_SHOULDER_CLEARANCE,
@@ -172,11 +173,11 @@ def _collar(lo: float, hi: float) -> tuple[float, float] | None:
 
 
 def input_shaft_spec(p: Params, d: Dims) -> ShaftSpec:
-    g, tv, wb = p.stage_gap, p.cover_thickness, d.bearing.width
+    g, tv, wb = p.stage_gap, p.cover_thickness, d.shaft_bearing.width
     return ShaftSpec(
         bottom=-(g + tv + wb + p.input_shaft_length),
         top=p.gear_thickness,
-        collar=_collar(-(g + tv), -COLLAR_CLEARANCE),
+        collar=_collar(-(g + tv) + COLLAR_BEARING_GAP, -COLLAR_CLEARANCE),
         flats=((0.0, p.gear_thickness + 1),),
     )
 
@@ -192,7 +193,7 @@ def link_shaft_spec(p: Params, d: Dims) -> ShaftSpec | None:
 
 
 def output_shaft_spec(p: Params, d: Dims) -> ShaftSpec:
-    g, tc, tv, wb = p.stage_gap, p.carrier_thickness, p.cover_thickness, d.bearing.width
+    g, tc, tv, wb = p.stage_gap, p.carrier_thickness, p.cover_thickness, d.shaft_bearing.width
     return ShaftSpec(
         bottom=0.0,
         top=tc + g + tv + wb + p.output_shaft_length,
@@ -220,7 +221,7 @@ def pin_spans(p: Params) -> PinSpans:
 
 def part_local_z(p: Params, d: Dims, part: str) -> tuple[float, float]:
     """Axial range of the master body of part, in part-local coordinates."""
-    wb = d.bearing.width
+    ws, wp = d.shaft_bearing.width, d.planet_bearing.width
     if part == "bolt":
         return (-FASTENER_LENGTH, HEAD_HEIGHT)
     if part == "nut":
@@ -228,9 +229,11 @@ def part_local_z(p: Params, d: Dims, part: str) -> tuple[float, float]:
     if part == "ring":
         return (RING_MARGIN, RING_MARGIN + d.ring_length)
     if part == "cover":
-        return (0.0, p.cover_thickness + wb)
-    if part in ("housing_bearing", "planet_bearing"):
-        return (0.0, wb)
+        return (0.0, p.cover_thickness + ws)
+    if part == "housing_bearing":
+        return (0.0, ws)
+    if part == "planet_bearing":
+        return (0.0, wp)
     if part in ("sun", "planet"):
         return (0.0, p.gear_thickness)
     if part == "carrier":
@@ -249,13 +252,14 @@ def part_local_z(p: Params, d: Dims, part: str) -> tuple[float, float]:
 
 def instances(p: Params, d: Dims) -> list[Instance]:
     """Every body of the gearbox in the gallery's Named() order."""
-    g, tv, wb, t = p.stage_gap, p.cover_thickness, d.bearing.width, p.gear_thickness
+    g, tv, t = p.stage_gap, p.cover_thickness, p.gear_thickness
+    ws, wp = d.shaft_bearing.width, d.planet_bearing.width
     length = d.ring_length
     out = [
         Instance(RING_NAME, "ring", Pose(z=-RING_MARGIN - g)),
         Instance(FRONT_COVER_NAME, "cover", Pose(flip=True, z=-g)),
         Instance(REAR_COVER_NAME, "cover", Pose(z=length - g)),
-        Instance(FRONT_BEARING_NAME, "housing_bearing", Pose(z=-(g + tv + wb))),
+        Instance(FRONT_BEARING_NAME, "housing_bearing", Pose(z=-(g + tv + ws))),
         Instance(REAR_BEARING_NAME, "housing_bearing", Pose(z=length - g + tv)),
         Instance(INPUT_SHAFT_NAME, "input_shaft", Pose()),
     ]
@@ -283,7 +287,7 @@ def instances(p: Params, d: Dims) -> list[Instance]:
             phi = planet_orbit_angle(p, i)
             x, y = d.orbit * math.cos(phi), d.orbit * math.sin(phi)
             out.append(Instance(planet_name(k, i), "planet", Pose(planet_tooth_angle(p, i), x, y, z)))
-            zb = z + t - wb + PLANET_BEARING_LIFT
+            zb = z + t - wp + PLANET_BEARING_LIFT
             out.append(Instance(bearing_name(k, i), "planet_bearing", Pose(0.0, x, y, zb)))
         zc = z + t + g
         for i in range(p.planet_count):

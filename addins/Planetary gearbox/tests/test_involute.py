@@ -109,17 +109,17 @@ class InvoluteTest(unittest.TestCase):
 
     def test_validate_spur_messages(self):
         cases = (
-            ((0, 13, A, 8, 15, 0.0, J), "spurgear: module 0 must be positive"),
-            ((1, 2, A, 8, 15, 0.0, J), "spurgear: teeth 2 must be at least 3"),
-            ((1, 13, A, 8, 15, 0.0, 0.6), "spurgear: backlash 0.6 exceeds half the module 1"),
-            ((1, 13, A, 8, 15, 0.0, float("nan")), "spurgear: backlash NaN is not finite"),
+            ((0, 13, A, 8, 15, 0.0, J), "module 0 must be positive"),
+            ((1, 2, A, 8, 15, 0.0, J), "teeth 2 must be at least 3"),
+            ((1, 13, A, 8, 15, 0.0, 0.6), "backlash 0.6 must be finite and within half the module 0.5"),
+            ((1, 13, A, 8, 15, 0.0, float("nan")), "backlash NaN must be finite and within half the module 0.5"),
             (
                 (1, 13, math.pi / 2, 8, 15, 0.0, J),
-                "spurgear: pressure angle 1.5707963267948966 must lie in (0, pi/2)",
+                "pressure angle 1.5707963267948966 must be in (0, pi/2)",
             ),
             (
                 (1, 13, A, 8, 15, 10.5, J),
-                "spurgear: bore diameter 10.5 must be below the root diameter 10.5",
+                "bore diameter 10.5 must be below the root diameter 10.5",
             ),
             ((1, 13, A, 8, 15, 0.0, J), None),
         )
@@ -131,7 +131,7 @@ class InvoluteTest(unittest.TestCase):
         gd = ring_tool_dims(1, 71, math.radians(40), -J, 0.5)
         with self.assertRaises(ValueError) as cm:
             closing_radius(gd)
-        self.assertEqual(str(cm.exception), "spurgear: adjacent teeth overlap at the root circle (radius 34.5)")
+        self.assertEqual(str(cm.exception), "embedded tooth: flanks of adjacent teeth overlap at the root circle (radius 34.5)")
 
 
 if __name__ == "__main__":

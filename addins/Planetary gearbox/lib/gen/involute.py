@@ -1,5 +1,6 @@
 """Own copy of decad-gallery models/spurgear involute math (involute.go, spurgear.go, variant.go) and the radius
-variants of models/planetarygearbox gears.go (externalGearWithRootClearance, ringTool), at a800069."""
+variants of models/planetarygearbox gears.go (externalGearWithRootClearance, ringTool), at a800069; the validation
+messages and closing_radius text at 45b5875."""
 
 from __future__ import annotations
 
@@ -76,37 +77,31 @@ def validate_spur(
     """Port of spurgear validate() for the inputs the gearbox uses. Returns the first error message."""
     m, n, a = module, teeth, pressure_angle
     if m <= 0:
-        return f"spurgear: module {fmt_num(m)} must be positive"
+        return f"module {fmt_num(m)} must be positive"
     if thickness <= 0:
-        return f"spurgear: thickness {fmt_num(thickness)} must be positive"
+        return f"thickness {fmt_num(thickness)} must be positive"
     if n < 3:
-        return f"spurgear: teeth {n} must be at least 3"
+        return f"teeth {n} must be at least 3"
     if samples < 3:
-        return f"spurgear: samples {samples} must be at least 3"
+        return f"samples {samples} must be at least 3"
     if a <= 0 or a >= math.pi / 2:
-        return f"spurgear: pressure angle {fmt_num(a)} must lie in (0, pi/2)"
+        return f"pressure angle {fmt_num(a)} must be in (0, pi/2)"
     if bore_diameter < 0:
-        return f"spurgear: bore diameter {fmt_num(bore_diameter)} must not be negative"
+        return f"bore diameter {fmt_num(bore_diameter)} must not be negative"
     j = backlash
-    if math.isnan(j) or math.isinf(j):
-        return f"spurgear: backlash {fmt_num(j)} is not finite"
-    if abs(j) > m / 2:
-        return f"spurgear: backlash {fmt_num(j)} exceeds half the module {fmt_num(m)}"
+    if math.isnan(j) or math.isinf(j) or abs(j) > m / 2:
+        return f"backlash {fmt_num(j)} must be finite and within half the module {fmt_num(m / 2)}"
     rp = m * n / 2
     rb = rp * math.cos(a)
     rr = (m * n - 2.5 * m) / 2
     rt = (m * n + 2 * m) / 2
-    if rr <= 0:
-        return f"spurgear: root radius {fmt_num(rr)} must be positive"
-    if rb <= 0:
-        return f"spurgear: base radius {fmt_num(rb)} must be positive"
-    if rt <= rb:
-        return f"spurgear: tip radius {fmt_num(rt)} must exceed base radius {fmt_num(rb)}"
+    if rr <= 0 or rb <= 0 or rt <= rb:
+        return f"invalid radii: root {fmt_num(rr)}, base {fmt_num(rb)}, tip {fmt_num(rt)}"
     if bore_diameter >= 2 * rr:
-        return f"spurgear: bore diameter {fmt_num(bore_diameter)} must be below the root diameter {fmt_num(2 * rr)}"
+        return f"bore diameter {fmt_num(bore_diameter)} must be below the root diameter {fmt_num(2 * rr)}"
     rf = 0.9 * rr * (math.pi / n - 2 * (math.tan(a) - a)) / 2
     if math.isnan(rf) or math.isinf(rf):
-        return f"spurgear: root fillet radius {fmt_num(rf)} is not finite"
+        return f"root fillet radius {fmt_num(rf)} is not finite"
     return None
 
 
@@ -141,7 +136,9 @@ def closing_radius(gd: GearDims) -> float:
     if half(gd.base) < limit:
         return gd.base
     if half(gd.root) >= limit:
-        raise ValueError(f"spurgear: adjacent teeth overlap at the root circle (radius {fmt_num(gd.root)})")
+        raise ValueError(
+            f"embedded tooth: flanks of adjacent teeth overlap at the root circle (radius {fmt_num(gd.root)})"
+        )
     lo, hi = gd.base, gd.root
     for _ in range(200):
         mid = (lo + hi) / 2

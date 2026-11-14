@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-import html
-
 import dataclasses
 
 import adsk.core
 import adsk.fusion
 
-from ...lib.gen.inputs import INPUT_SPECS, params_from_values
+from ...lib.gen.inputs import INPUT_SPECS, SELECTOR_IDS, kit_input_values, params_from_values, status_html, status_rows
 from ...lib.gen.params import Params, Vec3, default_params, placement_frame, ratio
-from ...lib.gen.validate import ValidationError, validate
+from ...lib.gen.validate import problems
 
 RATIO_ID = "ratio"
 STATUS_ID = "status"
@@ -60,6 +58,10 @@ def add_inputs(inputs: adsk.core.CommandInputs, build_label: str) -> None:
             inputs.addIntegerSpinnerCommandInput(spec.id, spec.label, 0, 9999, 1, int(spec.default))
         elif spec.kind == "bool":
             inputs.addBoolValueInput(spec.id, spec.label, True, "", bool(spec.default))
+        elif spec.kind == "choice":
+            dd = inputs.addDropDownCommandInput(spec.id, spec.label, adsk.core.DropDownStyles.TextListDropDownStyle)
+            for name in spec.choices:
+                dd.listItems.add(name, name == spec.default, "")
         else:
             inputs.addValueInput(spec.id, spec.label, "", adsk.core.ValueInput.createByReal(spec.default))
     sync_dependent_inputs(inputs)
@@ -78,6 +80,35 @@ def sync_dependent_inputs(inputs: adsk.core.CommandInputs) -> None:
         dependent = inputs.itemById(spec.id)
         if box is not None and dependent is not None:
             dependent.isEnabled = box.value
+
+
+def _selected_name(inputs: adsk.core.CommandInputs, input_id: str) -> str:
+    """Name of the selected item of a drop-down input, "" when it has none."""
+    dd = adsk.core.DropDownCommandInput.cast(inputs.itemById(input_id))
+    item = dd.selectedItem if dd is not None else None
+    return item.name if item is not None else ""
+
+
+def apply_kit_defaults(inputs: adsk.core.CommandInputs, changed: adsk.core.CommandInput | None) -> None:
+    """Directive (docs/planetarygearbox/directives.md): when a bearing selector changes, the kit-dependent inputs
+    (the tooth counts) are set to the tooth set of the kit with the selected bearings, so the dialog stays valid. Any
+    other input, and a bearing pair that is no kit, leave the inputs alone."""
+    if changed is None or changed.id not in SELECTOR_IDS:
+        return
+    values = kit_input_values(*(_selected_name(inputs, i) for i in SELECTOR_IDS))
+    kinds = {spec.id: spec.kind for spec in INPUT_SPECS}
+    for input_id, v in values.items():
+        inp = inputs.itemById(input_id)
+        if inp is None:
+            continue
+        kind = kinds[input_id]
+        if kind == "count":
+            adsk.core.IntegerSpinnerCommandInput.cast(inp).value = int(v)
+        elif kind == "length":
+            # Value inputs take database units: centimeters for lengths.
+            adsk.core.ValueCommandInput.cast(inp).value = v / _MM_PER_CM
+        else:
+            adsk.core.ValueCommandInput.cast(inp).value = v
 
 
 def advance_placement_focus(inputs: adsk.core.CommandInputs, changed: adsk.core.CommandInput | None) -> None:
@@ -150,9 +181,9 @@ def read_placement(inputs: adsk.core.CommandInputs):
     return placement_frame(origin, axis)
 
 
-def read_params(inputs: adsk.core.CommandInputs) -> tuple[Params | None, str]:
-    """Return (params, "") when the inputs pass the gallery's rules, else (None, first failing message)."""
-    values: dict[str, float] = {}
+def read_params(inputs: adsk.core.CommandInputs) -> tuple[Params | None, list[str]]:
+    """Return (params, []) when the inputs pass the gallery's rules, else (None, every failing message)."""
+    values: dict[str, float | str] = {}
     for spec in INPUT_SPECS:
         inp = inputs.itemById(spec.id)
         if spec.needs and not values[spec.needs]:
@@ -165,25 +196,28 @@ def read_params(inputs: adsk.core.CommandInputs) -> tuple[Params | None, str]:
         if spec.kind == "bool":
             values[spec.id] = float(adsk.core.BoolValueCommandInput.cast(inp).value)
             continue
+        if spec.kind == "choice":
+            values[spec.id] = _selected_name(inputs, spec.id)
+            continue
         vin = adsk.core.ValueCommandInput.cast(inp)
         if not vin.isValidExpression:
-            return None, f"{spec.label}: invalid value"
+            return None, [f"{spec.label}: invalid value"]
         # Value inputs return database units: centimeters for lengths, radians for angles.
         values[spec.id] = vin.value * _MM_PER_CM if spec.kind == "length" else vin.value
     p = params_from_values(values)
     try:
         p = dataclasses.replace(p, placement=read_placement(inputs))
     except ValueError as e:
-        return None, str(e)
-    try:
-        validate(p)
-    except ValidationError as e:
-        return None, str(e)
-    return p, ""
+        return None, [str(e)]
+    messages = problems(p)
+    if messages:
+        return None, messages
+    return p, []
 
 
-def show_status(inputs: adsk.core.CommandInputs, p: Params | None, err: str) -> None:
+def show_status(inputs: adsk.core.CommandInputs, p: Params | None, messages: list[str]) -> None:
     status = adsk.core.TextBoxCommandInput.cast(inputs.itemById(STATUS_ID))
-    status.formattedText = f"<b>Error:</b> {html.escape(err)}" if err else ""
+    status.formattedText = status_html(messages)
+    status.numRows = status_rows(messages)
     if p is not None:
         adsk.core.TextBoxCommandInput.cast(inputs.itemById(RATIO_ID)).formattedText = _ratio_text(p)
