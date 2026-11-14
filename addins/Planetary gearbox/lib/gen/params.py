@@ -9,6 +9,8 @@ from __future__ import annotations
 import dataclasses
 import math
 
+from .bearing import PRESS_FIT_CLEARANCE, SEAT_CLEARANCE  # noqa: F401  (re-exported: gallery params.go seatClearance)
+
 Vec3 = tuple[float, float, float]
 
 LIP_WIDTH = 2.0
@@ -23,14 +25,10 @@ TOOL_MARGIN = 1.0
 GEAR_ROOT_MODULE_CLEARANCE_FACTOR = 0.25
 LOOSE_GEAR_CLEARANCE = 0.5
 GEAR_ROOT_MEASUREMENT_MARGIN = 0.02
-# Radial clearance of a bore or pocket that holds a purchased bearing fixed [params.go seatClearance].
-SEAT_CLEARANCE = 0.05
 FIT_CLEARANCE = 0.25
 PLANET_BEARING_LIFT = FIT_CLEARANCE
 PIN_SHOULDER_CLEARANCE = FIT_CLEARANCE  # params.go pinShoulderClearance: pin's thick part above the bearing's race
 PIN_SHOULDER_REACH = FIT_CLEARANCE  # params.go pinShoulderReach: shortest thick part below the plate
-# params.go pressFitClearance: radial gap between a thick D part and its socket or hole in the carrier plate.
-PRESS_FIT_CLEARANCE = 0.05
 STEP_OVERLAP = 0.05  # params.go stepOverlap: how far a thin rod reaches into its thick part
 MIN_SOCKET_WALL = 1.0  # params.go minSocketWall: plate kept around a pin socket at mid-plate
 MIN_SOCKET_FACE_WALL = 0.5  # params.go minSocketFaceWall: plate kept between a socket and the chamfered outline
@@ -137,6 +135,9 @@ class Params:
     edge_chamfer: float = MIN_EDGE_CHAMFER
     input_shaft_length: float = 12.0
     bearing_clearance: float = SEAT_CLEARANCE
+    # Catalog names of the planet and shaft bearings [params.go PlanetBearing, ShaftBearing].
+    planet_bearing: str = "605ZZ"
+    shaft_bearing: str = "605ZZ"
     carrier_wall: float = 3.0
     ring_wall: float = 7.1
     backlash: float = 0.15
