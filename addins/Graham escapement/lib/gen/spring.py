@@ -1,7 +1,7 @@
 """Spiral spring dimensions and profile for the escapement's mainspring.
 
 Own copy of decad-gallery models/spiralspring params.go (Derive, Validate) and profile.go (the sketch geometry) at
-e11a188, and of models/escapement layout.go SpringParams. No sketch constraints: the profile is plain curves
+45b5875, and of models/escapement layout.go SpringParams. No sketch constraints: the profile is plain curves
 (docs/escapement/deviations.md).
 """
 

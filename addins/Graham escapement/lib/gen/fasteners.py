@@ -1,7 +1,7 @@
 """M2 bolt and nut geometry and the escapement's fastener sites and tool spans.
 
 Own copy of decad-gallery models/m2bolt (m2bolt.go) and models/m2nut (m2nut.go), unchanged since the gearbox port, and
-of internal/m2fastener plus models/escapement plates.go `sites` at e11a188. Thread is not modeled, as in the gallery.
+of internal/m2fastener plus models/escapement plates.go `sites` at 45b5875. Thread is not modeled, as in the gallery.
 Spans are model z (low, high) with the shank toward -Z from a head top at z 34.
 """
 

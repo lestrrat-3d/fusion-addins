@@ -1,6 +1,6 @@
 """Tangent rounds of loop corners.
 
-Own copy of the effect of the gallery's `sketch.CreateFillet` as used in models/escapement at e11a188: the corner
+Own copy of the effect of the gallery's `sketch.CreateFillet` as used in models/escapement at 45b5875: the corner
 between two lines or arcs is replaced by an arc of radius r tangent to both. The pieces are trimmed back to the
 touch points, and the round shares those points with them, so a loop stays closed.
 

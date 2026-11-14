@@ -1,7 +1,7 @@
 """Every 2D loop of the escapement parts, in part-local coordinates (origin on the part's axis).
 
 Own copy of the section geometry of decad-gallery models/escapement (plates.go, escapewheel.go, anchor.go, pendulum.go,
-drive.go, arbors.go, collars.go, builder.go dTool) at e11a188. Arcs are counterclockwise (curves.Arc); a clockwise
+drive.go, arbors.go, collars.go, builder.go dTool) at 45b5875. Arcs are counterclockwise (curves.Arc); a clockwise
 piece of the gallery is the counterclockwise arc from its other end. Pieces that meet share one point tuple, so loops
 close exactly. The gallery's sketch rounds are tangent arcs computed by fillet.py: each rounded loop is its sharp
 pieces plus a map of corner key to radius, and the public loop is fillet.round_loop of both.

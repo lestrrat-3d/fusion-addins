@@ -1,6 +1,6 @@
 """Body containers of the escapement and the check that stands in for decad VerifyContainers.
 
-Own copy of decad-gallery models/escapement containers.go (container names, moveBodies) at e11a188, and of the
+Own copy of decad-gallery models/escapement containers.go (container names, moveBodies) at 45b5875, and of the
 gearbox add-in's container check, extended to nested containers.
 """
 

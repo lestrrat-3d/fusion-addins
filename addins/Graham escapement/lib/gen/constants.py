@@ -1,7 +1,7 @@
 """Fixed constants of the escapement model.
 
 Own copy of the constants of decad-gallery models/escapement (layout.go, plates.go, drive.go, escapewheel.go,
-arbors.go, anchor.go, pendulum.go, hardware.go, collars.go, spring.go) at e11a188. Names are the Go names in
+arbors.go, anchor.go, pendulum.go, hardware.go, collars.go, spring.go) at 45b5875. Names are the Go names in
 UPPER_SNAKE_CASE.
 Lengths are mm, angles are radians.
 """

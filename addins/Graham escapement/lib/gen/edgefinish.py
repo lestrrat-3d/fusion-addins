@@ -3,7 +3,7 @@
 Own copy of decad-gallery internal/edgefinish (MinChamfer, LargeFaceArea, LongEdgeRun, the Outer and Inner filters),
 models/escapement plates.go plateKeep, pendulum.go rimKeep, the escapewheel.go finish filter, the drive.go
 buildGreatWheel filter, internal/edgefinish Long, models/spiralspring spiralspring.go `Outer || Long(Inner)` and the
-finish calls of the part builders at e11a188. The
+finish calls of the part builders at 45b5875. The
 gallery chamfers both planes of a part in one call because decad cannot chamfer a body twice; Fusion chamfers each
 plane in its own feature (docs/escapement/deviations.md). The removed volumes are the add-in's own; the gallery tests
 none.

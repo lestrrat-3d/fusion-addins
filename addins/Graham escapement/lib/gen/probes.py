@@ -4,7 +4,7 @@ Own copy of the gearbox add-in's probe structure, with the escapement's probe ta
 are in part-local coordinates (origin on the part's axis, z in model z). Interaction points are in the component frame.
 The `round` probes (labels containing "round", plus the root taper and the slot end) stand in for the gallery's
 TestCorners: each is a point on the segment from a sharp corner to its round's centre that only the round makes
-material.
+material. The `body step` arbor probes stand in for the gallery's body-step checks of TestArborCollars.
 """
 
 from __future__ import annotations

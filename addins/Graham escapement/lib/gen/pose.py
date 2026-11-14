@@ -1,7 +1,7 @@
 """Part poses of the escapement.
 
 Own copy of the gearbox add-in's Pose, and of decad-gallery models/escapement build.go (poses, poseAll),
-drive.go buildMainspring (spring pose) and internal/m2fastener PlaceBolt, PlaceNut at e11a188.
+drive.go buildMainspring (spring pose) and internal/m2fastener PlaceBolt, PlaceNut at 45b5875.
 
 Every part is built about its own axis at the component origin, then moved once by its Pose: a turn about local +Z
 by `angle` (after a flip about local X when `flip`), then a move by (x, y, z). The result equals the gallery's
