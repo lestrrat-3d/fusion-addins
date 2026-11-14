@@ -2,6 +2,9 @@
 
 Own copy of the gearbox add-in's probe structure, with the escapement's probe tables of the design doc. Part probes
 are in part-local coordinates (origin on the part's axis, z in model z). Interaction points are in the component frame.
+The `round` probes (labels containing "round", plus the root taper and the slot end) stand in for the gallery's
+TestCorners: each is a point on the segment from a sharp corner to its round's centre that only the round makes
+material.
 """
 
 from __future__ import annotations
@@ -17,7 +20,11 @@ from .layout import Geometry, angle_of
 from .motion import State
 from .params import Vec3
 from .pose import body_poses
-from .sections import KEYED_RING_D, DFamily
+from .constants import CARRIER_CORE_RADIUS, SLOT_END_RADIUS
+from .sections import (
+    KEYED_RING_D, DFamily, anchor_rounds, crutch_rounds, escape_window_rounds, pawl_rounds, pendulum_rounds,
+    ratchet_rounds, window_rounds,
+)
 
 INSIDE = "inside"
 OUTSIDE = "outside"
@@ -64,6 +71,21 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
     cx_a = angle_of(g.cx)
     probes: dict[str, list[Probe]] = {}
 
+    def rnd(label: str, r, z: float) -> Probe:
+        x, y = r.probe()
+        return _in(label, x, y, z)
+
+    win_r, win_l = window_rounds(g, 1.0), window_rounds(g, -1.0)
+    slot_c = pawl_g - SLOT_END_RADIUS / (CARRIER_CORE_RADIUS + SLOT_END_RADIUS)
+    slot_ctr = _polar(CARRIER_CORE_RADIUS + SLOT_END_RADIUS, slot_c)[:2]
+    along = (-math.sin(slot_c), math.cos(slot_c))
+    gangs = (pawl_g, pawl_g + math.pi)
+    e = dm.taper_offset
+    rho0, d = dm.first_inner_radius, dm.center_offset
+    phi = 225 * _DEG
+    s_old = -e * math.cos(phi) + math.sqrt(rho0 * rho0 - e * e * math.sin(phi) ** 2)
+    rm = (rho0 - e + s_old) / 2
+
     probes["back_plate"] = [
         _in("spine", 0, 30, -3), _in("hub ring -", -8.5, 0, -3), _in("hub ring +", 8.5, 0, -3),
         _in("rim -74", -47, 74, -3), _in("rim +74", 47, 74, -3), _in("rim -88", -47, -88, -3),
@@ -74,6 +96,8 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
         _out("lip", 0, 0, -3), _out("mount -", -40, 90, -3), _out("mount +", 40, 90, -3), _out("seat", 6, 0, -2),
         _out("cavity -74", -50, 74, 25), _out("cavity +74", 50, 74, 25), _out("cavity +88", 50, -88, 25),
         _out("hole", -50, 74, 22.5),
+        rnd("window round F", win_r[0], -3), rnd("window round H", win_r[1], -3),
+        rnd("window round A", win_r[6], -3), rnd("window round A left", win_l[6], -3),
     ]
     probes["front_plate"] = [
         _in("spine", 0, 30, 31), _in("socket wall", 0, 75, 31), _in("above seat", 6, 0, 33.5),
@@ -81,6 +105,8 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
         _out("window -", -40, 0, 31), _out("window +", 40, 0, 31), _out("seat", 6, 0, 30),
         _out("suspension socket", 0, sy, 32.5), _out("anchor socket", qx, qy, 29),
         _out("head pocket -", -50, 74, 33), _out("head pocket +", 50, 74, 33),
+        rnd("window round F", win_r[0], 31), rnd("window round H", win_r[1], 31),
+        rnd("window round A", win_r[6], 31), rnd("window round A left", win_l[6], 31),
     ]
     probes["escape_arbor"] = [
         _in("axis", 0, 0, 10), _in("under bearing", 2.25, 0, -2.5), _in("collar", 3.5, 0, 26),
@@ -110,6 +136,8 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
         Probe("window", _polar(20.5, 120 * _DEG, 23.5), OUTSIDE), _out("bore", -2.75, 0, 10),
         _out("bore at flat", 2.5, 0, 10), _out("front counterbore", 3.5, 0, 24.2),
         _out("rear counterbore", 3.5, 0, 2.4), _out("rim chamfer", 3.9, 0, 24.9), _out("no boss", 0, 3.5, 1.0),
+        rnd("window round inner", escape_window_rounds(0)[0], 23.5),
+        rnd("window round outer", escape_window_rounds(0)[1], 23.5),
     ]
     probes["anchor"] = [
         Probe("entry pallet", _polar(40.0, (ce_a + g.top_e) / 2, 23.5), INSIDE),
@@ -118,6 +146,8 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
         _in("counterbore wall", 3.9, 0, 25.0),
         _out("bore", -2.75, 0, 23.5), _out("between arms", 0, -20, 23.5), _out("counterbore", 3.5, 0, 25.0),
         _out("rim chamfer", 3.9, 0, 25.9), _out("no boss", 0, 3.2, 27),
+        rnd("round G_E", anchor_rounds(g)[0], 23.5), rnd("round H_E", anchor_rounds(g)[1], 23.5),
+        rnd("round H_X", anchor_rounds(g)[2], 23.5), rnd("round G_X", anchor_rounds(g)[3], 23.5),
     ]
     probes["crutch"] = [
         _in("arm", 0, -20, 36.8), _in("pin", 0, -45, 41.55), _in("floor", -3.5, 0, 37.8),
@@ -125,11 +155,13 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
         _in("socket flat side", 2.25, 0, 37.8),
         _out("beside arm", 4, -20, 36.8), _out("keyed counterbore", -3.5, 0, 36.5),
         _out("counterbore at its flat", 3.2, 0, 36.5), _out("socket", -2, 0, 37.8),
+        rnd("arm round left", crutch_rounds(g)[0], 36.8), rnd("arm round right", crutch_rounds(g)[1], 36.8),
     ]
     lp = g.params.pendulum_length
     probes["pendulum"] = [
         _in("rod", 0, -100, 41.8), _in("bob", 0, -lp, 41.8), _in("below pocket", 6, 0, 39.30),
         _out("slot", 0, -59, 41.8), _out("lip", 0, 0, 39.30), _out("pocket", 6, 0, 42.05),
+        rnd("rod round eye", pendulum_rounds(g)[3], 41.8), rnd("rod round bob", pendulum_rounds(g)[2], 41.8),
     ]
     probes["suspension_cap"] = [_in("wall", 3.0, 0, 46.05), _in("flat side", 2.25, 0, 46.05), _out("bore", -2.0, 0, 46.05)]
     probes["great_wheel"] = [
@@ -138,6 +170,7 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
         _in("counterbore wall", 4.4, 0, 3.0),
         Probe("ratchet gap", _polar(12.5, 27 * _DEG, 7), OUTSIDE), _out("bore", 3.3, 0, 4.25),
         _out("counterbore", 3.9, 0, 2.5), _out("rim chamfer", 4.3, 0, 1.6),
+        rnd("ratchet root round", ratchet_rounds()[0], 7), Probe("ratchet slope", _polar(12.5, 22 * _DEG, 7), OUTSIDE),
     ]
     probes["pawl_carrier"] = [
         _in("core", 6, 0, 7), Probe("pawl tooth", _polar(11.5, pawl_g - 114 * _DEG, 7), INSIDE),
@@ -145,12 +178,17 @@ def part_probes(g: Geometry) -> dict[str, list[Probe]]:
         _in("D flat side", 2.75, 0, 7),
         Probe("slot", _polar(8.0, pawl_g - 60 * _DEG, 7), OUTSIDE), _out("bore", -3.0, 0, 7),
         _out("beside boss", 0, 4.5, 10.5),
+        rnd("tooth root round", pawl_rounds(gangs)[0], 7), rnd("block back round", pawl_rounds(gangs)[1], 7),
+        _in("slot end wall", slot_ctr[0] + 0.8 * along[0], slot_ctr[1] + 0.8 * along[1], 7.25),
+        _out("slot end centre", slot_ctr[0], slot_ctr[1], 7.25),
+        _out("slot end air", slot_ctr[0] + 0.7 * along[0], slot_ctr[1] + 0.7 * along[1], 7.25),
     ]
     probes["mainspring"] = [
         _in("strip", 0, r1 + t / 2, 3), _in("hub", 0, -4.5, 3),
         _in("flat side", 0, 3.0, 3),
         _out("gap", 0, r1 - gap / 2, 3), _out("bore", 0, 0, 3), _out("eye hole", dm.eye_center_x, dm.eye_center_y, 3),
         _out("bore arc", 0, -3.2, 3), _out("bore rim chamfer", 0, -3.5, 0.1),
+        _in("root taper", d + e + rm * math.cos(phi), rm * math.sin(phi), 3),
     ]
     probes["spring_spacer"] = [
         _in("wall", 3.0, 0, 20), _in("D flat side", 2.75, 0, 20), _out("bore", -2.75, 0, 20),
