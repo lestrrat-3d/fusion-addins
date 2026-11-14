@@ -5,6 +5,7 @@ import unittest
 import _support  # noqa: F401
 from gen import layout
 from gen.dims import derive
+from gen.kits import default_params_for, supported_combinations
 from gen.params import default_params
 
 P1 = default_params()
@@ -66,6 +67,14 @@ class LayoutTest(unittest.TestCase):
         self.assertIn("Link Shaft 1", names)
         self.assertEqual(names[-2:], ["Carrier 2", "Output Shaft"])
         self.assertEqual(layout.expected_body_count(P2), 46)
+
+    def test_kit_bodies(self):
+        want = [i.name for i in layout.instances(P1, D1)]
+        for k in supported_combinations():
+            with self.subTest(kit=k.name):
+                p = default_params_for(k.name)
+                self.assertEqual(layout.expected_body_count(p), 34)
+                self.assertEqual([i.name for i in layout.instances(p, derive(p))], want)
 
     def test_parts_are_known(self):
         for inst in layout.instances(P2, D2):

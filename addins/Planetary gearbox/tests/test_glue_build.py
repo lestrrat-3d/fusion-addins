@@ -12,6 +12,7 @@ import _support  # noqa: F401
 
 from gen import containers, layout
 from gen.dims import derive
+from gen.kits import default_params_for
 from gen.params import default_params, placement_frame
 
 _ADDINS = _support.ADDINS
@@ -34,6 +35,7 @@ class World:
         self.alive = []
         self.calls = []
         self.chamfers = []
+        self.rims = []  # (radius, z) of every seat rim the builders looked up
 
     @property
     def count(self):
@@ -163,6 +165,10 @@ def install(world, fusion, face_loops=FACE_LOOPS):
         world.calls.append(("chamfer", what))
         world.chamfers.append((what, len(edges), distance, tangent_chain))
 
+    def circular_edges_at(body, radius, z, tol=1e-3):
+        world.rims.append((radius, z))
+        return [object()]
+
     patches = {
         "new_sketch": mock.MagicMock(),
         "draw_loop": mock.MagicMock(),
@@ -184,7 +190,7 @@ def install(world, fusion, face_loops=FACE_LOOPS):
         "flat_face_loops": flat_face_loops,
         "axial_edges_at": lambda body, points, tol=1e-3: [object()] * (2 * len(points) // 2),
         "concave_axial_edges": lambda body, tol=1e-3: [],
-        "circular_edges_at": lambda body, radius, z, tol=1e-3: [object()],
+        "circular_edges_at": circular_edges_at,
     }
     return mock.patch.multiple(fusion, **patches)
 
@@ -226,9 +232,9 @@ class GlueBuildTest(unittest.TestCase):
             self.ctx = run_all.call_args.args[0]
             return world, run_all.call_args.args[1]
 
-    def check_names(self, p_changes, expected_count):
+    def check_names(self, p_changes, expected_count, face_loops=None):
         p = dataclasses.replace(default_params(), **p_changes)
-        world, built = self.run_build(**p_changes)
+        world, built = self.run_build(face_loops=face_loops, **p_changes)
 
         d = derive(p)
         want = sorted(i.name for i in layout.instances(p, d))
@@ -240,6 +246,7 @@ class GlueBuildTest(unittest.TestCase):
         self.check_containers(p, derive(p), world)
         copies = [c for c in world.calls if c[0] == "copy" and c[1].endswith(" copy")]
         self.assertEqual(len(copies), expected_count - len({part for part, _, _ in built}))
+        return world
 
     def check_containers(self, p, d, world):
         want = containers.expected_bodies(p, d)
@@ -262,6 +269,22 @@ class GlueBuildTest(unittest.TestCase):
 
     def test_two_stages(self):
         self.check_names({"stages": 2}, 46)
+
+    def test_605_planet_608_shaft_kit(self):
+        kit = default_params_for("planet605-shaft608")
+        changes = {
+            name: getattr(kit, name)
+            for name in ("planet_bearing", "shaft_bearing", "sun_teeth", "planet_teeth", "ring_teeth")
+        }
+        # The 608ZZ shaft bearing gives an 18 mm cover lip bore, so the cover's lip loop has radius 9.
+        loops = {k: (list(v[0]), list(v[1])) for k, v in FACE_LOOPS.items()}
+        loops["cover"][0][4] = (False, 1, 9.0)
+        world = self.check_names(changes, 34, face_loops=loops)
+        rims = world.rims
+        for want in ((7.05, 8), (11.05, 10)):
+            self.assertEqual(len([r for r in rims if abs(r[0] - want[0]) < 1e-9 and abs(r[1] - want[1]) < 1e-9]), 1)
+        cover_chamfers = [c for c in world.chamfers if c[0].startswith("cover edge_chamfer z=0")]
+        self.assertEqual(cover_chamfers, [("cover edge_chamfer z=0", 14, 0.5, False)])
 
     def test_pins_shafts_not_split_by_default(self):
         world, _ = self.run_build(stages=2)

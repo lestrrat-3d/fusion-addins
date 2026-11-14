@@ -7,6 +7,7 @@ from gen import gears, layout
 from gen.curves import Circle, loop_polygon, rotate
 from gen.dims import derive
 from gen.involute import gear_outline_polygon
+from gen.kits import default_params_for
 from gen.params import default_params
 from gen.phase import planet_orbit_angle, planet_tooth_angle, ring_tooth_angle
 from gen.polygon import count_inside, point_in_polygon
@@ -200,6 +201,13 @@ class ProbesTest(unittest.TestCase):
 
     def test_probes_two_stages(self):
         self.check(P2, D2)
+
+    def test_probes_kits(self):
+        for kit in ("planet605-shaft608", "planet608-shaft605", "planet608-shaft608"):
+            for stages in (1, 2):
+                with self.subTest(kit=kit, stages=stages):
+                    p = dataclasses.replace(default_params_for(kit), stages=stages)
+                    self.check(p, derive(p))
 
     def test_probes_with_bridging(self):
         p = dataclasses.replace(P1, sacrificial_bridging=True)
