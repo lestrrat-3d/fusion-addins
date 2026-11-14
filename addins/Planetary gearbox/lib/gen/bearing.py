@@ -53,14 +53,3 @@ def lookup(name: str) -> Spec | None:
             return s
     return None
 
-
-# Kept until the per-role dimensions replace it (see dims.py).
-@dataclasses.dataclass(frozen=True)
-class Bearing:
-    bore_diameter: float
-    outer_diameter: float
-    width: float
-
-
-def bearing_605zz() -> Bearing:
-    return Bearing(5.0, 14.0, 5.0)

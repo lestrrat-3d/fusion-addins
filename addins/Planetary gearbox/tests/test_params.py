@@ -3,8 +3,9 @@ import math
 import unittest
 
 import _support  # noqa: F401
-from gen.bearing import Bearing, bearing_605zz
+from gen.bearing import lookup
 from gen.dims import derive, rim_inner_radius
+from gen.kits import default_params_for
 from gen.inputs import INPUT_SPECS, params_from_values
 from gen.params import (
     MIN_EDGE_CHAMFER,
@@ -29,8 +30,11 @@ REFERENCE_DIMS = {
     "pin": 5.0,
     "shaft": 5.0,
     "shaft_bore": 5.1,
-    "pocket": 14.1,
-    "lip": 10,
+    "planet_pocket": 14.1,
+    "cover_pocket": 14.1,
+    "planet_lip": 10,
+    "cover_lip": 10,
+    "pin_collar": 7.4,
     "collar": 7.4,
     "cover_boss": 20.1,
     "cover_hub": 26.1,
@@ -58,7 +62,32 @@ class ParamsTest(unittest.TestCase):
         for name, want in REFERENCE_DIMS.items():
             with self.subTest(name=name):
                 near(self, getattr(d, name), want)
-        self.assertEqual(d.bearing, Bearing(5, 14, 5))
+        self.assertEqual(d.planet_bearing, lookup("605ZZ"))
+        self.assertEqual(d.shaft_bearing, lookup("605ZZ"))
+
+    def test_derive_kits(self):
+        cols = ("pin", "pin_collar", "planet_pocket", "planet_lip", "shaft", "shaft_bore", "collar", "cover_pocket",
+                "cover_lip", "cover_boss", "cover_hub", "boss", "arm", "ring_outer", "rim_inner")
+        table = {
+            "planet605-shaft605": (5, 7.4, 14.1, 10, 5, 5.1, 7.4, 14.1, 10, 20.1, 26.1, 11, 7, 44.1, 36.85),
+            "planet605-shaft608": (5, 7.4, 14.1, 10, 8, 8.1, 10.4, 22.1, 18, 28.1, 34.1, 11, 7, 43.6, 36.35),
+            "planet608-shaft605": (8, 10.4, 22.1, 18, 5, 5.1, 7.4, 14.1, 10, 20.1, 26.1, 14, 10, 44.1, 36.85),
+            "planet608-shaft608": (8, 10.4, 22.1, 18, 8, 8.1, 10.4, 22.1, 18, 28.1, 34.1, 14, 10, 43.6, 36.35),
+        }
+        for kit, want in table.items():
+            d = derive(default_params_for(kit))
+            for name, w in zip(cols, want):
+                with self.subTest(kit=kit, name=name):
+                    near(self, getattr(d, name), w)
+            p = default_params_for(kit)
+            self.assertEqual(d.planet_bearing, lookup(p.planet_bearing))
+            self.assertEqual(d.shaft_bearing, lookup(p.shaft_bearing))
+
+    def test_derive_unknown_bearing(self):
+        for field in ("planet_bearing", "shaft_bearing"):
+            with self.subTest(field=field):
+                with self.assertRaises(ValueError):
+                    derive(dataclasses.replace(default_params(), **{field: "609ZZ"}))
 
     def test_rim_inner_radius(self):
         self.assertAlmostEqual(rim_inner_radius(40.55), 36.85, places=12)
@@ -84,7 +113,8 @@ class ParamsTest(unittest.TestCase):
         near(self, ratio(dataclasses.replace(default_params(), stages=2)), (1 + 71 / 13) ** 2)
 
     def test_bearing(self):
-        self.assertEqual(bearing_605zz(), Bearing(5, 14, 5))
+        self.assertEqual(lookup("605ZZ").width, 5)
+        self.assertEqual((lookup("605ZZ").bore_diameter, lookup("605ZZ").outer_diameter), (5, 14))
 
     def test_input_specs(self):
         ids = [s.id for s in INPUT_SPECS]

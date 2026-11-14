@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import math
 
-from .bearing import bearing_605zz
+from .bearing import lookup
 from .dims import derive
+from .sections import pin_socket_radius
 from .ears import validate_ears
 from . import gears as gearset
 from .involute import closing_radius, is_embedded, validate_spur
@@ -53,7 +54,7 @@ class ValidationError(ValueError):
 
 def validate(p: Params) -> None:
     """Raise ValidationError with the message of the first failing rule."""
-    b = bearing_605zz()
+    b = lookup(p.planet_bearing)
     m = p.module
 
     # 1. Finiteness.
@@ -151,9 +152,9 @@ def validate(p: Params) -> None:
             f"gear thickness {n(p.gear_thickness)} leaves less than {n(LIP_THICKNESS)} "
             f"for the lip behind a {n(b.width)} wide bearing"
         )
-    if d.pocket / 2 > d.planet_root - m:
+    if d.planet_pocket / 2 > d.planet_root - m:
         raise ValidationError(
-            f"bearing pocket diameter {n(d.pocket)} leaves less than one module of wall under the planet root"
+            f"bearing pocket diameter {n(d.planet_pocket)} leaves less than one module of wall under the planet root"
         )
     if d.shaft / 2 + d.boss / 2 >= d.orbit:
         raise ValidationError(
@@ -200,7 +201,7 @@ def validate(p: Params) -> None:
             f"flat depth {n(p.flat_depth)} must stay under the {n(COLLAR_MARGIN)} collar margin, "
             "so a thick part's flat stays outside its rod"
         )
-    socket = d.collar / 2 + PRESS_FIT_CLEARANCE
+    socket = pin_socket_radius(d)
     wall = d.boss / 2 - socket
     if wall < MIN_SOCKET_WALL:
         raise ValidationError(
@@ -225,7 +226,7 @@ def validate(p: Params) -> None:
     gears = (
         ("ring tooth spaces: ", p.ring_teeth, d.ring_length + 2 * RING_MARGIN, 0.0, -p.backlash),
         ("sun gear: ", p.sun_teeth, p.gear_thickness, sun_bore, p.backlash),
-        ("planet gear: ", p.planet_teeth, p.gear_thickness, d.lip, p.backlash),
+        ("planet gear: ", p.planet_teeth, p.gear_thickness, d.planet_lip, p.backlash),
     )
     for prefix, teeth, thickness, bore, backlash in gears:
         msg = validate_spur(m, teeth, p.pressure_angle, thickness, p.samples, bore, backlash)
