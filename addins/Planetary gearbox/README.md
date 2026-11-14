@@ -1,7 +1,7 @@
 # Planetary gearbox
 
 A Fusion add-in that rebuilds the decad-gallery model `planetarygearbox`: a fixed internal ring gear housing one or
-more stages, each with a sun gear, planet gears on 605ZZ bearings, a separate press-fit pin for each planet, a carrier
+more stages, each with a sun gear, planet gears on bearings, a separate press-fit pin for each planet, a carrier
 plate and a shaft, closed by two bearing covers that eight M2 bolts and eight M2 nuts hold to the ring. The shafts and
 the pins have a D-shaped flat (`Flat depth`) that fits the D-shaped bores of the suns and the carrier. The default
 gearbox has 34 bodies, and each further stage adds 12. It takes the gallery's inputs with the gallery's defaults and
@@ -11,6 +11,10 @@ component holds one sub-component per gallery container (`Housing`, `Cover Beari
 of its container. As in the gallery, the ring, the covers and the carriers have a 45° chamfer (`Edge chamfer`, 0.5 mm) on
 the edges of their large flat faces. The ring has three mounting ears by default; the `Mounting ears` check box in the
 dialog turns them off, and the `Ear count` and `Ear bore diameter` inputs are disabled while it is unchecked.
+The `Planet bearing` and `Shaft bearing` drop-downs choose the bearing of the planets and the bearing in the covers
+from 605ZZ and 608ZZ, both 605ZZ by default. Changing either one sets `Sun teeth`, `Planet teeth` and `Ring teeth` to
+the tooth set of that bearing pair (13/29/71 for a 605ZZ shaft bearing, 14/28/70 for a 608ZZ one). The dialog lists
+every input problem and keeps OK disabled until none is left.
 The `Split pins/shafts` check box is off by default; when it is checked, each carrier pin and each shaft is cut in two
 along the plane through its axis that is parallel to the D flat, so each becomes two bodies (`<name> Half 1`,
 `<name> Half 2`).
@@ -29,7 +33,8 @@ See [../../README.md](../../README.md).
 ## Tests
 
 From the `fusion-addins` root, run `python3 -m unittest discover -s "addins/Planetary gearbox/tests"`. The tests cover the
-pure geometry package `lib/gen/` and, with Fusion mocked, the glue imports and the build order
+pure geometry package `lib/gen/` (including the bearing catalog, the four bearing kits and the translated input
+checks) and, with Fusion mocked, the dialog's bearing selectors and input checks, the glue imports and the build order
 (body names, copies, body count, container components and edge chamfers for one and two stages). They need no
 Fusion.
 
