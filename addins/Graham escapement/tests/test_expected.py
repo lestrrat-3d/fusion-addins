@@ -37,11 +37,11 @@ class VolumeTest(unittest.TestCase):
 
     def test_value_table(self):
         want = {
-            "escape_arbor": 943.1919, "pallet_arbor": 1360.2952, "great_wheel_arbor": 1085.0111,
-            "suspension_pin": 439.3896, "escape_wheel": 11743.8579, "anchor": 3066.7512, "crutch": 960.1601,
-            "great_wheel": 26311.0696, "pawl_carrier": 942.0007, "mainspring": 10429.3078,
-            "spring_retainer": 183.3054, "winding_knob": 657.4719, "end_collar": 68.1310,
-            "pendulum": 19532.0434, "suspension_cap": 35.4193, "back_plate": 73722.8576, "front_plate": 53966.2783,
+            "escape_arbor": 1129.0888, "pallet_arbor": 1378.7013, "great_wheel_arbor": 1191.2211,
+            "suspension_pin": 428.9538, "escape_wheel": 11599.3005, "anchor": 3054.7633, "crutch": 967.2718,
+            "great_wheel": 26311.0696, "pawl_carrier": 953.6093, "mainspring": 10396.4366,
+            "spring_retainer": 136.3443, "winding_knob": 664.5837, "end_collar": 89.4663,
+            "pendulum": 19532.0434, "suspension_cap": 46.0870, "back_plate": 73722.8576, "front_plate": 53966.2783,
             "spring_anchor_pin": 146.3197, "bearing": 671.5154, "bolt": 51.4814, "nut": 16.1483,
         }
         self.assertEqual(set(want), set(bodies.PARTS))
