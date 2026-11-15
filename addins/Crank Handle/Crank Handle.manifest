@@ -1,0 +1,13 @@
+{
+    "autodeskProduct": "Fusion",
+    "type": "addin",
+    "id": "77c11534-c179-4a3c-9faf-4008d5c67e80",
+    "author": "lestrrat-3d",
+    "description": {
+        "": "Crank handle from decad-gallery models/crankhandle"
+    },
+    "version": "",
+    "runOnStartup": false,
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
