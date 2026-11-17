@@ -76,9 +76,9 @@ class ChecksTest(unittest.TestCase):
         records = self.run_checks()
         self.assertEqual([r[0] for r in records], ["summary"])
         summary = records[0][1]
-        self.assertEqual((summary["bodies"], summary["expected"], summary["fail"]), (11, 11, 0))
-        # 11 bodies x (volume, bounds, probes) plus the top and the five containers.
-        self.assertEqual(summary["pass"], 33 + 6)
+        self.assertEqual((summary["bodies"], summary["expected"], summary["fail"]), (13, 13, 0))
+        # 13 bodies x (volume, bounds, probes) plus the top and the five containers.
+        self.assertEqual(summary["pass"], 39 + 6)
 
     def test_wrong_volume_bounds_and_probe(self):
         records = self.run_checks(**{

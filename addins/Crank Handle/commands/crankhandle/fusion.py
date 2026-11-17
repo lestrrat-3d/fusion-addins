@@ -6,6 +6,7 @@ Pure code works in millimeters; Fusion works in centimeters. `cm` is the only pl
 from __future__ import annotations
 
 import contextlib
+import math
 import typing
 
 import adsk.core
@@ -100,6 +101,15 @@ def new_sketch_xz(comp: adsk.fusion.Component, name: str) -> adsk.fusion.Sketch:
         return sk
 
 
+def new_sketch_yz(comp: adsk.fusion.Component, name: str) -> adsk.fusion.Sketch:
+    """Sketch on the YZ plane, for the relief tool's side profile."""
+    with _step(f"sketch {name}"):
+        sk = comp.sketches.add(comp.yZConstructionPlane)
+        sk.name = name
+        sk.isComputeDeferred = True
+        return sk
+
+
 def _draw_loop(
     sk: adsk.fusion.Sketch,
     loop: Loop,
@@ -142,6 +152,14 @@ def draw_loop_xz(sk: adsk.fusion.Sketch, loop: Loop) -> None:
     _draw_loop(sk, loop, lambda q: sk.modelToSketchSpace(point(q[0], 0.0, q[1])), None)
 
 
+def draw_loop_yz(sk: adsk.fusion.Sketch, loop: Loop) -> None:
+    """Draw a closed loop of lines whose (u, v) are model (y, z) on a YZ sketch."""
+    if any(not isinstance(c, Line) for c in loop):
+        raise BuildError(f"sketch {sk.name}: draw_loop_yz takes lines only")
+    # The YZ sketch's own axes differ from model Y/Z; modelToSketchSpace converts.
+    _draw_loop(sk, loop, lambda q: sk.modelToSketchSpace(point(0.0, q[0], q[1])), None)
+
+
 def draw_circle(sk: adsk.fusion.Sketch, center: Point, radius: float) -> None:
     with _step(f"sketch {sk.name} draw_circle"):
         sk.sketchCurves.sketchCircles.addByCenterRadius(point(center[0], center[1]), cm(radius))
@@ -179,6 +197,21 @@ def extrude(
             adsk.fusion.DistanceExtentDefinition.create(adsk.core.ValueInput.createByReal(cm(length))),
             adsk.fusion.ExtentDirections.PositiveExtentDirection,
         )
+        feat = ctx.comp.features.extrudeFeatures.add(inp)
+        if feat is None or feat.bodies.count != 1:
+            raise BuildError(f"{what}: extrude produced {0 if feat is None else feat.bodies.count} bodies, expected 1")
+        return feat.bodies.item(0)
+
+
+def extrude_symmetric(
+    ctx: BuildContext, profile: adsk.fusion.Profile, length: float, what: str
+) -> adsk.fusion.BRepBody:
+    """Extrude profile into a new body, `length` (mm) in all, half on each side of its sketch plane."""
+    with _step(what):
+        inp = ctx.comp.features.extrudeFeatures.createInput(
+            profile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation
+        )
+        inp.setSymmetricExtent(adsk.core.ValueInput.createByReal(cm(length)), True)
         feat = ctx.comp.features.extrudeFeatures.add(inp)
         if feat is None or feat.bodies.count != 1:
             raise BuildError(f"{what}: extrude produced {0 if feat is None else feat.bodies.count} bodies, expected 1")
@@ -412,6 +445,87 @@ def face_loops(
                 edges = [loop.edges.item(k) for k in range(loop.edges.count)]
                 out.append((loop.isOuter, [e for e in edges if e.geometry is not None]))
     return out
+
+
+def bore_rim_edges(
+    body: adsk.fusion.BRepBody, bore_radius: float, what: str, want_lines: int = 1, tol: float = 1e-3
+) -> list:
+    """The edges of the D bore's rim in the back face: every edge with both end points at z = 0 and within
+    `bore_radius` (mm) of the Z axis. The slit's walls leave the rim, so their far end points fall outside. The slit
+    leaves two arcs and the flat, or with a double flat two arcs and three lines, because it splits the -Y flat. Any
+    other count is an error."""
+    found: list[adsk.fusion.BRepEdge] = []
+    arcs = lines = 0
+    for i in range(body.edges.count):
+        edge = body.edges.item(i)
+        g = edge.geometry
+        if g is None or edge.startVertex is None or edge.endVertex is None:
+            continue
+        ends = [edge.startVertex.geometry, edge.endVertex.geometry]
+        if any(abs(mm_from_cm(q.z)) > tol or math.hypot(mm_from_cm(q.x), mm_from_cm(q.y)) > bore_radius + tol
+               for q in ends):
+            continue
+        if g.curveType == adsk.core.Curve3DTypes.Arc3DCurveType:
+            arcs += 1
+        elif g.curveType == adsk.core.Curve3DTypes.Line3DCurveType:
+            lines += 1
+        else:
+            raise BuildError(f"{what}: unexpected edge type {g.curveType}")
+        found.append(edge)
+    if arcs != 2 or lines != want_lines:
+        raise BuildError(f"{what}: found {arcs} arcs and {lines} lines, expected 2 and {want_lines}")
+    return found
+
+
+def outer_face_edges(
+    body: adsk.fusion.BRepBody,
+    outer_z: float,
+    top_z: float,
+    top_y: float,
+    ramp_foot: float,
+    pin_y: float,
+    pin_hole_r: float,
+    what: str,
+    tol: float = 1e-3,
+) -> tuple[list[adsk.fusion.BRepEdge], list[adsk.fusion.BRepEdge]]:
+    """The edges the arm's outer face chamfer takes, after the relief cut, as (outline, ramp top).
+
+    The outline is every edge with both end points at z = `outer_z` (mm) and at y >= `ramp_foot`, less the ramp's foot
+    (both end points at y = `ramp_foot`) and the pin hole's rim (both end points within `pin_hole_r` of (0, `pin_y`)).
+    It holds two lines and an arc. The ramp top is the one line with both end points at z = `top_z` and y = `top_y`.
+    Any other count is an error."""
+    outline: list[adsk.fusion.BRepEdge] = []
+    tops: list[adsk.fusion.BRepEdge] = []
+    lines = arcs = 0
+    for i in range(body.edges.count):
+        edge = body.edges.item(i)
+        g = edge.geometry
+        if g is None or edge.startVertex is None or edge.endVertex is None:
+            continue
+        ends = [(mm_from_cm(q.x), mm_from_cm(q.y), mm_from_cm(q.z)) for q in
+                (edge.startVertex.geometry, edge.endVertex.geometry)]
+        is_line = g.curveType == adsk.core.Curve3DTypes.Line3DCurveType
+        if all(abs(z - outer_z) <= tol for _, _, z in ends):
+            if any(y < ramp_foot - tol for _, y, _ in ends) or all(abs(y - ramp_foot) <= tol for _, y, _ in ends):
+                continue
+            if all(math.hypot(x, y - pin_y) <= pin_hole_r + tol for x, y, _ in ends):
+                continue
+            if is_line:
+                lines += 1
+            elif g.curveType == adsk.core.Curve3DTypes.Arc3DCurveType:
+                arcs += 1
+            else:
+                raise BuildError(f"{what}: unexpected outline edge type {g.curveType}")
+            outline.append(edge)
+        elif all(abs(z - top_z) <= tol and abs(y - top_y) <= tol for _, y, z in ends):
+            if not is_line:
+                raise BuildError(f"{what}: the ramp's top edge is not a line")
+            tops.append(edge)
+    if lines != 2 or arcs != 1 or len(tops) != 1:
+        raise BuildError(
+            f"{what}: found {lines} side lines, {arcs} arcs and {len(tops)} ramp top lines, expected 2, 1 and 1"
+        )
+    return outline, tops
 
 
 def body_report(body: adsk.fusion.BRepBody) -> tuple[bool, float, tuple[float, ...]]:

@@ -23,8 +23,12 @@ INPUT_SPECS: tuple[InputSpec, ...] = (
     InputSpec("flat_depth", "Flat depth", "flat_depth", 0.5),
     InputSpec("bore_clearance", "Bore clearance", "bore_clearance", 0.05),
     InputSpec("throw", "Throw", "throw", 55.0),
+    InputSpec("double_flat", "Double flat", "double_flat", 0, "bool"),
     # Directive: an extra option, off by default, that splits the pin in two. Not a gallery input.
     InputSpec("split_pin", "Split pin", "split_pin", 0, "bool"),
+    # Directive: an extra option, off by default, that adds the arm's sacrificial bridge layer (decad-converter
+    # docs/sacrificial-bridging.md). Not a gallery input.
+    InputSpec("sacrificial_bridging", "Sacrificial bridging", "sacrificial_bridging", 0, "bool"),
 )
 
 

@@ -93,10 +93,13 @@ class Params:
     flat_depth: float = 0.5
     bore_clearance: float = 0.05  # ballbearing.PressFitClearance
     throw: float = 55.0
+    double_flat: bool = False  # a second flat, flat_depth deep, opposite the first
     placement: Frame | None = None
     # Add-in option, off by default, not a gallery input: cut the pin in two along the plane through its axis
     # (docs/crankhandle/directives.md).
     split_pin: bool = False
+    # Add-in option, off by default, not a gallery input: add the sacrificial bridge layers (lib/gen/bridge.py).
+    sacrificial_bridging: bool = False
 
 
 def default_params() -> Params:
@@ -108,8 +111,8 @@ def params_605zz() -> Params:
 
 
 def params_6082rs() -> Params:
-    """The hand-crank siren's crank: the 8 mm shaft of a 608-2RS bearing with a 0.75 mm flat."""
-    return Params(shaft_diameter=8.0, flat_depth=0.75)
+    """The hand-crank siren's crank: the 8 mm shaft of a 608-2RS bearing with a 0.75 mm flat on both sides."""
+    return Params(shaft_diameter=8.0, flat_depth=0.75, double_flat=True)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -118,13 +121,15 @@ class Dimensions:
 
     bore_radius: float  # r_b
     bore_flat: float  # f_b: distance from the axis to the bore's flat, on the +Y side
+    bore_back: float  # distance from the axis to the bore's wall on -Y, where the slit enters
     bore_loop: float  # length of the bore's outline in the back face
+    ramp_foot: float  # the y where the ramp meets the arm's outer face
     site: Site  # the pin bolt
     cross_sites: tuple[Site, Site]  # the two cross bolts that clamp the pin's halves
-    clamp_y: float  # the clamp bolt's axis
+    clamp_y: float  # the clamp bolts' axis
     side_end: float  # where the arm's sides stop being straight
     reach: float  # how far the end arc runs behind the shaft axis
-    clamp_site: Site  # the clamp bolt
+    clamp_sites: tuple[Site, Site]  # the two clamp bolts, at CLAMP_Z
 
     def corner_center(self) -> Point:
         """Centre of the right corner arc; the left one is its mirror in x = 0."""

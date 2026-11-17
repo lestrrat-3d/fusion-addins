@@ -11,6 +11,7 @@ import math
 
 from .constants import (
     ARM_RADIUS,
+    ARM_THICKNESS,
     CLAMP_END_R,
     CONE_ANGLE,
     CROSS_FLAT,
@@ -19,6 +20,8 @@ from .constants import (
     HEAD_FROM,
     HEAD_LENGTH,
     HEAD_R,
+    HUB_LENGTH,
+    RAMP_ANGLE,
     ROOT_R,
     SHANK_FROM,
     SHANK_R,
@@ -60,23 +63,40 @@ def arm_outline(p: Params, dm: Dimensions) -> Loop:
 
 
 def slit_tool(dm: Dimensions) -> Loop:
-    """The slit's cutter: x within +-SLIT_WIDTH/2 from 2 mm past the end arc up to SLIT_IN_BORE past the bore's wall,
+    """The slit's cutter: x within +-SLIT_WIDTH/2 from 2 mm past the end arc up to SLIT_IN_BORE past the bore's wall on -Y,
     closed there by a half circle of radius SLIT_WIDTH/2."""
     half = SLIT_WIDTH / 2
     y0 = -dm.reach - 2
-    y1 = -dm.bore_radius + SLIT_IN_BORE
+    y1 = -dm.bore_back + SLIT_IN_BORE
     yc = y1 - half
     a, b, c, d = (half, y0), (half, yc), (-half, yc), (-half, y0)
     return [Line(a, b), Arc((0.0, yc), b, c), Line(c, d), Line(d, a)]
 
 
-def bore_tool(dm: Dimensions) -> Loop:
-    """The D bore's cutter: an arc of radius r_b about the axis the long way round through -Y, closed by its flat at
-    y = f_b toward the pin."""
+def bore_tool(dm: Dimensions, double_flat: bool = False) -> Loop:
+    """The bore's cutter. A single D bore is an arc of radius r_b about the axis the long way round through -Y, closed
+    by its flat at y = f_b toward the pin. With a double flat it is two arcs of radius r_b closed by two flats at
+    y = +-f_b."""
     rb, fb = dm.bore_radius, dm.bore_flat
     w = math.sqrt(rb * rb - fb * fb)
     q1, q2 = (-w, fb), (w, fb)
-    return [Arc((0.0, 0.0), q1, q2), Line(q2, q1)]
+    if not double_flat:
+        return [Arc((0.0, 0.0), q1, q2), Line(q2, q1)]
+    q3, q4 = (w, -fb), (-w, -fb)
+    return [Arc((0.0, 0.0), q3, q2), Line(q2, q1), Arc((0.0, 0.0), q1, q4), Line(q4, q3)]
+
+
+def relief_tool(p: Params, dm: Dimensions) -> Loop:
+    """The relief's side profile, in (y, z): it turns the hub's full-height block into the boss and its ramp. It runs
+    from the ramp's foot on the outer face out past the pin's end, up past the boss top and back along the ramp's plane,
+    which passes through (ARM_RADIUS, HUB_LENGTH). It is extruded across the arm, from x = -(ARM_RADIUS + 1)."""
+    far_y = p.throw + ARM_RADIUS + 1
+    top = HUB_LENGTH + 1
+    a = (dm.ramp_foot, ARM_THICKNESS)
+    b = (far_y, ARM_THICKNESS)
+    c = (far_y, top)
+    d = (ARM_RADIUS - 1 / math.tan(math.radians(RAMP_ANGLE)), top)
+    return [Line(a, b), Line(b, c), Line(c, d), Line(d, a)]
 
 
 def flat_box(throw: float, z: float, side: float) -> tuple[Point, Point, float, float]:

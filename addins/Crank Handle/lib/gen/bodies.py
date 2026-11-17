@@ -28,21 +28,23 @@ HANDLE = "Handle"
 PIN_BOLT = "Pin Bolt"
 CROSS_BOLT_1 = "Cross Bolt 1"
 CROSS_BOLT_2 = "Cross Bolt 2"
-CLAMP_BOLT = "Clamp Bolt"
+CLAMP_BOLT_1 = "Clamp Bolt 1"
+CLAMP_BOLT_2 = "Clamp Bolt 2"
 PIN_NUT = "Pin Nut"
 CROSS_NUT_1 = "Cross Nut 1"
 CROSS_NUT_2 = "Cross Nut 2"
-CLAMP_NUT = "Clamp Nut"
+CLAMP_NUT_1 = "Clamp Nut 1"
+CLAMP_NUT_2 = "Clamp Nut 2"
 
 # The pin's two printed halves when the `Split pin` option is on: the half on the -Y side of the plane through the
 # pin's axis (toward the shaft, holding the cross bolts' nuts), then the half on the +Y side (the head pockets).
 PIN_HALVES: tuple[str, str] = ("Pin Half 1", "Pin Half 2")
 
 PRINTED: tuple[str, ...] = (ARM, PIN, HANDLE)
-BOLTS: tuple[str, ...] = (PIN_BOLT, CROSS_BOLT_1, CROSS_BOLT_2, CLAMP_BOLT)
-NUTS: tuple[str, ...] = (PIN_NUT, CROSS_NUT_1, CROSS_NUT_2, CLAMP_NUT)
+BOLTS: tuple[str, ...] = (PIN_BOLT, CROSS_BOLT_1, CROSS_BOLT_2, CLAMP_BOLT_1, CLAMP_BOLT_2)
+NUTS: tuple[str, ...] = (PIN_NUT, CROSS_NUT_1, CROSS_NUT_2, CLAMP_NUT_1, CLAMP_NUT_2)
 BODY_NAMES: tuple[str, ...] = PRINTED + BOLTS + NUTS
-EXPECTED_BODY_COUNT = len(BODY_NAMES)  # 11
+EXPECTED_BODY_COUNT = len(BODY_NAMES)  # 13
 
 BODY_CONTAINER: dict[str, str] = {
     ARM: ARM_CONTAINER,
@@ -65,8 +67,9 @@ def site_of(name: str, dm: Dimensions) -> Site:
     """The site of a bolt or a nut. Raises KeyError for a printed part."""
     sites = {
         PIN_BOLT: dm.site, CROSS_BOLT_1: dm.cross_sites[0], CROSS_BOLT_2: dm.cross_sites[1],
-        CLAMP_BOLT: dm.clamp_site,
-        PIN_NUT: dm.site, CROSS_NUT_1: dm.cross_sites[0], CROSS_NUT_2: dm.cross_sites[1], CLAMP_NUT: dm.clamp_site,
+        CLAMP_BOLT_1: dm.clamp_sites[0], CLAMP_BOLT_2: dm.clamp_sites[1],
+        PIN_NUT: dm.site, CROSS_NUT_1: dm.cross_sites[0], CROSS_NUT_2: dm.cross_sites[1],
+        CLAMP_NUT_1: dm.clamp_sites[0], CLAMP_NUT_2: dm.clamp_sites[1],
     }
     return sites[name]
 

@@ -11,12 +11,14 @@ import typing
 
 import adsk.fusion
 
-from ...lib.gen import bodies, fasteners, sections
+from ...lib.gen import bodies, bridge, fasteners, sections
 from ...lib.gen.constants import (
+    ARM_RADIUS,
     ARM_THICKNESS,
     BORE_FLOOR,
     CHAMFER_SIZE,
     CROSS_Z,
+    HUB_LENGTH,
     NUT_POCKET_ROUND,
     PIN_HOLE_R,
     POCKET_FLATS,
@@ -51,9 +53,11 @@ def _prism(ctx: BuildContext, what: str, loop: Loop, z0: float, length: float) -
     return fusion.extrude(ctx, profile, z0, length, f"{what}_extrude")
 
 
-def _cylinder(ctx: BuildContext, what: str, radius: float, z0: float, length: float) -> adsk.fusion.BRepBody:
+def _cylinder(
+    ctx: BuildContext, what: str, radius: float, z0: float, length: float, center: tuple[float, float] = _ORIGIN
+) -> adsk.fusion.BRepBody:
     sk = fusion.new_sketch(ctx.comp, what)
-    fusion.draw_circle(sk, _ORIGIN, radius)
+    fusion.draw_circle(sk, center, radius)
     profile = fusion.profile_with_loops(sk, 1, f"{what}_sketch", only=True)
     return fusion.extrude(ctx, profile, z0, length, f"{what}_extrude")
 
@@ -92,15 +96,15 @@ def _hole(ctx: BuildContext, site: Site, what: str) -> adsk.fusion.BRepBody:
     return tool
 
 
-def _nut_pocket(ctx: BuildContext, site: Site, what: str) -> adsk.fusion.BRepBody:
-    """[nutPocketTool, nutPocketCutter] The hexagonal pocket from the site's cavity floor out through the face its tip
-    ends on, its corners on the circle of radius NUT_CAVITY_RADIUS with the first along the site's corner. Its floor's
-    outline is rounded by NUT_POCKET_ROUND.
+def _nut_pocket(ctx: BuildContext, site: Site, what: str, depth: float) -> adsk.fusion.BRepBody:
+    """[m2fastener HexPocketTool, nutPocketCutter] The hexagonal pocket from the site's cavity floor, `depth` deep
+    along the bolt, so it opens through the face past the nut. Its corners lie on the circle of radius
+    NUT_CAVITY_RADIUS with the first along the site's corner. Its floor's outline is rounded by NUT_POCKET_ROUND.
 
     # Deviation: when Fusion rejects the floor round, the pocket keeps its sharp floor and the build logs a
     `fallback` line (docs/crankhandle/deviations.md)."""
     loop = fasteners.hexagon_by_radius(fasteners.NUT_CAVITY_RADIUS)
-    tool = _prism(ctx, what, loop, 0.0, fasteners.NUT_CAVITY_HEIGHT + fasteners.STOCK)
+    tool = _prism(ctx, what, loop, 0.0, depth)
     floor = [e for is_outer, edges in fusion.face_loops(tool, 0.0, 1.0, what) if is_outer for e in edges]
     if len(floor) != 6:
         raise fusion.BuildError(f"{what}: found {len(floor)} floor edges, expected 6")
@@ -119,18 +123,29 @@ def _rounded(ctx: BuildContext, site: Site, what: str, meridian: list[tuple[floa
     return tool
 
 
+def _relief(ctx: BuildContext) -> adsk.fusion.BRepBody:
+    """[reliefTool] The cutter that turns the hub's full-height block into the boss and its ramp: the side profile on the
+    YZ plane, extruded across the arm, from x = -(ARM_RADIUS + 1) to ARM_RADIUS + 1."""
+    sk = fusion.new_sketch_yz(ctx.comp, "arm relief tool")
+    fusion.draw_loop_yz(sk, sections.relief_tool(ctx.p, ctx.dm))
+    profile = fusion.profile_with_loops(sk, 1, "arm relief tool_sketch", only=True)
+    return fusion.extrude_symmetric(ctx, profile, 2 * ARM_RADIUS + 2, "arm relief tool_extrude")
+
+
 def build_arm(ctx: BuildContext) -> adsk.fusion.BRepBody:
-    """[arm] Extrude the outline, chamfer both faces' outer loops, then cut the slit, the blind D bore, the hexagonal
-    pocket, the pin bolt's head pocket, and the clamp bolt's nut pocket, head pocket and hole, in this order."""
+    """[arm] Extrude the outline to HUB_LENGTH, chamfer both faces' outer loops, cut the relief that leaves the boss and
+    its ramp, chamfer the new outer face, then cut the slit, the blind bore, the hexagonal pocket, the pin bolt's head
+    pocket, and each clamp bolt's nut pocket, head pocket and hole, in this order. The bore's rim in the back face is
+    chamfered last."""
     p, dm = ctx.p, ctx.dm
     sk = fusion.new_sketch(ctx.comp, "arm outline")
     fusion.draw_loop(sk, sections.arm_outline(p, dm))
     fusion.draw_circle(sk, (0.0, p.throw), PIN_HOLE_R)
     profile = fusion.profile_with_loops(sk, 2, "arm outline_sketch")
-    body = fusion.extrude(ctx, profile, 0.0, ARM_THICKNESS, "arm extrude")
+    body = fusion.extrude(ctx, profile, 0.0, HUB_LENGTH, "arm extrude")
 
     edges = []
-    for z in (0.0, ARM_THICKNESS):
+    for z in (0.0, HUB_LENGTH):
         loops = fusion.face_loops(body, z, 100.0, f"arm z={z:g}")
         outer = [edges_ for is_outer, edges_ in loops if is_outer]
         if len(outer) != 1:
@@ -138,17 +153,60 @@ def build_arm(ctx: BuildContext) -> adsk.fusion.BRepBody:
         edges += outer[0]
     fusion.chamfer(ctx, edges, CHAMFER_SIZE, "arm chamfer faces", tangent_chain=False)
 
-    slit = _prism(ctx, "arm slit tool", sections.slit_tool(dm), -1.0, ARM_THICKNESS + 2)
-    bore = _prism(ctx, "arm bore tool", sections.bore_tool(dm), -1.0, 1 + ARM_THICKNESS - BORE_FLOOR)
+    body = fusion.cut(ctx, body, [_relief(ctx)], "arm relief cut")
+    # The relief's new outer face and the ramp's top edge are chamfered by two calls: the outline is a tangent chain and
+    # the ramp's top edge is not.
+    outline, top = fusion.outer_face_edges(body, ARM_THICKNESS, HUB_LENGTH, ARM_RADIUS, dm.ramp_foot, p.throw,
+                                           PIN_HOLE_R, "arm outer face")
+    fusion.chamfer(ctx, outline, CHAMFER_SIZE, "arm outer face chamfer", tangent_chain=False)
+    fusion.chamfer(ctx, top, CHAMFER_SIZE, "arm ramp top chamfer", tangent_chain=False)
+
+    slit = _prism(ctx, "arm slit tool", sections.slit_tool(dm), -1.0, HUB_LENGTH + 2)
+    bore = _prism(ctx, "arm bore tool", sections.bore_tool(dm, p.double_flat), -1.0, 1 + HUB_LENGTH - BORE_FLOOR)
     pocket = _prism(ctx, "arm pocket tool", fasteners.hexagon_loop(POCKET_FLATS, (0.0, p.throw)), POCKET_FROM,
                     POCKET_LENGTH)
     head = _head_pocket(ctx, dm.site, "arm pin head pocket tool")
-    clamp_pocket = _nut_pocket(ctx, dm.clamp_site, "arm clamp nut pocket tool")
-    clamp_head = _head_pocket(ctx, dm.clamp_site, "arm clamp head pocket tool")
-    clamp_hole = _hole(ctx, dm.clamp_site, "arm clamp hole tool")
-    # The bore's rim in the back face stays sharp, as in the gallery (steps.md, "Known decad limit").
-    body = _cut_all(ctx, body, [slit, bore, pocket, head, clamp_pocket, clamp_head, clamp_hole], "arm")
+    tools = [slit, bore, pocket, head]
+    for i, site in enumerate(dm.clamp_sites, start=1):
+        # Each clamp's nut pocket runs from its floor out through the -X side face, 2 ARM_RADIUS from the head's face.
+        tools += [
+            _nut_pocket(ctx, site, f"arm clamp {i} nut pocket tool", 2 * ARM_RADIUS - site.cavity + fasteners.STOCK),
+            _head_pocket(ctx, site, f"arm clamp {i} head pocket tool"),
+            _hole(ctx, site, f"arm clamp {i} hole tool"),
+        ]
+    body = _cut_all(ctx, body, tools, "arm")
+    if p.sacrificial_bridging:
+        body = _bridge_layers(ctx, body)
+    _chamfer_bore_rim(ctx, body)
     return _require_solid(ctx, body)
+
+
+def _bridge_layers(ctx: BuildContext, body: adsk.fusion.BRepBody) -> adsk.fusion.BRepBody:
+    """Sacrificial bridge layers, only when the `Sacrificial bridging` box is checked.
+
+    # Deviation from decad-gallery: the pin bolt's head pocket in the arm is wider than the pin hole above it, so with the
+    arm printed on its back face the first layer over the pocket would hang in the air. A BRIDGE_THICKNESS disc fills
+    the hole directly above the pocket's roof, so that layer is whole. The owner drills it out after printing. The
+    disc reaches BRIDGE_OVERLAP into the hole wall so the join overlaps the arm's volume
+    (directive in docs/crankhandle/directives.md; rule in docs/sacrificial-bridging.md)."""
+    for i, b in enumerate(bridge.arm_bridges(ctx.p), start=1):
+        layer = _cylinder(ctx, f"arm bridge {i}", b.disc_radius(), b.z0, b.thickness, b.center)
+        body = fusion.join(ctx, body, [layer], f"arm bridge {i} join")
+    return body
+
+
+def _chamfer_bore_rim(ctx: BuildContext, body: adsk.fusion.BRepBody) -> None:
+    """[chamferBoreRim] Chamfer the bore's rim in the back face by CHAMFER_SIZE: the two arcs and the flat the slit
+    leaves, or with a double flat the two arcs and three lines, because the slit splits the -Y flat. Each arc ends at a
+    slit wall. It runs after every cut, so no later cut meets the rim.
+
+    # Deviation: when Fusion rejects the chamfer, the rim stays sharp and the build logs a `fallback` line
+    (docs/crankhandle/deviations.md)."""
+    edges = fusion.bore_rim_edges(body, ctx.dm.bore_radius, "arm bore rim", 3 if ctx.p.double_flat else 1)
+    try:
+        fusion.chamfer(ctx, edges, CHAMFER_SIZE, "arm bore rim chamfer", tangent_chain=False)
+    except fusion.BuildError as e:
+        ctx.log.write("fallback", [("step", "arm bore rim chamfer"), ("message", str(e))])
 
 
 def build_pin(ctx: BuildContext) -> adsk.fusion.BRepBody:
@@ -173,7 +231,8 @@ def build_pin(ctx: BuildContext) -> adsk.fusion.BRepBody:
     for i, site in enumerate(dm.cross_sites):
         tools.append(_hole(ctx, site, f"pin cross {i + 1} hole tool"))
         tools.append(_head_pocket(ctx, site, f"pin cross {i + 1} head pocket tool"))
-        tools.append(_nut_pocket(ctx, site, f"pin cross {i + 1} nut pocket tool"))
+        tools.append(_nut_pocket(ctx, site, f"pin cross {i + 1} nut pocket tool",
+                                 fasteners.NUT_CAVITY_HEIGHT + fasteners.STOCK))
     body = _cut_all(ctx, body, tools, "pin")
     return _require_solid(ctx, body)
 

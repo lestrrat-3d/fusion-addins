@@ -139,7 +139,7 @@ class GlueBuildTest(unittest.TestCase):
     def test_default_build_names_and_count(self):
         world, built = self.run_build()
         self.assertEqual([name for name, _ in built], list(bodies.BODY_NAMES))
-        self.assertEqual(len(world.alive), 11)
+        self.assertEqual(len(world.alive), 13)
         self.assertEqual(sorted(b.name for b in world.alive), sorted(bodies.BODY_NAMES))
         self.assertTrue(all(b.isSolid for b in world.alive))
 
@@ -156,7 +156,7 @@ class GlueBuildTest(unittest.TestCase):
         self.assertEqual((what, y), ("Pin split", 80.0))
         self.assertIs(comp, self.ctx.container_comps["Pin"])
         names = sorted(b.name for b in world.alive)
-        self.assertEqual(len(names), 12)
+        self.assertEqual(len(names), 14)
         self.assertNotIn("Pin", names)
         # The checks ran on the whole pin, before the split.
         self.assertEqual(sorted(n for n in names if n.startswith("Pin ")), ["Pin Bolt", "Pin Half 1", "Pin Half 2", "Pin Nut"])
@@ -221,7 +221,7 @@ class GlueBuildTest(unittest.TestCase):
     def test_stray_body_fails_count(self):
         with self.assertRaises(Exception) as cm:
             self.run_build(stray_part="Pin")
-        self.assertEqual(str(cm.exception), "expected 11 bodies, found 12")
+        self.assertEqual(str(cm.exception), "expected 13 bodies, found 14")
 
 
 if __name__ == "__main__":
