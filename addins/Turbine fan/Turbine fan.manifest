@@ -1,0 +1,13 @@
+{
+    "autodeskProduct": "Fusion",
+    "type": "addin",
+    "id": "88de245c-0c3e-47ca-a2e4-d82204cce32f",
+    "author": "lestrrat-3d",
+    "description": {
+        "": "Turbine fan from decad-gallery models/turbinefan"
+    },
+    "version": "",
+    "runOnStartup": false,
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
