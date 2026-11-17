@@ -13,6 +13,8 @@ REGULAR_FIT = 0.35 + FIT_MARGIN  # the handle on the pin's shank, and its gap to
 
 ARM_RADIUS = 10.0  # the arm is 20 wide: its sides run at x = +-ARM_RADIUS
 ARM_THICKNESS = 8.0
+HUB_LENGTH = 17.0  # the arm's back face to the boss top; the boss rises from the outer face under the bore
+RAMP_ANGLE = 30.0  # degrees, the ramp from the boss top down to the outer face
 BORE_FLOOR = 1.0  # the D bore is blind: 1 mm of arm closes it at the front face
 PIN_HOLE_R = 1.3  # the pin bolt's clearance hole through the arm
 STUB_FLATS = 7.03
@@ -31,23 +33,27 @@ HEAD_LENGTH = 3.0
 HANDLE_FROM = 7.4  # the handle sketch's origin, 1 behind the handle's inner end
 PIN_BOLT = 10.0
 PIN_CAVITY = 4.75  # from the bolt head's top face to the nut cavity's near face
-PRESS_WALL = 1.6  # the least wall round a press-fit bore
+PRESS_WALL = 1.6
+REGULAR_FIT = 0.40  # the least wall round a press-fit bore
 CHAMFER_SIZE = 0.5  # the arm's face chamfer
 CROSS_BOLT = 6.0
 CROSS_FLAT = 4.0  # the pin's double flats' distance from the pin axis
 CROSS_FLAT_HALF = 3.25  # half the flats' length along the pin
 CROSS_CAVITY = 6.0
 CONE_ANGLE = 30.0  # degrees, half angle of the pin's cones
-CLAMP_BOLT = 18.0
+CLAMP_BOLT = 16.0
 CLAMP_HOLE_WALL = 1.05
 CLAMP_SIDE_RUN = 3.6
 CLAMP_CORNER_R = 4.5
 CLAMP_END_R = 22.0
-SLIT_WIDTH = 1.0
+SLIT_WIDTH = 1.5
 SLIT_IN_BORE = 1.0
 NUT_POCKET_ROUND = 0.6
 BORE_CLEARANCE_MIN = 0.05  # ballbearing.PressFitClearance
 BORE_CLEARANCE_MAX = 0.5
+
+# The clamp bolts' distances along the shaft from the arm's back face: 4 mm above it, and 4 mm below the bore's floor.
+CLAMP_Z = (4.0, 12.0)
 
 # The cross bolts' distances along the pin from the arm's back face.
 CROSS_Z = (17.0, 49.0)

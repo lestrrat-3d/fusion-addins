@@ -19,11 +19,13 @@ class SiteTest(unittest.TestCase):
     def test_tool_frame_of_the_clamp_bolt(self):
         # [m2fastener Site.Across] U = Corner, V = Dir x Corner, so the sketch extrudes along Dir.
         # The clamp nut's hexagon has a corner up and one down (gallery #275): Corner is +Z.
-        origin, x, y, z = self.dm.clamp_site.axes(self.dm.clamp_site.cavity)
+        site = self.dm.clamp_sites[1]
+        origin, x, y, z = site.axes(site.cavity)
         self.assertEqual(x, (0.0, 0.0, 1.0))
         self.assertEqual(y, (0.0, 1.0, 0.0))
         self.assertEqual(z, (-1.0, 0.0, 0.0))
-        self.assertAlmostEqual(origin[0], -8.0, places=12)
+        self.assertAlmostEqual(origin[0], -6.0, places=12)  # the nut pocket's floor, 16 from the head
+        self.assertAlmostEqual(origin[2], 12.0, places=12)  # the second clamp bolt
 
     def test_bolt_and_nut_frames(self):
         s = self.dm.cross_sites[0]

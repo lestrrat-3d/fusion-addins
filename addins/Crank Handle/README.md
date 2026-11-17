@@ -1,11 +1,12 @@
 # Crank Handle
 
 A Fusion add-in that rebuilds the decad-gallery model `crankhandle`: a printed hand crank for a D-flat shaft. Its arm
-pinches the shaft through a slit in the hub and an M2 x 18 clamp bolt and nut, a pin is clamped into the arm's far end
+pinches the shaft through a slit in the hub and two M2 x 16 clamp bolts and nuts, a pin is clamped into the arm's far end
 by an M2 x 10 bolt and nut and held together by two M2 x 6 cross bolts and nuts, and the handle turns freely on the
-pin. The build has 11 bodies. The dialog takes the shaft bore diameter (`Shaft bore diameter`, default 5 mm), the
-shaft's `Flat depth`, the `Bore clearance` and the `Throw`, with the gallery's defaults and input rules, and a `Split pin` check box (off by default) that cuts the pin in two
-along the plane through its axis, which makes the build 12 bodies (`Pin Half 1` on the shaft side, holding the cross
+pin. The build has 13 bodies. The dialog takes the shaft bore diameter (`Shaft bore diameter`, default 5 mm), the
+shaft's `Flat depth`, the `Bore clearance`, the `Throw` and a `Double flat` check box (off by default), with the gallery's
+defaults and input rules, and a `Split pin` check box (off by default) that cuts the pin in two
+along the plane through its axis, which makes the build 14 bodies (`Pin Half 1` on the shaft side, holding the cross
 nuts, and `Pin Half 2`, holding the bolt heads). Bodies are
 grouped the way the gallery groups them: the `Crank Handle` component holds the sub-components `Arm`, `Pin`, `Handle`,
 `Bolts` and `Nuts`, and each body sits in the sub-component of its container. The two optional selections `Origin
@@ -13,7 +14,7 @@ point` and `Axis direction` place the crank.
 
 ## Gallery revision
 
-Gallery revision: 77eca2ef5bc3a08038d0626e7eaa8546fbf5678f (`GALLERY_REVISION` in `config.py`)
+Gallery revision: a8114921f7302d1c3f862dcc8eca44f2dab108be (`GALLERY_REVISION` in `config.py`)
 
 The add-in translates decad-gallery at this commit: `models/crankhandle` and the models it builds from,
 `models/ballbearing`, `models/m2bolt` and `models/m2nut`.
@@ -38,7 +39,8 @@ whole pin, before the split; the split then checks that the two halves' volumes 
 
 Text Commands shows only these lines: `crankhandle fingerprint <64 hex>` and `crankhandle gallery <40 hex>` when the
 add-in starts, one `summary` line with `bodies`, `expected`, `pass`, `fail` and `seconds` after a build, a `fallback`
-line when Fusion rejects the round on a nut pocket's floor, and an `error` line when a step fails. A failed check adds
+line when Fusion rejects the round on a nut pocket's floor or the chamfer on the bore's rim, and an `error` line
+when a step fails. A failed check adds
 one line with `result=FAIL` (`body`, `bounds`, `probes`, `probe`, `containers`, `container` or `split`); a passing check adds
 nothing. A `cut` line with `result=FAIL` means a cut removed no material, and shows the tool's bounds. The add-in writes no log file.
 

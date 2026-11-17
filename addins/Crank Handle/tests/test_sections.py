@@ -72,9 +72,9 @@ class ToolSectionsTest(unittest.TestCase):
                 loop = sections.slit_tool(dm)
                 self.assertTrue(loop_is_closed(loop))
                 x0, y0, x1, y1 = _bbox(loop)
-                self.assertAlmostEqual(x1 - x0, 1.0, places=9)
+                self.assertAlmostEqual(x1 - x0, 1.5, places=9)
                 self.assertAlmostEqual(y0, -dm.reach - 2, places=9)
-                self.assertAlmostEqual(y1, -dm.bore_radius + 1.0, places=6)
+                self.assertAlmostEqual(y1, -dm.bore_back + 1.0, places=6)
 
     def test_bore_is_the_long_way_round_with_a_flat(self):
         for name, p in CASES.items():
@@ -93,6 +93,44 @@ class ToolSectionsTest(unittest.TestCase):
                 half = math.acos(fb / rb)
                 want = rb * rb * (math.pi - half) + fb * math.sqrt(rb * rb - fb * fb)
                 self.assertAlmostEqual(polygon_area(loop_polygon(loop, max_step=math.radians(0.01))), want, places=3)
+
+    def test_double_flat_bore(self):
+        p = params_6082rs()
+        dm = derive(p)
+        loop = sections.bore_tool(dm, True)
+        self.assertTrue(loop_is_closed(loop))
+        self.assertEqual([type(c) for c in loop], [Arc, Line, Arc, Line])
+        x0, y0, x1, y1 = _bbox(loop)
+        self.assertAlmostEqual(y0, -dm.bore_flat, places=9)
+        self.assertAlmostEqual(y1, dm.bore_flat, places=9)
+        self.assertAlmostEqual(x1, dm.bore_radius, places=6)
+        rb, fb = dm.bore_radius, dm.bore_flat
+        want = rb * rb * (math.pi - 2 * math.acos(fb / rb)) + 2 * fb * math.sqrt(rb * rb - fb * fb)
+        self.assertAlmostEqual(polygon_area(loop_polygon(loop, max_step=math.radians(0.01))), want, places=3)
+
+    def test_slit_enters_a_double_flat_bore_at_its_flat(self):
+        dm = derive(params_6082rs())
+        self.assertEqual(dm.bore_back, dm.bore_flat)
+        _, y0, _, y1 = _bbox(sections.slit_tool(dm))
+        self.assertAlmostEqual(y1, -dm.bore_flat + 1.0, places=6)
+
+    def test_relief_profile_is_the_ramp_and_the_arm_beyond(self):
+        for name, p in CASES.items():
+            with self.subTest(case=name):
+                dm = derive(p)
+                loop = sections.relief_tool(p, dm)
+                self.assertTrue(loop_is_closed(loop))
+                self.assertTrue(all(isinstance(c, Line) for c in loop))
+                a, b, c, d = (ln.start for ln in loop)
+                self.assertAlmostEqual(a[0], 10 + 9 / math.tan(math.radians(30)), places=9)  # the ramp's foot, y 25.59
+                self.assertEqual(a[1], 8.0)
+                self.assertEqual((b[0], b[1]), (p.throw + 11, 8.0))
+                self.assertEqual((c[0], c[1]), (p.throw + 11, 18.0))
+                self.assertAlmostEqual(d[0], 10 - 1 / math.tan(math.radians(30)), places=9)
+                # D to A is the ramp: it passes through the boss top's edge (10, 17) and falls at 30 degrees.
+                slope = (d[1] - a[1]) / (d[0] - a[0])
+                self.assertAlmostEqual(slope, -math.tan(math.radians(30)), places=9)
+                self.assertAlmostEqual(a[1] + slope * (10 - a[0]), 17.0, places=9)
 
     def test_flat_boxes_straddle_the_pin(self):
         a, b, z0, length = sections.flat_box(55.0, 17.0, 1.0)

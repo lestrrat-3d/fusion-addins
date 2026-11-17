@@ -15,6 +15,8 @@ class DerivedTest(unittest.TestCase):
         self.assertAlmostEqual(dm.bore_radius, 2.55, places=12)
         self.assertAlmostEqual(dm.bore_flat, 2.05, places=12)
         self.assertAlmostEqual(dm.bore_loop, 15.8, delta=0.05)
+        self.assertAlmostEqual(dm.bore_back, 2.55, places=12)
+        self.assertAlmostEqual(dm.ramp_foot, 25.59, delta=0.01)
         self.assertAlmostEqual(dm.clamp_y, -4.90, places=12)
         self.assertAlmostEqual(dm.side_end, -8.50, places=12)
         self.assertAlmostEqual(dm.reach, 13.89, delta=0.01)
@@ -23,7 +25,8 @@ class DerivedTest(unittest.TestCase):
         dm = derive(params_6082rs())
         self.assertAlmostEqual(dm.bore_radius, 4.05, places=12)
         self.assertAlmostEqual(dm.bore_flat, 3.30, places=12)
-        self.assertAlmostEqual(dm.bore_loop, 25.13, delta=0.01)
+        self.assertAlmostEqual(dm.bore_loop, 24.82, delta=0.01)  # two flats: 24.8 in instructions.md
+        self.assertAlmostEqual(dm.bore_back, 3.30, places=12)  # the -Y wall is the flat
         self.assertAlmostEqual(dm.clamp_y, -6.40, places=12)
         self.assertAlmostEqual(dm.side_end, -10.0, places=12)
         self.assertAlmostEqual(dm.reach, 15.39, delta=0.01)
@@ -32,13 +35,17 @@ class DerivedTest(unittest.TestCase):
         dm = derive(default_params())
         self.assertEqual(dm.site.head, (0.0, 55.0, 0.0))
         self.assertEqual([s.head for s in dm.cross_sites], [(0.0, 59.0, 17.0), (0.0, 59.0, 49.0)])
-        self.assertEqual(dm.clamp_site.head[0::2], (10.0, 4.0))
-        self.assertAlmostEqual(dm.clamp_site.head[1], -4.9, places=12)
-        for site in (dm.site, dm.clamp_site) + dm.cross_sites:
+        self.assertEqual([s.head[0::2] for s in dm.clamp_sites], [(10.0, 4.0), (10.0, 12.0)])
+        for s in dm.clamp_sites:
+            self.assertAlmostEqual(s.head[1], -4.9, places=12)
+        for site in (dm.site,) + dm.clamp_sites + dm.cross_sites:
             self.assertEqual(site.validate(), "")
-        # The clamp and cross bolts' tips end flush with the face their nut pocket opens to.
-        for site in (dm.clamp_site,) + dm.cross_sites:
+        # Each bolt's tip ends at its nut cavity's far face.
+        for site in dm.clamp_sites + dm.cross_sites:
             self.assertAlmostEqual(site.tip(), site.cavity_far(), places=9)
+        # Each clamp bolt's tip ends 2 mm inside the -X side face, 18 mm from the head's face.
+        for s in dm.clamp_sites:
+            self.assertAlmostEqual(s.tip(), 18.0, places=9)
 
     def test_throw_moves_the_pin_sites(self):
         dm = derive(dataclasses.replace(default_params(), throw=80.0))
@@ -76,8 +83,8 @@ class ValidationTest(unittest.TestCase):
         self.fails("ShaftDiameter leaves less than a 1.6 mm wall in the 20 mm arm", shaft_diameter=16.8)
 
     def test_throw(self):
-        validate(dataclasses.replace(default_params(), throw=20.0))
-        self.fails("Throw must be at least 20 mm", throw=19.9)
+        validate(dataclasses.replace(default_params(), throw=35.29))
+        self.fails("Throw must be at least 35.29 mm", throw=35.28)
 
     def test_placement(self):
         self.fails("Placement must be a valid frame", placement=Frame(u=(1.0, 0.0, 0.0), v=(2.0, 0.0, 0.0)))
@@ -96,11 +103,17 @@ class InputsTest(unittest.TestCase):
     def test_bore_diameter_is_an_input(self):
         spec = INPUT_SPECS[0]
         self.assertEqual((spec.id, spec.label, spec.default), ("shaft_diameter", "Shaft bore diameter", 5.0))
-        values = {s.id: s.default for s in INPUT_SPECS} | {"shaft_diameter": 8.0, "flat_depth": 0.75}
+        values = {s.id: s.default for s in INPUT_SPECS} | {"shaft_diameter": 8.0, "flat_depth": 0.75, "double_flat": 1.0}
         self.assertEqual(params_from_values(values), params_6082rs())
 
+    def test_double_flat_is_an_option_off_by_default(self):
+        spec = next(s for s in INPUT_SPECS if s.id == "double_flat")
+        self.assertEqual((spec.label, spec.kind, spec.default), ("Double flat", "bool", 0))
+        self.assertFalse(default_params().double_flat)
+        self.assertTrue(params_6082rs().double_flat)
+
     def test_split_pin_is_an_option_off_by_default(self):
-        spec = INPUT_SPECS[-1]
+        spec = next(s for s in INPUT_SPECS if s.id == "split_pin")
         self.assertEqual((spec.id, spec.label, spec.kind, spec.default), ("split_pin", "Split pin", "bool", 0))
         self.assertFalse(default_params().split_pin)
         values = {s.id: s.default for s in INPUT_SPECS}

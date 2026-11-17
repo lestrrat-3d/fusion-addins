@@ -119,7 +119,7 @@ class ReadParamsTest(unittest.TestCase):
     def test_input_order_and_labels(self):
         from gen.inputs import INPUT_SPECS
 
-        self.assertEqual([s.label for s in INPUT_SPECS], ["Shaft bore diameter", "Flat depth", "Bore clearance", "Throw", "Split pin"])
+        self.assertEqual([s.label for s in INPUT_SPECS], ["Shaft bore diameter", "Flat depth", "Bore clearance", "Throw", "Double flat", "Split pin", "Sacrificial bridging"])
 
     def test_split_pin_check_box(self):
         dialog = self._dialog()

@@ -30,7 +30,7 @@ class FakeFusion:
     class BuildError(RuntimeError):
         pass
 
-    def __init__(self, fail_fillet=False, floor_edges=6):
+    def __init__(self, fail_fillet=False, floor_edges=6, fail_rim_chamfer=False):
         self.calls = []
         self.moves = []
         self.cuts = []
@@ -38,7 +38,10 @@ class FakeFusion:
         self.sketches = []
         self.fail_fillet = fail_fillet
         self.floor_edges = floor_edges
-        self.chamfered = None
+        self.chamfers = []
+        self.fail_rim_chamfer = fail_rim_chamfer
+        self.rim_calls = []
+        self.outer_calls = []
         self.filleted = []
 
     def new_sketch(self, comp, name):
@@ -46,11 +49,13 @@ class FakeFusion:
         return name
 
     new_sketch_xz = new_sketch
+    new_sketch_yz = new_sketch
 
     def draw_loop(self, sk, loop):
         self.calls.append(("draw_loop", sk, len(loop)))
 
     draw_loop_xz = draw_loop
+    draw_loop_yz = draw_loop
 
     def draw_circle(self, sk, center, radius):
         self.calls.append(("draw_circle", sk, center, radius))
@@ -64,6 +69,14 @@ class FakeFusion:
     def extrude(self, ctx, profile, z, length, what):
         self.calls.append(("extrude", what, z, length))
         return FakeBody(what)
+
+    def extrude_symmetric(self, ctx, profile, length, what):
+        self.calls.append(("extrude_symmetric", what, length))
+        return FakeBody(what)
+
+    def outer_face_edges(self, body, outer_z, top_z, top_y, ramp_foot, pin_y, pin_hole_r, what):
+        self.outer_calls.append((outer_z, top_z, top_y, ramp_foot, pin_y, pin_hole_r))
+        return [object()] * 3, [object()]
 
     def revolve(self, ctx, profile, what):
         self.calls.append(("revolve", what))
@@ -83,7 +96,13 @@ class FakeFusion:
             raise self.BuildError(f"{what}: rejected")
 
     def chamfer(self, ctx, edges, distance, what, tangent_chain=True):
-        self.chamfered = (len(edges), distance, tangent_chain)
+        self.chamfers.append((what, len(edges), distance, tangent_chain))
+        if self.fail_rim_chamfer and "rim" in what:
+            raise self.BuildError(f"{what}: rejected")
+
+    def bore_rim_edges(self, body, radius, what, want_lines=1):
+        self.rim_calls.append((getattr(body, "what", None), radius, what, want_lines))
+        return [object()] * 3
 
     def move(self, ctx, body, axes, what):
         self.moves.append((body.what, axes))
@@ -136,45 +155,100 @@ class PartsTest(unittest.TestCase):
         ctx = self.ctx()
         body = self.parts.build_arm(ctx)
         self.assertEqual(body.what, "arm extrude")
-        self.assertEqual(self.fake.chamfered, (12, 0.5, False))
+        self.assertEqual(self.fake.chamfers, [
+            ("arm chamfer faces", 12, 0.5, False),
+            ("arm outer face chamfer", 3, 0.5, False),
+            ("arm ramp top chamfer", 1, 0.5, False),
+            ("arm bore rim chamfer", 3, 0.5, False),
+        ])
+        self.assertEqual(self.fake.outer_calls, [(8.0, 17.0, 10.0, ctx.dm.ramp_foot, 55.0, 1.3)])
+        self.assertEqual(self.fake.rim_calls, [("arm extrude", ctx.dm.bore_radius, "arm bore rim", 1)])
         cuts = [tools for _, tools, _ in self.fake.cuts]
+        self.assertEqual(len(cuts), 11)  # the rim chamfer runs after the last cut
         self.assertEqual([t[0] for t in cuts], [
+            "arm relief tool_extrude",
             "arm slit tool_extrude", "arm bore tool_extrude", "arm pocket tool_extrude",
-            "arm pin head pocket tool_extrude", "arm clamp nut pocket tool_extrude",
-            "arm clamp head pocket tool_extrude", "arm clamp hole tool_extrude",
+            "arm pin head pocket tool_extrude",
+            "arm clamp 1 nut pocket tool_extrude", "arm clamp 1 head pocket tool_extrude",
+            "arm clamp 1 hole tool_extrude",
+            "arm clamp 2 nut pocket tool_extrude", "arm clamp 2 head pocket tool_extrude",
+            "arm clamp 2 hole tool_extrude",
         ])
         self.assertEqual(self.fake.joins, [])
+
+    def test_no_bridge_layer_unless_the_box_is_checked(self):
+        self.load()
+        self.parts.build_arm(self.ctx())
+        self.assertEqual(self.fake.joins, [])
+
+    def test_bridge_layer_sits_on_the_head_pockets_roof(self):
+        self.load()
+        ctx = self.ctx(sacrificial_bridging=True)
+        self.parts.build_arm(ctx)
+        self.assertEqual(self.fake.joins, [("arm extrude", ["arm bridge 1_extrude"])])
+        extrudes = {c[1]: c[2:] for c in self.fake.calls if c[0] == "extrude"}
+        self.assertEqual(extrudes["arm bridge 1_extrude"], (2.0, 0.3))
+        circles = [c for c in self.fake.calls if c[0] == "draw_circle" and c[1] == "arm bridge 1"]
+        self.assertEqual([c[2] for c in circles], [(0.0, 55.0)])
+        self.assertAlmostEqual(circles[0][3], 1.4)  # the 1.3 hole and 0.1 of wall
+        self.assertEqual(len(self.fake.cuts), 11)  # the layer is joined, not a cut
+
+    def test_pin_has_no_bridge_layer(self):
+        self.load()
+        self.parts.build_pin(self.ctx(sacrificial_bridging=True))
+        self.assertEqual(self.fake.joins, [("pin stub_extrude", ["pin turned_revolve"])])
+
+    def test_double_flat_rim_has_three_lines(self):
+        self.load()
+        ctx = self.ctx(double_flat=True)
+        self.parts.build_arm(ctx)
+        self.assertEqual(self.fake.rim_calls[0][3], 3)
 
     def test_arm_tools_start_and_length(self):
         self.load()
         self.parts.build_arm(self.ctx())
         extrudes = {c[1]: c[2:] for c in self.fake.calls if c[0] == "extrude"}
-        self.assertEqual(extrudes["arm extrude"], (0.0, 8.0))
-        self.assertEqual(extrudes["arm slit tool_extrude"], (-1.0, 10.0))
-        self.assertEqual(extrudes["arm bore tool_extrude"], (-1.0, 8.0))  # to z = 7, 1 mm of floor
+        self.assertEqual(extrudes["arm extrude"], (0.0, 17.0))
+        self.assertEqual(extrudes["arm slit tool_extrude"], (-1.0, 19.0))
+        self.assertEqual(extrudes["arm bore tool_extrude"], (-1.0, 17.0))  # to z = 16, 1 mm of floor
         self.assertEqual(extrudes["arm pocket tool_extrude"], (3.25, 5.75))
         self.assertEqual(extrudes["arm pin head pocket tool_extrude"], (-1.0, 3.0))
-        self.assertEqual(extrudes["arm clamp nut pocket tool_extrude"], (0.0, 3.0))
-        self.assertEqual(extrudes["arm clamp hole tool_extrude"], (-1.0, 22.0))
+        for i in (1, 2):
+            # 4 mm to the face, 1 mm of stock
+            self.assertEqual(extrudes[f"arm clamp {i} nut pocket tool_extrude"], (0.0, 5.0))
+            # to 1 mm past the tip, 18 from the head
+            self.assertEqual(extrudes[f"arm clamp {i} hole tool_extrude"], (-1.0, 20.0))
+        symmetric = [c[1:] for c in self.fake.calls if c[0] == "extrude_symmetric"]
+        self.assertEqual(symmetric, [("arm relief tool_extrude", 22.0)])  # x from -11 to 11
 
-    def test_arm_clamp_tools_move_onto_the_clamp_site(self):
+    def test_arm_clamp_tools_move_onto_the_clamp_sites(self):
         self.load()
         ctx = self.ctx()
         self.parts.build_arm(ctx)
         moved = {what: axes for what, axes in self.fake.moves}
-        site = ctx.dm.clamp_site
-        self.assertEqual(moved["arm clamp hole tool_extrude"], site.axes())
-        self.assertEqual(moved["arm clamp head pocket tool_extrude"], site.axes())
-        self.assertEqual(moved["arm clamp nut pocket tool_extrude"], site.axes(site.cavity))
-        self.assertEqual(self.fake.filleted, [("arm clamp nut pocket tool round_floor", 6, 0.6)])
+        for i, site in enumerate(ctx.dm.clamp_sites, start=1):
+            self.assertEqual(moved[f"arm clamp {i} hole tool_extrude"], site.axes())
+            self.assertEqual(moved[f"arm clamp {i} head pocket tool_extrude"], site.axes())
+            self.assertEqual(moved[f"arm clamp {i} nut pocket tool_extrude"], site.axes(site.cavity))
+        self.assertEqual([z for _, _, z in ((m, 0, a[0][2]) for m, a in self.fake.moves
+                                            if "clamp" in m and "hole" in m)], [4.0, 12.0])
+        self.assertEqual(self.fake.filleted, [("arm clamp 1 nut pocket tool round_floor", 6, 0.6),
+                                              ("arm clamp 2 nut pocket tool round_floor", 6, 0.6)])
 
     def test_floor_round_falls_back_with_a_log_line(self):
         self.load(fail_fillet=True)
         ctx = self.ctx()
         self.parts.build_arm(ctx)
-        self.assertEqual([r[0] for r in ctx.log.records], ["fallback"])
+        self.assertEqual([r[0] for r in ctx.log.records], ["fallback", "fallback"])
         self.assertIn("round_floor", ctx.log.records[0][1]["step"])
-        self.assertEqual(len(self.fake.cuts), 7)
+        self.assertEqual(len(self.fake.cuts), 11)
+
+    def test_rim_chamfer_falls_back_with_a_log_line(self):
+        self.load(fail_rim_chamfer=True)
+        ctx = self.ctx()
+        self.parts.build_arm(ctx)
+        self.assertEqual([r[0] for r in ctx.log.records], ["fallback"])
+        self.assertEqual(ctx.log.records[0][1]["step"], "arm bore rim chamfer")
 
     def test_floor_edges_must_be_six(self):
         fusion, _ = self.load(floor_edges=5)

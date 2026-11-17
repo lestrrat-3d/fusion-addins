@@ -6,7 +6,7 @@ import os
 DEBUG = False
 
 # Full commit ID of decad-gallery that this add-in was generated from. Set by the generator on every regeneration.
-GALLERY_REVISION = "77eca2ef5bc3a08038d0626e7eaa8546fbf5678f"
+GALLERY_REVISION = "a8114921f7302d1c3f862dcc8eca44f2dab108be"
 
 ADDIN_NAME = os.path.basename(os.path.dirname(__file__))
 COMPANY_NAME = "lestrrat3d"

@@ -22,7 +22,7 @@ class FramesTest(unittest.TestCase):
     def test_conjugate_undoes_the_assembly_frame(self):
         # Fusion turns a transform T given for a body into W^-1 T W; conjugating first must give back the move.
         w = frame_axes(placement_frame((0.0, 0.0, 48.0), (0.0, 0.0, 1.0)))
-        site = derive(default_params()).clamp_site
+        site = derive(default_params()).clamp_sites[0]
         move = site.axes(site.cavity)
         given = frames.conjugate(move, w)
         applied = frames.compose(frames.compose(frames.inverse(w), given), w)
@@ -47,7 +47,7 @@ class FramesTest(unittest.TestCase):
         w = frame_axes(Frame(origin=(0.0, 0.0, 48.0)))
         dm = derive(default_params())
         for site, want in ((dm.site.bolt_axes(), (0.0, 0.0, -96.0)),
-                           (dm.clamp_site.axes(dm.clamp_site.cavity), (-48.0, 0.0, -48.0))):
+                           (dm.clamp_sites[0].axes(dm.clamp_sites[0].cavity), (-48.0, 0.0, -48.0))):
             applied = frames.compose(frames.compose(frames.inverse(w), site), w)
             self.assertTrue(close(tuple(a - b for a, b in zip(applied[0], site[0])), want))
 
