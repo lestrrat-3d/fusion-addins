@@ -1,0 +1,13 @@
+{
+    "autodeskProduct": "Fusion",
+    "type": "addin",
+    "id": "bdfec104-4b43-4379-bce4-61196540f24c",
+    "author": "lestrrat-3d",
+    "description": {
+        "": "One-way clutch from decad-gallery models/onewayclutch"
+    },
+    "version": "",
+    "runOnStartup": false,
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
