@@ -1,0 +1,13 @@
+{
+    "autodeskProduct": "Fusion",
+    "type": "addin",
+    "id": "31ad9e2c-0f74-4edc-b3c2-e83a99233ce1",
+    "author": "lestrrat-3d",
+    "description": {
+        "": "Plaque stand from decad-gallery models/plaquestand"
+    },
+    "version": "",
+    "runOnStartup": false,
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
