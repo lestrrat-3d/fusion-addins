@@ -1,0 +1,13 @@
+{
+    "autodeskProduct": "Fusion",
+    "type": "addin",
+    "id": "718fb6bb-e4a5-49e4-bbaf-4a543853cfa3",
+    "author": "lestrrat-3d",
+    "description": {
+        "": "Seven-segment display from decad-gallery models/sevensegment"
+    },
+    "version": "",
+    "runOnStartup": false,
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
