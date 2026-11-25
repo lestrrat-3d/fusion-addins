@@ -75,16 +75,25 @@ class ReadParamsTest(unittest.TestCase):
     def _dialog(self):
         adsk = mock.MagicMock()
         adsk.core.IntegerSpinnerCommandInput.cast = lambda x: x
+        adsk.core.BoolValueCommandInput.cast = lambda x: x
         adsk.core.SelectionCommandInput.cast = lambda x: None
         fakes = {"adsk": adsk, "adsk.core": adsk.core, "adsk.fusion": adsk.fusion}
         with mock.patch.dict(sys.modules, fakes), mock.patch.object(sys, "path", [_ADDINS] + sys.path):
             return importlib.import_module("Seven-segment display.commands.sevensegment.dialog")
 
     def _inputs(self, **overrides):
-        from gen.inputs import INPUT_SPECS
+        from gen.inputs import INPUT_SPECS, TILT_DEFAULT, TILT_ID
 
         items = {spec.id: _Input(spec.id, overrides.get(spec.id, spec.default)) for spec in INPUT_SPECS}
+        items[TILT_ID] = _Input(TILT_ID, overrides.get(TILT_ID, TILT_DEFAULT))
         return types.SimpleNamespace(itemById=lambda i: items.get(i)), items
+
+    def test_the_flags_are_straight_by_default_and_tilt_with_the_check_box(self):
+        dialog = self._dialog()
+        inputs, _ = self._inputs()
+        self.assertFalse(dialog.read_params(inputs)[0].tilt_flags)
+        inputs, _ = self._inputs(tilt_flags=True)
+        self.assertTrue(dialog.read_params(inputs)[0].tilt_flags)
 
     def test_defaults_give_default_params(self):
         dialog = self._dialog()
@@ -122,6 +131,7 @@ class ReadParamsTest(unittest.TestCase):
             inputs = mock.MagicMock()
             dialog.add_inputs(inputs, "Build: abc")
         inputs.addIntegerSpinnerCommandInput.assert_called_once_with("digit", "Digit", 0, 9, 1, 2)
+        inputs.addBoolValueInput.assert_called_once_with("tilt_flags", "Tilt flags to show the digit", True, "", False)
         ids = [c.args[0] for c in inputs.addSelectionInput.call_args_list]
         self.assertEqual(ids, [dialog.ORIGIN_ID, dialog.AXIS_ID])
         texts = [c.args[2] for c in inputs.addTextBoxCommandInput.call_args_list]

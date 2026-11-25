@@ -216,12 +216,17 @@ def shared_info(ctx: BuildContext, name: str) -> tuple[str, Axes] | None:
 
 def _pose(ctx: BuildContext, body: adsk.fusion.BRepBody, s: int) -> adsk.fusion.BRepBody:
     """Move the rotor from its local frame onto the model, turned by its angle at this digit."""
-    angle = fc.flag_angle(s, ctx.dm.theta)
-    return fusion.move(ctx, body, fc.rotor_axes(s, angle), f"{ctx.part} move")
+    return fusion.move(ctx, body, _flag_pose(ctx, s), f"{ctx.part} move")
+
+
+def _flag_angle(ctx: BuildContext, s: int) -> float:
+    """The turn of segment s's flag in degrees: its angle at the digit with `Params.tilt_flags`, else its print
+    orientation (`fc.PRINT_TURN`: yellow face down, bed on the +Z side)."""
+    return fc.flag_angle(s, ctx.dm.theta) if ctx.p.tilt_flags else fc.PRINT_TURN
 
 
 def _flag_pose(ctx: BuildContext, s: int) -> Axes:
-    return fc.rotor_axes(s, fc.flag_angle(s, ctx.dm.theta))
+    return fc.rotor_axes(s, _flag_angle(ctx, s))
 
 
 def build_yellow(ctx: BuildContext, s: int) -> adsk.fusion.BRepBody:

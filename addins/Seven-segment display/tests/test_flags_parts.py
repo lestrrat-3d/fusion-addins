@@ -114,10 +114,10 @@ class FlagPartsTest(unittest.TestCase):
         self.addCleanup(lambda: [sys.modules.pop(n, None) for n in names])
         self.intersects = []
 
-    def build(self, name, digit=2, fake=None, shared=None):
+    def build(self, name, digit=2, fake=None, shared=None, tilt=True):
         fake = fake or FakeFusion()
         fake.BuildError = FakeFusion.BuildError
-        p = replace(default_params(), digit=digit)
+        p = replace(default_params(), digit=digit, tilt_flags=tilt)
         ctx = types.SimpleNamespace(comp=None, p=p, dm=derive(p), log=mock.MagicMock(), part=name,
                                     shared={} if shared is None else shared)
         self.ctx = ctx
@@ -131,12 +131,42 @@ class FlagPartsTest(unittest.TestCase):
             body = self.pf.build_flag_part(ctx, name)
         return body, fake
 
-    def build_all(self, names, digit=2):
+    def build_all(self, names, digit=2, tilt=True):
         """Build `names` in order with one shared prototype table and one fake, as a build does."""
         fake, shared = FakeFusion(), {}
         for name in names:
-            self.build(name, digit, fake, shared)
+            self.build(name, digit, fake, shared, tilt)
         return fake, shared
+
+    def test_flags_are_in_their_print_orientation_unless_tilted(self):
+        # Every flag is moved onto its rotor frame turned by the print turn, whatever the digit.
+        for digit in (1, 8):
+            fake, _ = self.build_all([bodies.yellow_name(0)], digit=digit, tilt=False)
+            self.assertEqual(fake.moves[-1][1], fc.rotor_axes(0, fc.PRINT_TURN))
+        fake, _ = self.build_all([bodies.yellow_name(0)], digit=8, tilt=True)
+        self.assertEqual(fake.moves[-1][1], fc.rotor_axes(0, fc.flag_angle(0, 288.0)))
+
+    def test_the_yellow_face_normal_points_to_the_bed_at_plus_z_for_every_segment(self):
+        # The roof's up in print is the rotor-local (-1, -1)/sqrt 2 and the yellow face normal is the opposite one.
+        k = 2 ** -0.5
+        for s in range(7):
+            axes = fc.rotor_axes(s, fc.PRINT_TURN)
+            up = frames.rotate(axes, (-k, -k, 0.0))
+            normal = frames.rotate(axes, (k, k, 0.0))
+            for got, want in zip(up, (0.0, 0.0, -1.0)):
+                self.assertAlmostEqual(got, want, places=9)
+            for got, want in zip(normal, (0.0, 0.0, 1.0)):
+                self.assertAlmostEqual(got, want, places=9)
+
+    def test_print_orientation_copies_move_by_the_difference_of_the_rotor_poses(self):
+        names = [bodies.yellow_name(s) for s in range(7)]
+        fake, _ = self.build_all(names, digit=3, tilt=False)
+        moves = dict(fake.moves)
+        for s in range(1, 7):
+            want = frames.compose(fc.rotor_axes(s, fc.PRINT_TURN), frames.inverse(fc.rotor_axes(0, fc.PRINT_TURN)))
+            for a, b in zip(moves[f"{names[s]} move"], want):
+                for x, y in zip(a, b):
+                    self.assertAlmostEqual(x, y, places=9)
 
     def test_yellow_bodies_are_built_once_and_copied(self):
         names = [bodies.yellow_name(s) for s in range(7)]
