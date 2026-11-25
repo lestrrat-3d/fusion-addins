@@ -52,6 +52,13 @@ def raise_(s: int) -> float:
     return 0.0
 
 
+# The turn about the rotor's axis that puts a flag in its print orientation: the yellow face down. The yellow face's
+# normal is the rotor-local diagonal (1, 1)/sqrt 2 (`print axis -n_yellow`, and the roof's up in print is
+# (-1, -1)/sqrt 2), so a turn of 45 degrees takes it to local +y, which is world +Z at the rotor frame. With the bed on
+# the +Z side and the print growing toward -Z, the flag prints with its yellow face on the bed.
+PRINT_TURN = 45.0
+
+
 def flag_angle(s: int, theta: float) -> float:
     """Segment s's modeled rotor angle in degrees at camshaft angle theta [FlagAngle]."""
     return math.degrees(math.atan2(ramps.lift(s, theta) - 2.625 + raise_(s), PIN_OFFSET))

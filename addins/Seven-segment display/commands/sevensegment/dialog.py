@@ -12,7 +12,7 @@ import dataclasses
 import adsk.core
 import adsk.fusion
 
-from ...lib.gen.inputs import INPUT_SPECS, params_from_values
+from ...lib.gen.inputs import INPUT_SPECS, TILT_DEFAULT, TILT_ID, TILT_LABEL, params_from_values
 from ...lib.gen.params import Params, Vec3, placement_frame
 from ...lib.gen.validate import ValidationError, validate
 
@@ -51,6 +51,7 @@ def add_inputs(inputs: adsk.core.CommandInputs, build_label: str) -> None:
     axis.setSelectionLimits(0, 1)
     for spec in INPUT_SPECS:
         inputs.addIntegerSpinnerCommandInput(spec.id, spec.label, spec.minimum, spec.maximum, 1, spec.default)
+    inputs.addBoolValueInput(TILT_ID, TILT_LABEL, True, "", TILT_DEFAULT)
     inputs.addTextBoxCommandInput(STATUS_ID, "", "", 2, True)
     inputs.addTextBoxCommandInput(BUILD_ID, "", build_label, 1, True)
 
@@ -130,7 +131,8 @@ def read_params(inputs: adsk.core.CommandInputs) -> tuple[Params | None, str]:
     values: dict[str, int] = {}
     for spec in INPUT_SPECS:
         values[spec.id] = adsk.core.IntegerSpinnerCommandInput.cast(inputs.itemById(spec.id)).value
-    p = params_from_values(values)
+    tilt = adsk.core.BoolValueCommandInput.cast(inputs.itemById(TILT_ID))
+    p = params_from_values(values, tilt.value if tilt is not None else TILT_DEFAULT)
     try:
         p = dataclasses.replace(p, placement=read_placement(inputs))
     except ValueError as e:

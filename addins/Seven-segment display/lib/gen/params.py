@@ -101,6 +101,10 @@ class Params:
 
     digit: int = 2  # the digit shown, 0..9: sets the camshaft angle 36 * digit and every slider's height
     placement: Frame | None = None  # None keeps the model's world frame
+    # Deviation: not a gallery input. False builds the flags in their print orientation (yellow face on the bed at +Z,
+    # printing toward -Z); True turns each by its angle at the digit, as the gallery does
+    # (docs/sevensegment/deviations.md).
+    tilt_flags: bool = False
 
 
 def default_params() -> Params:

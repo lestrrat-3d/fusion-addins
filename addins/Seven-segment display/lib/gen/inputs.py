@@ -23,7 +23,13 @@ class InputSpec:
 # The gallery's inputs are `Digit` and `Placement` only; Placement is chosen by the two selections in the dialog.
 INPUT_SPECS: tuple[InputSpec, ...] = (InputSpec("digit", "Digit", "digit", 2, DIGIT_MIN, DIGIT_MAX),)
 
+# The check box after the spinner: the flags are tilted to show the digit. Off (the default) builds them straight, so
+# they are in the orientation they print in.
+TILT_ID = "tilt_flags"
+TILT_LABEL = "Tilt flags to show the digit"
+TILT_DEFAULT = False
 
-def params_from_values(values: dict[str, int]) -> Params:
-    """Build Params from the dialog's integer values."""
-    return Params(**{spec.field: int(values[spec.id]) for spec in INPUT_SPECS})
+
+def params_from_values(values: dict[str, int], tilt_flags: bool = TILT_DEFAULT) -> Params:
+    """Build Params from the dialog's integer values and its check box."""
+    return Params(tilt_flags=bool(tilt_flags), **{spec.field: int(values[spec.id]) for spec in INPUT_SPECS})

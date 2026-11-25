@@ -4,7 +4,8 @@ A Fusion add-in that rebuilds the decad-gallery model `sevensegment`: a printed,
 with a yellow face and a black body turn in windows of a top plate, each on two printed pivot blocks, driven by seven
 cams on a camshaft that a push-button click indexer steps from digit to digit. The build has 75 bodies. The dialog
 takes the `Digit` the display is built showing (0 to 9, default 2) and has the two optional selections `Origin point`
-and `Axis direction` that place it. Bodies are grouped the way the gallery groups them: the `Seven-segment display`
+and `Axis direction` that place it, and the check box `Tilt flags to show the digit` (off: the flags are in their
+print orientation, yellow face on the bed at +Z). Bodies are grouped the way the gallery groups them: the `Seven-segment display`
 component holds the sub-components `Frame`, `Camshaft`, `Click Indexer`, `Segment Sliders`, `Flags` and `Pivot Blocks`,
 and each body sits in the sub-component of its container. The sizes are the gallery's, written in mm in
 `lib/gen/constants.py` (1.5 times the earlier builds); the dialog has no scale input.

@@ -198,7 +198,8 @@ class IsolateTest(unittest.TestCase):
         from gen.validate import derive
 
         parts = importlib.import_module(f"{_PKG}.parts")
-        ctx = self.build.BuildContext(comp=None, top=None, p=None, dm=derive(default_params()), log=mock.MagicMock())
+        ctx = self.build.BuildContext(comp=None, top=None, p=default_params(), dm=derive(default_params()),
+                                      log=mock.MagicMock())
         firsts = parts.first_of_each_kind(ctx)
         self.assertEqual(sorted(firsts), sorted(["Yellow Face A", "Black Body A", "Black Body B", "Pivot Block A -u",
                                                  "Nut T1", "Bolt T1", "Bolt G1"]))
